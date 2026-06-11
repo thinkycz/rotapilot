@@ -31,6 +31,42 @@ class EmployeeProfileValidity
     }
 
     /**
+     * Create rules.
+     *
+     * @return array<string, mixed>
+     */
+    public function create(): array
+    {
+        return [
+            'user_id' => [$this->userId()],
+            'name' => [$this->name()],
+            'email' => [$this->email()],
+            'phone' => [$this->phone()],
+            'role_label' => [$this->roleLabel()],
+            'max_hours_per_week' => [$this->maxHoursPerWeek()],
+            'is_active' => [$this->isActive()],
+        ];
+    }
+
+    /**
+     * Update rules.
+     *
+     * @return array<string, mixed>
+     */
+    public function update(): array
+    {
+        return [
+            'user_id' => [$this->userId()],
+            'name' => [$this->name()],
+            'email' => [$this->email()],
+            'phone' => [$this->phone()],
+            'role_label' => [$this->roleLabel()],
+            'max_hours_per_week' => [$this->maxHoursPerWeek()],
+            'is_active' => [$this->isActive()],
+        ];
+    }
+
+    /**
      * Name validation.
      */
     public function name(): Validity

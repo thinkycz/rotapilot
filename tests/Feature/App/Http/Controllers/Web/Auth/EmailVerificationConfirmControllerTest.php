@@ -6,7 +6,6 @@ use App\Models\User;
 use Database\Factories\UserFactory;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Event;
-use Inertia\Support\SessionKey;
 use Thinkycz\LaravelCore\Services\EmailBrokerService;
 use Thinkycz\LaravelCore\Support\Typer;
 
@@ -26,7 +25,7 @@ use Thinkycz\LaravelCore\Support\Typer;
     ]));
 
     $response->assertRedirect('/dashboard');
-    \assertInertiaFlash('success', \__('Email verified.'));
+    \assertInertiaFlash($response, 'success', \__('Email verified.'));
 
     $user->refresh();
     static::assertNotNull($user->getEmailVerifiedAt());
@@ -50,7 +49,7 @@ use Thinkycz\LaravelCore\Support\Typer;
     ]));
 
     $response->assertRedirect('/login');
-    \assertInertiaFlash('success', \__('Email verified.'));
+    \assertInertiaFlash($response, 'success', \__('Email verified.'));
 
     $user->refresh();
     static::assertNotNull($user->getEmailVerifiedAt());
@@ -74,7 +73,7 @@ use Thinkycz\LaravelCore\Support\Typer;
     ]));
 
     $response->assertRedirect('/dashboard');
-    \assertInertiaFlash('success', \__('Email already verified.'));
+    \assertInertiaFlash($response, 'success', \__('Email already verified.'));
 
     Event::assertNotDispatched(Verified::class);
 });
@@ -91,7 +90,7 @@ use Thinkycz\LaravelCore\Support\Typer;
     ]));
 
     $response->assertRedirect('/login');
-    \assertInertiaFlash('error', \__('The verification link is invalid or has expired.'));
+    \assertInertiaFlash($response, 'error', \__('The verification link is invalid or has expired.'));
 });
 
 \test('unknown email redirects to login with error', function (): void {
@@ -102,7 +101,7 @@ use Thinkycz\LaravelCore\Support\Typer;
     ]));
 
     $response->assertRedirect('/login');
-    \assertInertiaFlash('error', \__('We can\'t find a user with that email address.'));
+    \assertInertiaFlash($response, 'error', \__('We can\'t find a user with that email address.'));
 });
 
 \test('missing parameters return 422', function (): void {
@@ -110,17 +109,3 @@ use Thinkycz\LaravelCore\Support\Typer;
 
     $response->assertStatus(422);
 });
-
-/**
- * Assert that the session carries an Inertia flash under the
- * dedicated `inertia.flash_data` key with the given message
- * (success or error).
- */
-function assertInertiaFlash(string $key, mixed $message): void
-{
-    $flashed = \session(SessionKey::FLASH_DATA);
-
-    \expect($flashed)->toBeArray()
-        ->toHaveKey($key)
-        ->and($flashed[$key])->toBe($message);
-}

@@ -16,6 +16,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue';
 import Brand from '@/components/ui/Brand.vue';
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
 import FlashAlerts from '@/components/ui/FlashAlerts.vue';
 import { useBoundLocale } from '@/composables/useBoundLocale';
 import { useSharedProps } from '@/composables/useSharedProps';
@@ -244,5 +245,6 @@ function logout(): void {
                 </div>
             </div>
         </main>
+        <ConfirmDialog />
     </div>
 </template>

@@ -1,14 +1,6 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
-import {
-    Plus,
-    Eye,
-    Edit,
-    Clock,
-    MapPin,
-    Coffee,
-    ArrowRight,
-} from '@lucide/vue';
+import { Plus, Eye, Edit, Clock, MapPin, Coffee } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';

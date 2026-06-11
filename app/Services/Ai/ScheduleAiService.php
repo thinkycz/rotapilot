@@ -6,11 +6,12 @@ namespace App\Services\Ai;
 
 use App\Ai\Agents\FakeSchedulePlannerAgent;
 use App\Ai\Agents\SchedulePlannerAgent;
-use App\Models\Schedule;
+use App\Models\EmployeeProfile;
 use App\Models\Store;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Laravel\Ai\Responses\AgentResponse;
+use Thinkycz\LaravelCore\Support\Config;
 
 /**
  * Orchestrates schedule intent generation. Uses laravel/ai when a provider is
@@ -19,24 +20,23 @@ use Laravel\Ai\Responses\AgentResponse;
 class ScheduleAiService
 {
     /**
-     * Check whether any AI provider key is configured in the environment.
+     * Check whether any AI provider key is configured in the application's
+     * `ai.providers` config.
      */
     public static function hasProvider(): bool
     {
-        $keys = [
-            (string) (\env('OPENAI_API_KEY') ?? ''),
-            (string) (\env('ANTHROPIC_API_KEY') ?? ''),
-            (string) (\env('GEMINI_API_KEY') ?? ''),
-            (string) (\env('GROQ_API_KEY') ?? ''),
-            (string) (\env('MISTRAL_API_KEY') ?? ''),
-            (string) (\env('DEEPSEEK_API_KEY') ?? ''),
-            (string) (\env('XAI_API_KEY') ?? ''),
-            (string) (\env('OPENROUTER_API_KEY') ?? ''),
-            (string) (\env('OLLAMA_API_KEY') ?? ''),
-        ];
+        $providers = Config::inject()->mixed('ai.providers');
+        if (!\is_array($providers)) {
+            return false;
+        }
 
-        foreach ($keys as $k) {
-            if ($k !== '') {
+        foreach ($providers as $config) {
+            if (!\is_array($config)) {
+                continue;
+            }
+
+            $key = $config['key'] ?? null;
+            if (\is_string($key) && $key !== '') {
                 return true;
             }
         }
@@ -56,7 +56,7 @@ class ScheduleAiService
         EloquentCollection $employees,
         string $prompt,
     ): array {
-        $agent = $this->resolveAgent($store, $periodStart, $periodEnd);
+        $agent = $this->resolveAgent($store, $periodStart, $periodEnd, $employees);
 
         $response = $agent->prompt($prompt);
         $structured = $this->extractStructured($response);
@@ -78,15 +78,21 @@ class ScheduleAiService
 
     /**
      * Build the right agent. Real if the SDK has a provider, otherwise fake.
+     *
+     * @param EloquentCollection<int, EmployeeProfile> $employees
      */
-    private function resolveAgent(Store $store, Carbon $periodStart, Carbon $periodEnd): object
-    {
+    private function resolveAgent(
+        Store $store,
+        Carbon $periodStart,
+        Carbon $periodEnd,
+        EloquentCollection $employees,
+    ): object {
         if (self::hasProvider()) {
             return new SchedulePlannerAgent(
                 $store->getName(),
                 $periodStart,
                 $periodEnd,
-                \App\Models\EmployeeProfile::query()->getQuery()->getQuery()->whereIn('id', $store->employees()->pluck('employee_profiles.id')->all() ?: [0])->orderBy('name')->get(),
+                $employees,
             );
         }
 

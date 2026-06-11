@@ -4,20 +4,11 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Support\TimeOfDay;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Thinkycz\LaravelCore\Models\BaseModel;
 
-/**
- * @property int $id
- * @property int $store_id
- * @property int $day_of_week
- * @property string|null $opens_at
- * @property string|null $closes_at
- * @property bool $is_closed
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
- */
 class StoreBusinessHour extends BaseModel
 {
     /**
@@ -96,6 +87,27 @@ class StoreBusinessHour extends BaseModel
     public function getStore(): Store
     {
         return $this->assertRelationship('store', Store::class);
+    }
+
+    /**
+     * Whether this business hour covers the given [start, end) window.
+     * Returns true for closed days (no coverage) and for windows that
+     * fall entirely within [opens_at, closes_at).
+     */
+    public function covers(string $startTime, string $endTime): bool
+    {
+        if ($this->getIsClosed()) {
+            return false;
+        }
+
+        $opens = $this->getOpensAt();
+        $closes = $this->getClosesAt();
+
+        if ($opens === null || $closes === null) {
+            return false;
+        }
+
+        return TimeOfDay::contains($opens, $closes, $startTime, $endTime);
     }
 
     /**

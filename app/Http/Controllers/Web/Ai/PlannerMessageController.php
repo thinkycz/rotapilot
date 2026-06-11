@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\Ai\ScheduleAiService;
 use App\Support\Authorization;
 use App\Support\Db;
+use App\Support\ModelFinder;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
@@ -35,11 +36,7 @@ class PlannerMessageController
         ]);
 
         $storeId = (int) $validated->mixed('store_id');
-        $storeRow = Store::query()->getQuery()->getQuery()->where('id', $storeId)->first();
-        $store = $storeRow !== null ? Db::hydrateOne($storeRow, Store::class) : null;
-        if (!$store instanceof Store) {
-            \abort(404);
-        }
+        $store = ModelFinder::findOrAbort(Store::class, $storeId);
         if (!Authorization::canManageStore($user, $store)) {
             \abort(403);
         }

@@ -18,6 +18,11 @@ class EmployeeIndexController
     use ValidatesWebRequests;
 
     /**
+     * Page size for the index view.
+     */
+    public const int TAKE = 25;
+
+    /**
      * Show the employees list.
      */
     public function __invoke(Request $request): Response
@@ -38,7 +43,7 @@ class EmployeeIndexController
                 'role_label' => $e->getRoleLabel(),
                 'max_hours_per_week' => $e->getMaxHoursPerWeek(),
                 'is_active' => $e->getIsActive(),
-                'has_login' => $e->getUser() instanceof User,
+                'has_login' => $e->hasLoginAccount(),
             ])->values()->all(),
         ]);
     }

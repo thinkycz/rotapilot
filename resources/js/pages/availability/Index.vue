@@ -2,7 +2,7 @@
 import { router, useForm } from '@inertiajs/vue3';
 import { Plus, X, Sparkles } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useBoundLocale } from '@/composables/useBoundLocale';
 
@@ -48,16 +48,7 @@ const form = useForm({
 });
 
 const showAdd = ref<string | null>(null);
-const editingId = ref<number | null>(null);
 
-const editForm = useForm({
-    type: 'available',
-    start_time: '09:00',
-    end_time: '17:00',
-    note: '',
-});
-
-const aiText = ref('');
 const aiRows = ref<
     | {
           date: string;
@@ -81,18 +72,6 @@ function closeAdd(): void {
 
 function submitAdd(): void {
     form.post('/availability/store');
-}
-
-function openEdit(employeeId: number, date: string, entry: DayEntry): void {
-    editingId.value = entry.id;
-    editForm.type = entry.type;
-    editForm.start_time = entry.start_time ?? '09:00';
-    editForm.end_time = entry.end_time ?? '17:00';
-    editForm.note = '';
-}
-
-function submitEdit(): void {
-    editForm.post(`/availability/update?id=${editingId.value}`);
 }
 
 function destroy(id: number): void {

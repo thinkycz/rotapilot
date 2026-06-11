@@ -16,6 +16,11 @@ use Inertia\Response;
 class PlannerIndexController
 {
     /**
+     * Page size for the index view.
+     */
+    public const int TAKE = 25;
+
+    /**
      * Show the AI planner.
      */
     public function __invoke(Request $request): Response

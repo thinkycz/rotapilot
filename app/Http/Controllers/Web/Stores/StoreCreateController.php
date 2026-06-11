@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Web\Stores;
 
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
-use App\Models\Store;
 use App\Models\User;
+use App\Support\Authorization;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,11 +20,7 @@ class StoreCreateController
      */
     public function __invoke(Request $request): Response
     {
-        $user = User::mustAuth();
-
-        if (!$user->isAdmin() && !$user->isStoreManager()) {
-            \abort(403);
-        }
+        Authorization::mustCreateStore(User::mustAuth());
 
         return Inertia::render('stores/Edit', [
             'store' => null,

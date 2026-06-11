@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Link, router } from '@inertiajs/vue3';
-import { Plus, Eye, Edit, CalendarCheck2, ArrowRight } from '@lucide/vue';
+import { Link } from '@inertiajs/vue3';
+import { Plus, Eye, Edit, CalendarCheck2 } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -32,12 +32,6 @@ const isAdmin = computed(
         auth.value.user?.role === 'admin' ||
         auth.value.user?.role === 'store_manager',
 );
-
-function destroy(id: number): void {
-    if (confirm(t('common.confirm'))) {
-        router.post('/employees/destroy', { id });
-    }
-}
 </script>
 
 <template>

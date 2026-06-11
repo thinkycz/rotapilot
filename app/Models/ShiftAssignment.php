@@ -10,17 +10,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Thinkycz\LaravelCore\Models\BaseModel;
 
-/**
- * @property int $id
- * @property int $shift_requirement_id
- * @property int $employee_profile_id
- * @property string $status
- * @property string $source
- * @property int|null $assigned_by
- * @property string|null $note
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
- */
 class ShiftAssignment extends BaseModel
 {
     /**
@@ -41,6 +30,20 @@ class ShiftAssignment extends BaseModel
     public static function scopeSearch(Builder $builder, string $search): void
     {
         $builder->getQuery()->where($builder->qualifyColumn('id'), (int) $search);
+    }
+
+    /**
+     * Active (non-cancelled) assignments.
+     *
+     * @param Builder<static> $builder
+     */
+    public static function scopeActive(Builder $builder): void
+    {
+        $builder->getQuery()->where(
+            $builder->qualifyColumn('status'),
+            '!=',
+            ShiftAssignmentStatusEnum::Cancelled->value,
+        );
     }
 
     /**

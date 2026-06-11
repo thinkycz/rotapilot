@@ -17,6 +17,11 @@ class StoreIndexController
     use ValidatesWebRequests;
 
     /**
+     * Page size for the index view.
+     */
+    public const int TAKE = 25;
+
+    /**
      * Show the stores index.
      */
     public function __invoke(Request $request): Response

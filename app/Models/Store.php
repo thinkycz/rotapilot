@@ -10,16 +10,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Thinkycz\LaravelCore\Models\BaseModel;
 
-/**
- * @property int $id
- * @property string $name
- * @property string|null $address
- * @property string|null $city
- * @property string $timezone
- * @property bool $is_active
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
- */
 class Store extends BaseModel
 {
     /**
@@ -113,6 +103,16 @@ class Store extends BaseModel
         $hours = $this->businessHours()->get();
 
         return $hours->sortBy('day_of_week')->values();
+    }
+
+    /**
+     * Find the business hour for a given day of week (1=Monday..7=Sunday).
+     */
+    public function findBusinessHourFor(int $dayOfWeek): StoreBusinessHour|null
+    {
+        return $this->businessHours()
+            ->where('day_of_week', $dayOfWeek)
+            ->first();
     }
 
     /**

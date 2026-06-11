@@ -117,7 +117,8 @@
         "back": "Zpět",
         "loading": "Načítání…",
         "no_data": "Zatím žádná data.",
-        "confirm": "Opravdu?",
+        "confirm": "Potvrdit",
+        "confirm_title": "Opravdu?",
         "actions": "Akce"
     },
     "stores": {
@@ -178,7 +179,13 @@
         "view": "Detail",
         "edit_link": "Upravit",
         "week_view": "Týden",
-        "month_view": "Měsíc"
+        "month_view": "Měsíc",
+        "no_shifts": "Žádné směny.",
+        "new_shift": "Nová směna",
+        "delete_shift": "Smazat směnu",
+        "no_assignments": "Zatím nikdo nepřiřazen.",
+        "confirm_remove_assignment": "Odebrat toto přiřazení?",
+        "confirm_delete_shift": "Smazat tuto směnu?"
     },
     "availability": {
         "title": "Dostupnost",

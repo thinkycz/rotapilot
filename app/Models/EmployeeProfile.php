@@ -9,19 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Thinkycz\LaravelCore\Models\BaseModel;
+use Thinkycz\LaravelCore\Support\Typer;
 
-/**
- * @property int $id
- * @property int|null $user_id
- * @property string $name
- * @property string|null $email
- * @property string|null $phone
- * @property string|null $role_label
- * @property int|null $max_hours_per_week
- * @property bool $is_active
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
- */
 class EmployeeProfile extends BaseModel
 {
     /**
@@ -45,13 +34,29 @@ class EmployeeProfile extends BaseModel
     }
 
     /**
-     * Scope active.
+     * Active employees.
      *
      * @param Builder<static> $builder
      */
     public static function scopeActive(Builder $builder): void
     {
         $builder->getQuery()->where($builder->qualifyColumn('is_active'), true);
+    }
+
+    /**
+     * Employees assigned to a given store.
+     *
+     * @param Builder<static> $builder
+     */
+    public static function scopeForStore(Builder $builder, int $storeId): void
+    {
+        $builder->getQuery()->whereIn(
+            $builder->qualifyColumn('id'),
+            static fn($sub) => $sub
+                ->select('employee_profile_id')
+                ->from('employee_store')
+                ->where('store_id', $storeId),
+        );
     }
 
     /**
@@ -125,13 +130,19 @@ class EmployeeProfile extends BaseModel
      */
     public function getUser(): User|null
     {
-        $value = $this->getAttribute('user');
-
-        if ($value instanceof User) {
-            return $value;
+        if (!$this->relationLoaded('user')) {
+            return null;
         }
 
-        return null;
+        return Typer::assertNullableInstance($this->getRelationValue('user'), User::class);
+    }
+
+    /**
+     * Whether the employee profile has a linked login account.
+     */
+    public function hasLoginAccount(): bool
+    {
+        return $this->getUserId() !== null;
     }
 
     /**

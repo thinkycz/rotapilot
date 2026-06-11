@@ -53,9 +53,11 @@ use Thinkycz\LaravelCore\Support\Resolver;
         'password' => 'password',
         'password_confirmation' => 'different',
         'locale' => 'en',
-    ]);
+    ], $this->inertiaHeaders());
 
-    $response->assertSessionHasErrors('password_confirmation');
+    $response->assertStatus(422);
+    $response->assertJsonPath('component', 'auth/Register');
+    $response->assertJsonPath('props.errors.password.0', 'The password field confirmation does not match.');
     $this->assertDatabaseMissing('users', ['email' => 'mismatch@example.com']);
 });
 

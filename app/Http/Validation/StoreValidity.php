@@ -31,6 +31,38 @@ class StoreValidity
     }
 
     /**
+     * Create rules.
+     *
+     * @return array<string, mixed>
+     */
+    public function create(): array
+    {
+        return [
+            'name' => [$this->name()],
+            'address' => [$this->address()],
+            'city' => [$this->city()],
+            'timezone' => [$this->timezone()],
+            'is_active' => [$this->isActive()],
+        ];
+    }
+
+    /**
+     * Update rules.
+     *
+     * @return array<string, mixed>
+     */
+    public function update(): array
+    {
+        return [
+            'name' => [$this->name()],
+            'address' => [$this->address()],
+            'city' => [$this->city()],
+            'timezone' => [$this->timezone()],
+            'is_active' => [$this->isActive()],
+        ];
+    }
+
+    /**
      * Name validation.
      */
     public function name(): Validity

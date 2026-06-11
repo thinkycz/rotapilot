@@ -2,11 +2,68 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Web\Ai\PlannerApplyPreviewController;
+use App\Http\Controllers\Web\Ai\PlannerIndexController;
+use App\Http\Controllers\Web\Ai\PlannerMessageController;
+use App\Http\Controllers\Web\Auth\EmailVerificationConfirmController;
+use App\Http\Controllers\Web\Auth\ForgotPasswordController;
+use App\Http\Controllers\Web\Auth\LoginController;
+use App\Http\Controllers\Web\Auth\LogoutController;
+use App\Http\Controllers\Web\Auth\RegisterController;
+use App\Http\Controllers\Web\Auth\ResetPasswordController;
+use App\Http\Controllers\Web\Auth\VerifyEmailController;
+use App\Http\Controllers\Web\Availability\AvailabilityDestroyController;
+use App\Http\Controllers\Web\Availability\AvailabilityIndexController;
+use App\Http\Controllers\Web\Availability\AvailabilityParseAiController;
+use App\Http\Controllers\Web\Availability\AvailabilityStoreController;
+use App\Http\Controllers\Web\Availability\AvailabilityUpdateController;
+use App\Http\Controllers\Web\Calendar\MyCalendarController;
+use App\Http\Controllers\Web\Conflicts\ConflictAskAiController;
+use App\Http\Controllers\Web\Conflicts\ConflictIndexController;
+use App\Http\Controllers\Web\Conflicts\ConflictResolveController;
+use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\Employees\EmployeeCreateController;
+use App\Http\Controllers\Web\Employees\EmployeeDestroyController;
+use App\Http\Controllers\Web\Employees\EmployeeEditController;
+use App\Http\Controllers\Web\Employees\EmployeeIndexController;
+use App\Http\Controllers\Web\Employees\EmployeeShowController;
+use App\Http\Controllers\Web\Employees\EmployeeStoreAssignController;
+use App\Http\Controllers\Web\Employees\EmployeeStoreController;
+use App\Http\Controllers\Web\Employees\EmployeeStoreUnassignController;
+use App\Http\Controllers\Web\Employees\EmployeeUpdateController;
+use App\Http\Controllers\Web\Schedules\ScheduleArchiveController;
+use App\Http\Controllers\Web\Schedules\ScheduleCreateController;
+use App\Http\Controllers\Web\Schedules\ScheduleDestroyController;
+use App\Http\Controllers\Web\Schedules\ScheduleEditController;
+use App\Http\Controllers\Web\Schedules\ScheduleIndexController;
+use App\Http\Controllers\Web\Schedules\SchedulePublishController;
+use App\Http\Controllers\Web\Schedules\ScheduleShowController;
+use App\Http\Controllers\Web\Schedules\ScheduleStoreController;
+use App\Http\Controllers\Web\Schedules\ScheduleUpdateController;
+use App\Http\Controllers\Web\Schedules\ShiftAssignmentDestroyController;
+use App\Http\Controllers\Web\Schedules\ShiftAssignmentStoreController;
+use App\Http\Controllers\Web\Schedules\ShiftAutoFillController;
+use App\Http\Controllers\Web\Schedules\ShiftRequirementDestroyController;
+use App\Http\Controllers\Web\Schedules\ShiftRequirementStoreController;
+use App\Http\Controllers\Web\Schedules\ShiftRequirementUpdateController;
+use App\Http\Controllers\Web\Settings\PasswordController;
+use App\Http\Controllers\Web\Settings\ProfileController;
+use App\Http\Controllers\Web\Stores\StoreBusinessHoursEditController;
+use App\Http\Controllers\Web\Stores\StoreBusinessHoursUpdateController;
+use App\Http\Controllers\Web\Stores\StoreCreateController;
+use App\Http\Controllers\Web\Stores\StoreDestroyController;
+use App\Http\Controllers\Web\Stores\StoreEditController;
+use App\Http\Controllers\Web\Stores\StoreIndexController;
+use App\Http\Controllers\Web\Stores\StoreShowController;
+use App\Http\Controllers\Web\Stores\StoreStoreController;
+use App\Http\Controllers\Web\Stores\StoreUpdateController;
+use App\Http\Middleware\EnsureInertiaUserIsAuthenticated;
+use App\Models\User;
 use Illuminate\Routing\Router;
 use Thinkycz\LaravelCore\Support\Resolver;
 
 Resolver::resolveRouteRegistrar()->get('/', static function () {
-    if (App\Models\User::auth() instanceof App\Models\User) {
+    if (User::auth() instanceof User) {
         return Resolver::resolveRedirector()->to('/dashboard');
     }
 
@@ -16,86 +73,86 @@ Resolver::resolveRouteRegistrar()->get('/', static function () {
 Resolver::resolveRouteRegistrar()
     ->middleware('guest:users')
     ->group(static function (Router $router): void {
-        $router->get('login', [App\Http\Controllers\Web\Auth\LoginController::class, 'create']);
-        $router->post('login', [App\Http\Controllers\Web\Auth\LoginController::class, 'store']);
-        $router->get('register', [App\Http\Controllers\Web\Auth\RegisterController::class, 'create']);
-        $router->post('register', [App\Http\Controllers\Web\Auth\RegisterController::class, 'store']);
-        $router->get('forgot-password', [App\Http\Controllers\Web\Auth\ForgotPasswordController::class, 'create']);
-        $router->post('forgot-password', [App\Http\Controllers\Web\Auth\ForgotPasswordController::class, 'store']);
-        $router->get('reset-password', [App\Http\Controllers\Web\Auth\ResetPasswordController::class, 'create']);
-        $router->post('reset-password', [App\Http\Controllers\Web\Auth\ResetPasswordController::class, 'store']);
+        $router->get('login', [LoginController::class, 'create']);
+        $router->post('login', [LoginController::class, 'store']);
+        $router->get('register', [RegisterController::class, 'create']);
+        $router->post('register', [RegisterController::class, 'store']);
+        $router->get('forgot-password', [ForgotPasswordController::class, 'create']);
+        $router->post('forgot-password', [ForgotPasswordController::class, 'store']);
+        $router->get('reset-password', [ResetPasswordController::class, 'create']);
+        $router->post('reset-password', [ResetPasswordController::class, 'store']);
     });
 
-Resolver::resolveRouteRegistrar()->get('email/verify', App\Http\Controllers\Web\Auth\EmailVerificationConfirmController::class);
+Resolver::resolveRouteRegistrar()->get('email/verify', EmailVerificationConfirmController::class);
 
 Resolver::resolveRouteRegistrar()
-    ->middleware(App\Http\Middleware\EnsureInertiaUserIsAuthenticated::class)
+    ->middleware(EnsureInertiaUserIsAuthenticated::class)
     ->group(static function (Router $router): void {
-        $router->post('logout', App\Http\Controllers\Web\Auth\LogoutController::class);
-        $router->get('dashboard', App\Http\Controllers\Web\DashboardController::class);
-        $router->get('verify-email', [App\Http\Controllers\Web\Auth\VerifyEmailController::class, 'create']);
-        $router->post('verify-email', [App\Http\Controllers\Web\Auth\VerifyEmailController::class, 'store']);
-        $router->get('settings/profile', [App\Http\Controllers\Web\Settings\ProfileController::class, 'edit']);
-        $router->post('settings/profile', [App\Http\Controllers\Web\Settings\ProfileController::class, 'update']);
-        $router->get('settings/password', [App\Http\Controllers\Web\Settings\PasswordController::class, 'edit']);
-        $router->post('settings/password', [App\Http\Controllers\Web\Settings\PasswordController::class, 'update']);
+        $router->post('logout', LogoutController::class);
+        $router->get('dashboard', DashboardController::class);
+        $router->get('verify-email', [VerifyEmailController::class, 'create']);
+        $router->post('verify-email', [VerifyEmailController::class, 'store']);
+        $router->get('settings/profile', [ProfileController::class, 'edit']);
+        $router->post('settings/profile', [ProfileController::class, 'update']);
+        $router->get('settings/password', [PasswordController::class, 'edit']);
+        $router->post('settings/password', [PasswordController::class, 'update']);
 
         // Stores
-        $router->get('stores/index', App\Http\Controllers\Web\Stores\StoreIndexController::class);
-        $router->get('stores/create', App\Http\Controllers\Web\Stores\StoreCreateController::class);
-        $router->post('stores/store', App\Http\Controllers\Web\Stores\StoreStoreController::class);
-        $router->get('stores/show', App\Http\Controllers\Web\Stores\StoreShowController::class);
-        $router->get('stores/edit', App\Http\Controllers\Web\Stores\StoreEditController::class);
-        $router->post('stores/update', App\Http\Controllers\Web\Stores\StoreUpdateController::class);
-        $router->post('stores/destroy', App\Http\Controllers\Web\Stores\StoreDestroyController::class);
-        $router->get('stores/business-hours', App\Http\Controllers\Web\Stores\StoreBusinessHoursEditController::class);
-        $router->post('stores/business-hours/update', App\Http\Controllers\Web\Stores\StoreBusinessHoursUpdateController::class);
+        $router->get('stores/index', StoreIndexController::class);
+        $router->get('stores/create', StoreCreateController::class);
+        $router->post('stores/store', StoreStoreController::class);
+        $router->get('stores/show', StoreShowController::class);
+        $router->get('stores/edit', StoreEditController::class);
+        $router->post('stores/update', StoreUpdateController::class);
+        $router->post('stores/destroy', StoreDestroyController::class);
+        $router->get('stores/business-hours', StoreBusinessHoursEditController::class);
+        $router->post('stores/business-hours/update', StoreBusinessHoursUpdateController::class);
 
         // Employees
-        $router->get('employees/index', App\Http\Controllers\Web\Employees\EmployeeIndexController::class);
-        $router->get('employees/create', App\Http\Controllers\Web\Employees\EmployeeCreateController::class);
-        $router->post('employees/store', App\Http\Controllers\Web\Employees\EmployeeStoreController::class);
-        $router->get('employees/show', App\Http\Controllers\Web\Employees\EmployeeShowController::class);
-        $router->get('employees/edit', App\Http\Controllers\Web\Employees\EmployeeEditController::class);
-        $router->post('employees/update', App\Http\Controllers\Web\Employees\EmployeeUpdateController::class);
-        $router->post('employees/destroy', App\Http\Controllers\Web\Employees\EmployeeDestroyController::class);
-        $router->post('employees/stores/store', App\Http\Controllers\Web\Employees\EmployeeStoreAssignController::class);
-        $router->post('employees/stores/destroy', App\Http\Controllers\Web\Employees\EmployeeStoreUnassignController::class);
+        $router->get('employees/index', EmployeeIndexController::class);
+        $router->get('employees/create', EmployeeCreateController::class);
+        $router->post('employees/store', EmployeeStoreController::class);
+        $router->get('employees/show', EmployeeShowController::class);
+        $router->get('employees/edit', EmployeeEditController::class);
+        $router->post('employees/update', EmployeeUpdateController::class);
+        $router->post('employees/destroy', EmployeeDestroyController::class);
+        $router->post('employees/stores/store', EmployeeStoreAssignController::class);
+        $router->post('employees/stores/destroy', EmployeeStoreUnassignController::class);
 
         // Availability
-        $router->get('availability', App\Http\Controllers\Web\Availability\AvailabilityIndexController::class);
-        $router->post('availability/store', App\Http\Controllers\Web\Availability\AvailabilityStoreController::class);
-        $router->post('availability/update', App\Http\Controllers\Web\Availability\AvailabilityUpdateController::class);
-        $router->post('availability/destroy', App\Http\Controllers\Web\Availability\AvailabilityDestroyController::class);
-        $router->post('availability/parse-ai', App\Http\Controllers\Web\Availability\AvailabilityParseAiController::class);
+        $router->get('availability', AvailabilityIndexController::class);
+        $router->post('availability/store', AvailabilityStoreController::class);
+        $router->post('availability/update', AvailabilityUpdateController::class);
+        $router->post('availability/destroy', AvailabilityDestroyController::class);
+        $router->post('availability/parse-ai', AvailabilityParseAiController::class);
 
         // Schedules
-        $router->get('schedules/index', App\Http\Controllers\Web\Schedules\ScheduleIndexController::class);
-        $router->get('schedules/create', App\Http\Controllers\Web\Schedules\ScheduleCreateController::class);
-        $router->post('schedules/store', App\Http\Controllers\Web\Schedules\ScheduleStoreController::class);
-        $router->get('schedules/show', App\Http\Controllers\Web\Schedules\ScheduleShowController::class);
-        $router->get('schedules/edit', App\Http\Controllers\Web\Schedules\ScheduleEditController::class);
-        $router->post('schedules/update', App\Http\Controllers\Web\Schedules\ScheduleUpdateController::class);
-        $router->post('schedules/destroy', App\Http\Controllers\Web\Schedules\ScheduleDestroyController::class);
-        $router->post('schedules/publish', App\Http\Controllers\Web\Schedules\SchedulePublishController::class);
-        $router->post('schedules/archive', App\Http\Controllers\Web\Schedules\ScheduleArchiveController::class);
-        $router->post('shift-requirements/store', App\Http\Controllers\Web\Schedules\ShiftRequirementStoreController::class);
-        $router->post('shift-requirements/update', App\Http\Controllers\Web\Schedules\ShiftRequirementUpdateController::class);
-        $router->post('shift-requirements/destroy', App\Http\Controllers\Web\Schedules\ShiftRequirementDestroyController::class);
-        $router->post('shift-requirements/auto-fill', App\Http\Controllers\Web\Schedules\ShiftAutoFillController::class);
-        $router->post('shift-assignments/store', App\Http\Controllers\Web\Schedules\ShiftAssignmentStoreController::class);
-        $router->post('shift-assignments/destroy', App\Http\Controllers\Web\Schedules\ShiftAssignmentDestroyController::class);
+        $router->get('schedules/index', ScheduleIndexController::class);
+        $router->get('schedules/create', ScheduleCreateController::class);
+        $router->post('schedules/store', ScheduleStoreController::class);
+        $router->get('schedules/show', ScheduleShowController::class);
+        $router->get('schedules/edit', ScheduleEditController::class);
+        $router->post('schedules/update', ScheduleUpdateController::class);
+        $router->post('schedules/destroy', ScheduleDestroyController::class);
+        $router->post('schedules/publish', SchedulePublishController::class);
+        $router->post('schedules/archive', ScheduleArchiveController::class);
+        $router->post('shift-requirements/store', ShiftRequirementStoreController::class);
+        $router->post('shift-requirements/update', ShiftRequirementUpdateController::class);
+        $router->post('shift-requirements/destroy', ShiftRequirementDestroyController::class);
+        $router->post('shift-requirements/auto-fill', ShiftAutoFillController::class);
+        $router->post('shift-assignments/store', ShiftAssignmentStoreController::class);
+        $router->post('shift-assignments/destroy', ShiftAssignmentDestroyController::class);
 
         // My calendar (employee self-service)
-        $router->get('my-calendar', App\Http\Controllers\Web\Calendar\MyCalendarController::class);
+        $router->get('my-calendar', MyCalendarController::class);
 
         // AI planner
-        $router->get('ai-planner', App\Http\Controllers\Web\Ai\PlannerIndexController::class);
-        $router->post('ai-planner/message', App\Http\Controllers\Web\Ai\PlannerMessageController::class);
-        $router->post('ai-planner/apply-preview', App\Http\Controllers\Web\Ai\PlannerApplyPreviewController::class);
+        $router->get('ai-planner', PlannerIndexController::class);
+        $router->post('ai-planner/message', PlannerMessageController::class);
+        $router->post('ai-planner/apply-preview', PlannerApplyPreviewController::class);
 
         // Conflicts
-        $router->get('conflicts', App\Http\Controllers\Web\Conflicts\ConflictIndexController::class);
-        $router->post('conflicts/resolve', App\Http\Controllers\Web\Conflicts\ConflictResolveController::class);
-        $router->post('conflicts/ask-ai', App\Http\Controllers\Web\Conflicts\ConflictAskAiController::class);
+        $router->get('conflicts', ConflictIndexController::class);
+        $router->post('conflicts/resolve', ConflictResolveController::class);
+        $router->post('conflicts/ask-ai', ConflictAskAiController::class);
     });

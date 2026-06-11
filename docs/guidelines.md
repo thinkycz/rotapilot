@@ -1,319 +1,284 @@
-# Laravel Core Boilerplate Guidelines
+# RotaPilot Guidelines
 
-## Enums
+This project is an **Inertia-web** app at the UI surface, with a small
+**JSON:API** surface for programmatic clients. The conventions below cover
+both. Items that apply only to one surface are tagged **[Web]** or **[API]**.
 
-- Generate enums using the `make:enum` command
+## Stack and Tooling
+
+- Makefile is the primary entry point for provisioning, formatting, and
+  validation: `make local|testing|development|staging|production`, `make fix`,
+  `make check`.
+- Before each commit, run `make fix` then `make check`.
+- PHPStan is the source of truth for type errors. It must stay at
+  `level: max` and pass without `phpstan-baseline.neon`. Do not lower
+  strictness, reintroduce a baseline, add broad ignores, or suppress errors
+  in code; fix the underlying type or API contract issue.
+- Frontend type checks: `npm run type-check`; build: `npm run build`.
 
 ## Consistency
 
-- Code must be consistent within the project and with internal libraries, boilerplates, and reference implementations
+- Code must be consistent within the project and with the local
+  `thinkycz/laravel-core` package.
+- Follow existing project conventions for naming, imports, and
+  control flow. When you find a violation, fix it before adding the new
+  feature.
+- Import every PHP class/interface/trait/enum reference with a `use`
+  statement. Inline fully qualified class names are not allowed in
+  signatures, route definitions, PHPDoc, catches, callbacks, or method
+  bodies when the symbol can be imported. Global function calls such as
+  `\array_map()` may remain fully qualified when used deliberately.
+- Do not use model `@property`, `@method`, or `@phpstan-method` PHPDoc
+  as a substitute for real APIs. Eloquent attributes are read through
+  explicit getters that use `assertString`, `assertInt`,
+  `assertNullableString`, `Typer::*`, or the closest precise assertion.
+- Relations are accessed through explicit relationship methods for query
+  building or through typed relation getters such as `getStore()` and
+  `getMovementItems()`. Application code does not read
+  `$model->relation` properties.
+- Local scopes are called directly, for example
+  `Item::scopeSearch($query, $search)` or from a `tap()` callback that
+  calls the static scope method. Do not rely on magic builder methods
+  such as `$query->search()` or `$query->forUser()`.
+- PHPDoc remains appropriate for real generic contracts, including
+  relationship return types, `@param Builder<Model>`, and
+  `@use HasFactory<Factory>`.
+- Avoid single-use temporary variables for obvious expressions. Inline
+  trivial values such as `'%' . $search . '%'`, and remove unused
+  locals immediately.
+- TypeScript must keep `noUnusedLocals` and `noUnusedParameters`
+  enabled. Remove confirmed unused imports, locals, and dependencies
+  instead of leaving dead frontend code behind.
 
-## Makefile
+## Architecture Tests
 
-- Project must use `Makefile` for development, checking, minification, fixing code, and building applications in all environments (`testing|local|development|staging|production`)
+`tests/Architecture/*` enforces project conventions. Reading them is
+the fastest way to learn the rules. Common enforced conventions:
 
-## Linters and Static Analysis
+- Controller suffixes, model/validity/visibility naming.
+- Web controllers may use `create/store` and `edit/update` pairs.
+- API controllers must extend `AutomaticController` and be invokable
+  with `__invoke(ApiFormRequest $request): SymfonyResponse`.
+- All Enums end with `Enum` suffix and are string-backed.
+- All Resources extend `JsonApiResource`.
+- Only `Resolver::resolveRouteRegistrar()` may be used in `routes/*`; no
+  raw `Route::*()`.
+- Validity classes expose a `BaseValidity` property and only declare
+  wrapper helpers — no direct `->required()` / `->nullable()` chains.
+- Models under `App\Models` extend `BaseModel` or `BaseUser`; non-User
+  models must implement `querySelect()` and `scopeSearch()`.
+- Strict equality only (`===`/`!==`), no `==`/`!=`.
+- No `env()`, `config()`, `dd()`, `var_dump()`, `unserialize()`, etc.
+  outside config files.
+- Do not call `env()` or `\env()` directly, including in config files.
+  Read environment values through `$env = Env::inject();` and use the
+  appropriate typed parser/assertion method.
 
-- Code must pass static analysis and all linters defined in the project
-- Developers must not modify or lower PHPStan levels and other linters
-- Running `make check` must not produce warnings or errors
+When in doubt, read the test that enforces the rule.
 
 ## Tests
 
-- All controllers must be tested
-- 100% coverage required for all success paths
-- Error path testing is not mandatory
-- Every controller must have at least one feature test
+- Every controller must have at least one feature test. 100% coverage
+  of the success path is expected; error path coverage is recommended
+  but not mandatory.
+- Test files mirror the source tree:
+  `app/Http/Controllers/Web/Auth/LoginController.php` →
+  `tests/Feature/App/Http/Controllers/Web/Auth/LoginControllerTest.php`.
+- Use the `createIsolatedUserWithStore()` helper from `tests/Pest.php`
+  to set up a `store_manager` user and a default `Store`.
+- Prefer factories over direct `Model::query()->create([...])` calls
+  once the controller uses the factory pattern.
+- The `assertInertiaFlash(TestResponse $response, string $key, mixed
+$message)` helper asserts Inertia flash messages for both
+  redirect and 200-OK render responses.
 
-## Code Checking
+## HTTP Surfaces
 
-- Developer must not commit code that doesn't pass `make local testing development staging production check` for APP_ENV="local|testing|development|staging|production"
-- Before each commit, run `make fix check` to ensure properly formatted code and no linter errors
+| Surface | Path          | Returns               | Notes     |
+| ------- | ------------- | --------------------- | --------- |
+| Inertia | `/...`        | Inertia render or 302 | **[Web]** |
+| API     | `/api/v1/...` | `JsonApiResource`     | **[API]** |
 
-## Editorconfig
+- **[Web]** Inertia controllers live in
+  `app/Http/Controllers/Web/...` and return `Inertia::render(...)`,
+  `RedirectResponse`, or `Response`. They use the `ValidatesWebRequests`
+  trait and the core `Resolver::resolveValidator(...)` flow.
+- **[API]** JSON:API controllers live in
+  `app/Http/Controllers/Api/...` and extend
+  `Thinkycz\LaravelCore\Routing\AutomaticController`. They use the
+  `ApiFormRequest` builder and the `Typer` parser for typed input.
 
-- Code must follow formatting defined in `.editorconfig`
+### **[Web]** Inertia Conventions
 
-## API Documentation
+- Use Inertia `<Link>` for all internal navigation; never raw
+  `<a href>`. Internal links that need button styling should be a
+  `<Link>` whose content is a `<Button>`-styled element, or
+  `as="button"` where supported.
+- Use `router.get/post/...` for all form submissions and searches;
+  never `window.location.href`. Preserve state on search/filter
+  navigation with `router.get(url, params, { preserveState: true })`.
+- Use `Inertia::flash('success', \__('...'))` for success flashes; the
+  `HandleInertiaRequests` middleware also falls back to session
+  `->flash()`, but `Inertia::flash()` survives 302 chains.
+- For form submits, bind `@submit.prevent` and call
+  `router.post(...)`; do not set redundant `method`/`action`
+  attributes on the `<form>` element.
+- Inertia pages live in `resources/js/pages/` and are resolved by
+  `resources/js/app.ts`. Use `@/` for `resources/js` imports.
+- Inertia v3 stores flash data on the dedicated
+  `inertia.flash_data` session key; on a 200-OK render the message
+  surfaces in the `flash.{key}` page prop.
 
-- Inertia-first projects do not require OpenAPI by default; if API documentation is added later, generated artifacts must not be manually edited
+### **[API]** JSON:API Conventions
 
-## Client Communication
-
-- Input is always `multipart/form-data`, never `json` or other alternatives (because binary files can't be sent via `application/json`)
-- Output is always `application/json`
-
-## JSON to multipart/form-data Conversion
-
-- Boolean: `true` → `'1'`, `false` → `'0'`
-- Int/Float: Send as strings
-- Null: Send as empty string `''`
-- Arrays/Objects: Send in exploded form
-- Empty arrays/objects: Send as empty string `''`
-
-## Application Documentation
-
-- Maintain current application documentation in `docs/application_documentation.md` or as defined in README.md
-- Should include tech stack, server hardware/software requirements, packages, tooling, languages, services, ENV description, emails/notifications, cookies, cron jobs, queue workers
-
-## PSR Standards
-
-- Follow basic PSR rules: PSR1, PSR2, PSR4, PSR12, PSR5, PSR19
-
-## Naming Conventions
-
-- Classes should have type suffixes: `Controller`, `Action`, `Request`, `Resource`, `Service`, `Validity`
-- Models exclude `Model` suffix
-- Traits have `Trait` suffix
-- Interfaces have `Interface` suffix
-- Abstract classes have `Abstract` prefix
-- Final classes have `Final` prefix
-- Enums have `Enum` suffix
-- Class names in singular: `UserStoreController.php`, `UserRoleEnum.php`
-
-## ENV Naming
-
-- Keys in `SCREAMING_SNAKE_CASE`: `APP_NAME='Laravel'`
-
-## Config File Naming
-
-- Files in `snake_case` plural: `config/google_services.php`
-- Subfolders in `snake_case` plural
-- Keys in `snake_case`
-
-## Translation File Naming
-
-- Files in `snake_case` plural
-- Subfolders in `snake_case` plural
-- Keys in `snake_case`
-
-## Blade Naming
-
-- Files in `snake_case` singular
-- Subfolders in `snake_case` plural: `resources/views/pages/about_us.blade.php`
-
-## Table Naming
-
-- Tables in plural `snake_case`: `blog_posts`
-- Pivot tables in singular alphabetical `snake_case`: `role_user`
-- Columns in `snake_case`: `users.full_name`
-- Foreign keys in `snake_case` with `_id` suffix: `groups.user_id`
+- Resource controllers are invokable.
+- The `Store` (create) action returns a generic `ModelJsonApiResource`,
+  not an `Index`/`Show` resource. Updates and destroys return
+  `204 No Content`.
+- Output is always `application/json`.
+- All persistence happens inside a transaction; the
+  `AutomaticController` base handles this automatically.
 
 ## URL Format
 
-- URLs in `snake_case` plural: `/api/v1/email_verification/resend`
+- **[Web]** URLs in `kebab-case`: `/shift-requirements`, `/employees`,
+  `/stores`. Routes use the resource id as a path segment:
+  `/items/{item}`. This is an intentional exception to the API rule
+  below.
+- **[API]** URLs in `snake_case` plural: `/api/v1/email_verification/resend`.
 
-## Flat URLs
+## Flat Endpoints (API only)
 
-- Endpoints written flat without nesting relations
-- Wrong: `GET /api/v1/users/1/notifications`
-- Right: `GET /api/v1/notifications/index?filter[user_id]=1`
+- **[API]** Endpoints are flat with no nested relations.
+    - Right: `GET /api/v1/notifications/index?filter[user_id]=1`
+    - Wrong: `GET /api/v1/users/1/notifications`
+- **[API]** Don't use route params, use query params:
+  `GET /api/v1/users/show?id=1`.
+- **[API]** Only `GET` and `POST` methods. Replace `PUT`/`PATCH`/`DELETE`
+  with `POST` and a postfix: `POST /api/v1/users/update?id=1`.
 
-## Route Params and Slugs
+## Basic Endpoint Structure (API only)
 
-- Don't use route params, use query params instead: `GET /api/v1/users/show?id=1` instead of `GET /api/v1/users/1`
-
-## HTTP Methods
-
-- Only use `GET` and `POST` methods
-- Replace `PUT`, `PATCH`, `DELETE` with `POST` and postfix: `POST /api/v1/users/update?id=1`
-
-## Basic Endpoint Structure
-
-- No endpoints on root (ending with `/`)
 - Index: `GET /api/v1/{models}/index`
-- Show: `GET /api/v1/{models}/show?id=number && GET /api/v1/{models}/show?slug=string`
+- Show: `GET /api/v1/{models}/show?id=number`
 - Store: `POST /api/v1/{models}/store`
 - Update: `POST /api/v1/{models}/update?id=number`
 - Destroy: `POST /api/v1/{models}/destroy?id=number`
-- Attach: `POST /api/v1/{modelas_modelbs}/store`
-- Detach: `POST /api/v1/{modelas_modelbs}/destroy`
+- Attach/Detach: `POST /api/v1/{a_model_b_model}/store|destroy`
 
-## Test Naming
+## Naming Conventions
 
-- Test classes named after tested class with `Test` suffix
-- Same namespace as tested class: `tests/Feature/App/Http/Controllers/Api/Auth/RegisterControllerTest.php`
+- Classes have type suffixes: `Controller`, `Request`, `Resource`,
+  `Service`, `Validity`.
+- Models exclude `Model` suffix (`Item.php`, not `ItemModel.php`).
+- Traits have `Trait` suffix. Interfaces have `Interface` suffix.
+  Abstract classes have `Abstract` prefix. Final classes have `Final`
+  prefix. Enums have `Enum` suffix.
+- Class names are singular: `UserStoreController.php`,
+  `UserRoleEnum.php`.
 
-## Controller Naming
+## Tables, Columns, Foreign Keys
 
-- Model name + action + `Controller` suffix
-- Preferred actions: index, show, store, update, destroy
-- Example: `UserStoreController.php`
+- Tables plural `snake_case`. Pivot tables singular alphabetical
+  `snake_case`. Columns `snake_case`. Foreign keys end in `_id`.
 
-## Route Naming
+## PSR Standards
 
-- Don't use route names, use `Resolver::resolveUrlFactory()->action(Controller::class)`
+- Follow PSR-1, PSR-2, PSR-4, PSR-12, PSR-5, PSR-19.
 
-## Function Naming with "Must"
+## Translation Files
 
-- Functions that throw errors instead of fallback/null have `must` prefix: `mustResolveUser(): User`
+- `resources/js/i18n/{en,cs,sk}.json` for frontend (vue-i18n).
+- `lang/{en,cs,sk}.json` for backend (`__()`) — includes email subjects
+  and one-off strings.
+- Three locales must remain in sync. Add a key to all three at the
+  same time.
+- Keys in `snake_case` (nested OK).
+- Hardcoded user-facing strings in PHP or Vue are a code smell — move
+  them to i18n.
 
-## Getting Data from ENV
+## Controllers, Authorization, Validation
 
-- Use typed methods from `Thinkycz\LaravelCore\Support\Env` and `Typer`
-- Never hardcode keys/passwords/SMTP/database settings in code/config files
-- Forbidden to use `env()` function outside config files
+- Authorization and validation in the controller, not in request
+  classes.
+- **[Web]** Validation rules live in `App\Http\Validity\*Validity`
+  classes; inject with `*Validity::inject()` and use
+  `$this->validateRequest($request, $rules)` to obtain a typed
+  `Parser` for `assertString/assertNullableInt/...`.
+- **[API]** Validation rules live in
+  `App\Http\Validation\*Validity` classes too; the API controller
+  passes them to the `ApiFormRequest::builder()`.
+- Multi-step writes (`create + related`, `update + tokens`,
+  `password + revoke`) must run in `DB::transaction(...)`.
+- All queries must be scoped to the logged-in user via the
+  `Authorization` helper in `App\Support\Authorization` (or a relation
+  through an already-scoped parent).
+- Forbids `ValidationException::withMessages(...)`. Use
+  `Thrower::default()->message($key, $message)->throw()`.
+- Forbids `env()`, `config()`, `dd()`, `var_dump()`, `print_r()`,
+  `unserialize()`, `extract()` in `app/`. `app()->environment()`,
+  `Auth::shouldUse()`, `Password::getConfig()`, etc. are also
+  forbidden; use the core's typed helpers instead.
 
-## Getting Data from Config Files
+## Dependency Injection
 
-- Use type-checked methods from `Thinkycz\LaravelCore\Support\Config` and `Typer`
-
-## Getting Data from Translation Files
-
-- Use typed methods that check translation presence and throw errors if missing
-
-## Functional Annotations
-
-- Don't use phpdocblocks that affect functionality (removed by opcache)
-
-## Docblocks
-
-- Don't use phpdocblocks for `@param`, `@property`, `@method` - use getters/setters with runtime type checks
-
-## Throwing Errors
-
-- Errors with status >= 400 must use `Symfony\Component\HttpKernel\Exception\HttpException()`
-- Each error must have unique code tracked in `ClientErrorEnum`
-
-## Request Attribute Naming
-
-- Attributes in `snake_case`
-
-## Route Parameters
-
-- Route parameters are forbidden
-
-## Transactional Request Processing
-
-- Code modifying database must run in transactional mode
-
-## Strict Request Validation
-
-- Request must reject all data not defined in `rules()` function
-- Reference: SecureFormRequest, SignedRequest
-
-## JSON:API
-
-- Application must follow JSON:API standard (https://jsonapi.org/)
-- Reference: JsonApiResource, JsonApiCollectionResponse, ModelJsonApiResource
-
-## Request Validation
-
-- Attributes validated only in dedicated request classes
-- Rules come from validation classes created with `artisan make:validity`
-- Validity defines rules except uniqueness and partiality
-- Uniqueness handled at controller level for throttling
-
-## String Interpolation
-
-- Use string interpolation instead of concatenation and printf: `"{$id}|{$bearer}"`
-
-## Artificial IDs
-
-- All tables must have artificial primary key
-- Never use other columns like email, ID numbers, or composite primary keys
-
-## Controller Response
-
-- Only allowed return type is SymfonyResponse: `public function __invoke(RegisterRequest $request): SymfonyResponse`
-
-## Store Controller Response
-
-- Store controller returns generic ModelJsonApiResource instead of specific index/show resource
-- For multiple models, return JsonApiCollectionResponse
-
-## Update and Destroy Controller Response
-
-- Update and destroy controllers must return 204 No Content
-
-## Mandatory Static Typing
-
-- Static typing is mandatory where possible
-
-## Idempotent Seeder
-
-- Seeders must be repeatable without producing changes on repeated calls
-- Use `firstOrCreate`, environment checks
-
-## Composer Dev Dependencies
-
-- Dev dependencies only installed in `development` environment
-- Code must handle missing dev dependencies in `staging` and `production`
-
-## Controller Folders and Namespaces
-
-- Controllers not in `app/Http/Controllers` root
-- Subfolders by type: `Api|Admin|Web`
-- API for API endpoints, Admin for admin interfaces, Web for HTML endpoints
-
-## Invocable Controllers
-
-- Controllers must be invocable (single `__invoke` method)
-
-## Authorization and Validation
-
-- Authorization and validation performed in controller, not in Request class
-
-## On-demand Dependency Injection
-
-- Don't use constructor/method DI, use `Resolver::resolve*()` methods
+- **[Web]** Don't use constructor or method DI. Resolve via
+  `Resolver::resolve*()` in the method body.
+- **[API]** `AutomaticController` injects via constructor; services
+  used inside action methods can be resolved via `Resolver` or method
+  DI.
 
 ## Contracts
 
-- Imported classes from `Illuminate\Contracts` must have `Contract` suffix: `AuthenticatableContract`
+- Imported classes from `Illuminate\Contracts` should have a `Contract`
+  suffix: `AuthenticatableContract`. (This is a soft preference for new
+  code; the core package itself doesn't always follow it.)
 
 ## Down Migration
 
-- Skip `down()` method in migrations
+- Skip `down()` in migrations.
 
 ## Comments
 
-- Every property, method, function must have comments
-- All must have docblocks
+- Every property and every method must have a docblock comment.
+- Do not use phpdocblocks that affect functionality at runtime
+  (opcache strips them).
 
 ## Throttling
 
-- Throttle at controller level after validation
-- Failed validation must not increase throttle hits
-
-## Request Data
-
-- Access request data outside request class using `validatedInput()`
-- Inside request class use `allInput()`
-
-## SymfonyResponse
-
-- Alias `Symfony\Component\HttpFoundation\Response` as `SymfonyResponse`
+- Throttle at the controller level after validation. Use the
+  `ThrottlesWebRequests` trait for the web surface.
+- Failed validation must not increase throttle hits.
 
 ## ID Getter
 
-- Access model IDs only via `getKey()`, `getAuthIdentifier()`, `getRouteKey()`
+- Access model IDs only via `getKey()`, `getAuthIdentifier()`,
+  `getRouteKey()`. Never read `$model->id` directly.
 
 ## Mail Queue
 
-- Emails and notifications must implement `ShouldQueue`
-
-## Mail After Commit
-
-- Send emails and notifications only after database transaction commit
+- Emails and notifications must implement `ShouldQueue` and be sent
+  after the database transaction commits.
 
 ## Working with Logged-in User
 
-- Use template helper methods: `Model::resolve()`, `Model::mustResolve()` (throws 401)
+- Use `Model::mustAuth(): User` (throws 401) and
+  `Model::auth(): User|null` from the core's base models.
 
 ## Inheritdoc
 
-- Overridden methods must inherit phpdoc with `@inheritDoc`
+- Overridden methods must inherit phpdoc with `@inheritDoc`.
 
 ## Cron Schedule
 
-- Define cron tasks using Jobs, not Artisan commands
+- Define cron tasks using Jobs, not Artisan commands.
 
 ## Single Job
 
-- Jobs processing collections must use recursive processing
-- Fetch all models, dispatch self with single model for transaction processing
+- Jobs processing collections must use recursive processing: fetch
+  the model, dispatch a single-model job for each within a transaction.
 
 ## CRUD Command
 
-- Generate boilerplate code exclusively with CRUD scaffolding commands (see `packages/thinkycz/laravel-core/src/Providers/CoreServiceProvider.php`)
+- Generate boilerplate code exclusively with CRUD scaffolding commands
+  shipped by the `thinkycz/laravel-core` package.

@@ -14,6 +14,7 @@ use App\Models\Store;
 use App\Models\User;
 use App\Support\Authorization;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -49,24 +50,19 @@ class DashboardController
         $today = $now->format('Y-m-d');
 
         $activeEmployees = EmployeeProfile::query()
-            ->getQuery()
-            ->where('is_active', true)
-            ->whereIn('id', function ($sub) use ($storeIds): void {
-                $sub->select('employee_profile_id')
-                    ->from('employee_store')
-                    ->whereIn('store_id', $storeIds ?: [0]);
+            ->tap(static fn(Builder $query) => EmployeeProfile::scopeActive($query))
+            ->whereHas('stores', static function ($q) use ($storeIds): void {
+                $q->whereIn('stores.id', $storeIds ?: [0]);
             })
             ->count();
 
         $shiftsThisMonth = ShiftRequirement::query()
-            ->getQuery()
             ->whereIn('store_id', $storeIds ?: [0])
             ->whereBetween('date', [$startOfMonth, $endOfMonth])
             ->count();
 
         $openConflicts = ScheduleConflict::query()
-            ->getQuery()
-            ->whereNull('resolved_at')
+            ->tap(static fn(Builder $query) => ScheduleConflict::scopeUnresolved($query))
             ->whereIn('schedule_id', function ($sub) use ($storeIds): void {
                 $sub->select('id')->from('schedules')->whereIn('store_id', $storeIds ?: [0]);
             })

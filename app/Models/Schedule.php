@@ -11,18 +11,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Thinkycz\LaravelCore\Models\BaseModel;
 
-/**
- * @property int $id
- * @property int $store_id
- * @property string $name
- * @property string $period_start
- * @property string $period_end
- * @property string $status
- * @property int $created_by
- * @property \Illuminate\Support\Carbon|null $published_at
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
- */
 class Schedule extends BaseModel
 {
     /**

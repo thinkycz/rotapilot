@@ -45,21 +45,7 @@ class FakeSchedulePlannerAgent implements Agent, HasStructuredOutput
      */
     public function schema(JsonSchema $schema): array
     {
-        return [
-            'intent' => $schema->string()->enum(['create_or_update_schedule', 'noop'])->required(),
-            'understanding' => $schema->string()->required(),
-            'warnings' => $schema->array()->items($schema->string())->required(),
-            'shift_requirements' => $schema->array()->items(
-                $schema->object(fn(JsonSchema $s): array => [
-                    'date' => $s->string()->required(),
-                    'start_time' => $s->string()->required(),
-                    'end_time' => $s->string()->required(),
-                    'required_employee_count' => $s->integer()->min(1)->required(),
-                    'role_label' => $s->string()->nullable(),
-                    'note' => $s->string()->nullable(),
-                ]),
-            )->required(),
-        ];
+        return \App\Ai\Concerns\PlannerOutputSchema::build($schema);
     }
 
     /**

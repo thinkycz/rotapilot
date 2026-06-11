@@ -282,3 +282,44 @@ rewrites native function calls. PHPStan catches type errors that
 are invisible at runtime. Prettier aligns the frontend. Audits
 flag supply-chain issues. Without the loop, the next `make check`
 on CI fails on a fixable lint issue.
+
+### `phpstan-baseline.neon` is a deferred follow-up, not a free pass
+
+**Problem.** StockFlow's reference deletes the baseline so every
+type error must be fixed or the build fails. In rotapilot the
+baseline currently masks ~54 real errors and the new `strictRules`
+block surfaces another ~185, totalling ~239 reports. Removing
+the baseline in one PR would break `make check` for weeks until
+the sweep is done.
+
+**Why the temptation.** The StockFlow guidelines are explicit:
+"Code must pass PHPStan without `phpstan-baseline.neon`; fix the
+underlying type issue instead of suppressing it." Keeping the
+baseline feels like cheating.
+
+**Fix adopted for this Unreleased.** The strict rules and the
+tightened `phpstan.neon` are already in place. The baseline is
+explicitly listed as a deferred task in `CHANGELOG.md` so the
+follow-up is visible. The next pass should:
+
+1. Delete `phpstan-baseline.neon` and the line that references it.
+2. Fix the surviving reports by class:
+    - `app/Ai/Agents/SchedulePlannerAgent.php` — the JSON schema
+      return type needs `array<string, Type>` instead of
+      `array<string, mixed>`.
+    - `app/Ai/Concerns/PlannerOutputSchema.php` — `decode()` returns
+      `list<mixed>` where the controller expects
+      `array<int, array<string, mixed>>`. The fix is to use
+      `assertArrayShape` on the decoded payload.
+    - `app/Services/Scheduling/*` — strict-rules flags a handful of
+      untyped `mixed` parameters and a dead-code branch in the
+      `ConflictDetectionService` recursion guard.
+    - `app/Http/Controllers/Web/Ai/Planner*` and
+      `app/Http/Controllers/Web/Conflicts/ConflictAskAi` — the
+      `agent_messages` payload is currently typed as
+      `array<int, mixed>`; narrow it with `assertArrayShape` and the
+      `assertString` helpers from `Parser`.
+3. Re-run `phpstan analyse` until `[OK] No errors` lands.
+
+**Signal.** Once the new rules stay on for two weeks without
+regressing, the baseline is safe to delete.

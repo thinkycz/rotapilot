@@ -16,6 +16,11 @@ use Inertia\Response;
 class ScheduleIndexController
 {
     /**
+     * Page size for the index view.
+     */
+    public const int TAKE = 25;
+
+    /**
      * Show the schedules list.
      */
     public function __invoke(Request $request): Response

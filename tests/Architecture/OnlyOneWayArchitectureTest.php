@@ -2,6 +2,23 @@
 
 declare(strict_types=1);
 
+/**
+ * Recursively iterate every .php file under a directory.
+ *
+ * @return iterable<string>
+ */
+function arch_php_files(string $dir): iterable
+{
+    $rii = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS));
+
+    foreach ($rii as $file) {
+        /** @var SplFileInfo $file */
+        if ($file->isFile() && $file->getExtension() === 'php') {
+            yield $file->getPathname();
+        }
+    }
+}
+
 $forbiddenFunctions = [
     'env(',
     'config(',
@@ -20,7 +37,7 @@ $forbiddenFunctions = [
 ];
 
 \arch('app code never calls forbidden debug/dangerous functions', function () use ($forbiddenFunctions): void {
-    foreach (\glob(\base_path('app/**/*.php'), \GLOB_BRACE) as $file) {
+    foreach (\arch_php_files(\base_path('app')) as $file) {
         $contents = (string) \file_get_contents($file);
 
         foreach ($forbiddenFunctions as $call) {
@@ -36,7 +53,7 @@ $forbiddenFunctions = [
         'use Illuminate\\Config\\Repository;',
     ];
 
-    foreach (\glob(\base_path('app/**/*.php'), \GLOB_BRACE) as $file) {
+    foreach (\arch_php_files(\base_path('app')) as $file) {
         $contents = (string) \file_get_contents($file);
 
         foreach ($forbidden as $use) {
@@ -51,7 +68,7 @@ $forbiddenFunctions = [
         'use Illuminate\\Support\\Env;',
     ];
 
-    foreach (\glob(\base_path('app/**/*.php'), \GLOB_BRACE) as $file) {
+    foreach (\arch_php_files(\base_path('app')) as $file) {
         $contents = (string) \file_get_contents($file);
 
         foreach ($forbidden as $use) {
@@ -66,7 +83,7 @@ $forbiddenFunctions = [
         'use Illuminate\\Contracts\\Translation\\Translator;',
     ];
 
-    foreach (\glob(\base_path('app/**/*.php'), \GLOB_BRACE) as $file) {
+    foreach (\arch_php_files(\base_path('app')) as $file) {
         $contents = (string) \file_get_contents($file);
 
         foreach ($forbidden as $use) {
@@ -102,7 +119,7 @@ $forbiddenFunctions = [
         'Application::setFallbackLocale(',
     ];
 
-    foreach (\glob(\base_path('app/**/*.php'), \GLOB_BRACE) as $file) {
+    foreach (\arch_php_files(\base_path('app')) as $file) {
         $contents = (string) \file_get_contents($file);
 
         foreach ($forbidden as $call) {
@@ -130,7 +147,7 @@ $forbiddenFunctions = [
         'PasswordBrokerManager::setDefaultDriver(',
     ];
 
-    foreach (\glob(\base_path('app/**/*.php'), \GLOB_BRACE) as $file) {
+    foreach (\arch_php_files(\base_path('app')) as $file) {
         $contents = (string) \file_get_contents($file);
 
         foreach ($forbidden as $call) {
@@ -145,7 +162,7 @@ $forbiddenFunctions = [
         'ValidationException::withMessages(',
     ];
 
-    foreach (\glob(\base_path('app/**/*.php'), \GLOB_BRACE) as $file) {
+    foreach (\arch_php_files(\base_path('app')) as $file) {
         $contents = (string) \file_get_contents($file);
 
         foreach ($forbidden as $call) {

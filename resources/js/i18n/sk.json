@@ -112,7 +112,8 @@
         "back": "Späť",
         "loading": "Načítava sa…",
         "no_data": "Zatiaľ žiadne dáta.",
-        "confirm": "Naozaj?",
+        "confirm": "Potvrdiť",
+        "confirm_title": "Naozaj?",
         "actions": "Akcie"
     },
     "stores": {
@@ -173,7 +174,13 @@
         "view": "Detail",
         "edit_link": "Upraviť",
         "week_view": "Týždeň",
-        "month_view": "Mesiac"
+        "month_view": "Mesiac",
+        "no_shifts": "Žiadne zmeny.",
+        "new_shift": "Nová zmena",
+        "delete_shift": "Zmazať zmenu",
+        "no_assignments": "Zatiaľ nikto nepriradený.",
+        "confirm_remove_assignment": "Odobrať toto priradenie?",
+        "confirm_delete_shift": "Zmazať túto zmenu?"
     },
     "availability": {
         "title": "Dostupnosť",

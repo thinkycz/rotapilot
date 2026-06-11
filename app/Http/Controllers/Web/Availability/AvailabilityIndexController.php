@@ -20,6 +20,11 @@ class AvailabilityIndexController
     use ValidatesWebRequests;
 
     /**
+     * Page size for the index view.
+     */
+    public const int TAKE = 25;
+
+    /**
      * Show the availability grid for a month.
      */
     public function __invoke(Request $request): Response

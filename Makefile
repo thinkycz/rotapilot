@@ -11,7 +11,7 @@ MAKE_ARTISAN ?= ${MAKE_PHP} ./artisan
 
 # Goals
 .PHONY: check
-check: stan lint audit frontend test
+check: stan lint audit frontend test-unit test
 
 .PHONY: audit
 audit: ./vendor ./composer.lock ./node_modules ./package-lock.json
@@ -38,6 +38,10 @@ lint: ./node_modules/.bin/prettier ./vendor/bin/pint
 fix: ./node_modules/.bin/prettier ./vendor/bin/pint
 	"./node_modules/.bin/prettier" -w .
 	${MAKE_PHP} ./vendor/bin/pint
+
+.PHONY: test-unit
+test-unit: ./node_modules/.bin/vitest
+	npm run test:unit
 
 .PHONY: test
 test: ./vendor/bin/phpunit ./.env

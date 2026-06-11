@@ -6,6 +6,8 @@ namespace App\Http\Controllers\Web\Stores;
 
 use App\Models\Store;
 use App\Models\User;
+use App\Support\Authorization;
+use App\Support\ModelFinder;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
@@ -16,17 +18,10 @@ class StoreDestroyController
      */
     public function __invoke(Request $request): SymfonyResponse
     {
-        $user = User::mustAuth();
-
-        if (!$user->isAdmin()) {
-            \abort(403);
-        }
-
         $id = (int) $request->query('id', '0');
-        $store = Store::query()->find($id);
-        if (!$store instanceof Store) {
-            \abort(404);
-        }
+        $store = ModelFinder::findOrAbort(Store::class, $id);
+
+        Authorization::mustDeleteStore(User::mustAuth(), $store);
 
         $store->delete();
 

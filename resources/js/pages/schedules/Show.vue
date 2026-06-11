@@ -1,20 +1,14 @@
 <script setup lang="ts">
 import { Link, router, useForm } from '@inertiajs/vue3';
-import {
-    CalendarCheck2,
-    Sparkles,
-    Plus,
-    Trash2,
-    X,
-    Wand2,
-    AlertTriangle,
-} from '@lucide/vue';
+import { Sparkles, Plus, Trash2, X, Wand2, AlertTriangle } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import { computed, ref } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useBoundLocale } from '@/composables/useBoundLocale';
+import { useConfirmDialog } from '@/composables/useConfirmDialog';
 
 const { t } = useI18n();
+const { confirm } = useConfirmDialog();
 
 useBoundLocale();
 
@@ -34,11 +28,6 @@ interface Shift {
     note: string | null;
     source: string;
     assignments: Assignment[];
-}
-
-interface Day {
-    date: string;
-    shifts: Shift[];
 }
 
 interface Conflict {
@@ -125,14 +114,22 @@ function assignEmployee(shiftId: number): void {
     showShiftPanel.value = false;
 }
 
-function removeAssignment(id: number): void {
-    if (confirm('Remove assignment?')) {
+async function removeAssignment(id: number): Promise<void> {
+    if (
+        await confirm(t('schedules.confirm_remove_assignment'), {
+            variant: 'danger',
+        })
+    ) {
         router.post('/shift-assignments/destroy', { id });
     }
 }
 
-function removeShift(id: number): void {
-    if (confirm('Delete shift?')) {
+async function removeShift(id: number): Promise<void> {
+    if (
+        await confirm(t('schedules.confirm_delete_shift'), {
+            variant: 'danger',
+        })
+    ) {
         router.post('/shift-requirements/destroy', { id });
         showShiftPanel.value = false;
     }
@@ -146,14 +143,8 @@ function archive(): void {
     router.post(`/schedules/archive?id=${props.schedule.id}`);
 }
 
-const severityVariant: Record<string, string> = {
-    info: 'bg-blue-50 text-blue-700',
-    warning: 'bg-amber-50 text-amber-700',
-    critical: 'bg-rose-50 text-rose-700',
-};
-
 function statusColor(
-    count: number,
+    _count: number,
     required: number,
     assigned: number,
 ): string {

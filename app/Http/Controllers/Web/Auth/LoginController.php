@@ -9,12 +9,13 @@ use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Thinkycz\LaravelCore\Models\BaseUser;
 use Thinkycz\LaravelCore\Support\Resolver;
+use Thinkycz\LaravelCore\Support\Thrower;
+use Thinkycz\LaravelCore\Support\Typer;
 use Thinkycz\LaravelCore\Validation\AuthValidity;
 
 class LoginController
@@ -60,15 +61,11 @@ class LoginController
         if ($user instanceof BaseUser === false) {
             $hasher->check($password, '$2y$10$' . \str_repeat('a', 53));
 
-            throw ValidationException::withMessages([
-                'email' => \__('auth.failed'),
-            ]);
+            Thrower::default()->message('email', Typer::assertString(\__('auth.failed')))->throw();
         }
 
         if (!$hasher->check($password, $user->getAuthPassword())) {
-            throw ValidationException::withMessages([
-                'password' => \__('auth.password'),
-            ]);
+            Thrower::default()->message('password', Typer::assertString(\__('auth.password')))->throw();
         }
 
         Resolver::resolveDatabaseTokenGuard('users')->login($user);

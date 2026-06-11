@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Scheduling;
 
-use App\Enums\ShiftAssignmentStatusEnum;
 use App\Models\EmployeeAvailability;
 use App\Models\EmployeeProfile;
 use App\Models\ShiftAssignment;
@@ -19,17 +18,12 @@ use stdClass;
 class ScheduleGeneratorService
 {
     /**
-     * Availability matcher.
-     */
-    private readonly AvailabilityMatcherService $availability;
-
-    /**
      * Constructor.
      */
-    public function __construct(AvailabilityMatcherService $availability)
-    {
-        $this->availability = $availability;
-    }
+    public function __construct(
+        private readonly AvailabilityMatcherService $availability,
+        private readonly OverlapDetectorService $overlaps,
+    ) {}
 
     /**
      * Propose employee assignments for a shift requirement.
@@ -183,9 +177,8 @@ class ScheduleGeneratorService
 
         /** @var \Illuminate\Support\Collection<int, stdClass> $rawAssignments */
         $rawAssignments = ShiftAssignment::query()
-            ->getQuery()
+            ->active()
             ->whereIn('employee_profile_id', $candidateIds)
-            ->where('status', '!=', ShiftAssignmentStatusEnum::Cancelled->value)
             ->get();
 
         /** @var EloquentCollection<int, ShiftAssignment> $assignments */
@@ -232,18 +225,17 @@ class ScheduleGeneratorService
     }
 
     /**
-     * Check whether the employee has any overlapping assignment that would conflict with the requirement.
+     * Check whether the employee has any overlapping assignment that would
+     * conflict with the requirement. Delegates to OverlapDetectorService
+     * after pre-loading the candidate requirements.
      */
     private function hasOverlap(int $employeeId, ShiftRequirement $r): bool
     {
-        /** @var \Illuminate\Support\Collection<int, stdClass> $rawOverlapping */
         $rawOverlapping = ShiftAssignment::query()
-            ->getQuery()
+            ->active()
             ->where('employee_profile_id', $employeeId)
-            ->where('status', '!=', ShiftAssignmentStatusEnum::Cancelled->value)
             ->get();
 
-        /** @var EloquentCollection<int, ShiftAssignment> $overlapping */
         $overlapping = Db::hydrate($rawOverlapping, ShiftAssignment::class);
 
         $requirementIds = [];
@@ -255,26 +247,19 @@ class ScheduleGeneratorService
             return false;
         }
 
-        /** @var \Illuminate\Support\Collection<int, stdClass> $rawOthers */
         $rawOthers = ShiftRequirement::query()
-            ->getQuery()
             ->whereIn('id', $requirementIds)
             ->get();
 
-        /** @var EloquentCollection<int, ShiftRequirement> $others */
         $others = Db::hydrate($rawOthers, ShiftRequirement::class);
 
-        foreach ($others as $other) {
-            if ($other->getDate() !== $r->getDate()) {
-                continue;
-            }
-
-            if ($r->getStartTime() < $other->getEndTime() && $other->getStartTime() < $r->getEndTime()) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->overlaps->hasOverlap(
+            $others->all(),
+            $r->getKey(),
+            $r->getDate(),
+            $r->getStartTime(),
+            $r->getEndTime(),
+        );
     }
 
     /**

@@ -112,7 +112,8 @@
         "back": "Back",
         "loading": "Loading…",
         "no_data": "No data yet.",
-        "confirm": "Are you sure?",
+        "confirm": "Confirm",
+        "confirm_title": "Are you sure?",
         "actions": "Actions"
     },
     "stores": {
@@ -173,7 +174,13 @@
         "view": "View",
         "edit_link": "Edit",
         "week_view": "Week",
-        "month_view": "Month"
+        "month_view": "Month",
+        "no_shifts": "No shifts.",
+        "new_shift": "New shift",
+        "delete_shift": "Delete shift",
+        "no_assignments": "No one assigned yet.",
+        "confirm_remove_assignment": "Remove this assignment?",
+        "confirm_delete_shift": "Delete this shift?"
     },
     "availability": {
         "title": "Availability",

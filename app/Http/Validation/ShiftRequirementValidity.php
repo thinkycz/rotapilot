@@ -32,6 +32,42 @@ class ShiftRequirementValidity
     }
 
     /**
+     * Create rules.
+     *
+     * @return array<string, mixed>
+     */
+    public function create(): array
+    {
+        return [
+            'date' => [$this->date()],
+            'start_time' => [$this->startTime()],
+            'end_time' => [$this->endTime()],
+            'required_employee_count' => [$this->requiredEmployeeCount()],
+            'role_label' => [$this->roleLabel()],
+            'note' => [$this->note()],
+            'source' => [$this->source()],
+        ];
+    }
+
+    /**
+     * Update rules.
+     *
+     * @return array<string, mixed>
+     */
+    public function update(): array
+    {
+        return [
+            'date' => [$this->date()],
+            'start_time' => [$this->startTime()],
+            'end_time' => [$this->endTime()],
+            'required_employee_count' => [$this->requiredEmployeeCount()],
+            'role_label' => [$this->roleLabel()],
+            'note' => [$this->note()],
+            'source' => [$this->source()],
+        ];
+    }
+
+    /**
      * Date validation.
      */
     public function date(): Validity

@@ -16,6 +16,11 @@ use Inertia\Response;
 class ConflictIndexController
 {
     /**
+     * Page size for the index view.
+     */
+    public const int TAKE = 25;
+
+    /**
      * Show the conflicts page.
      */
     public function __invoke(Request $request): Response

@@ -9,6 +9,8 @@
 .env
 .env.backup
 .env.production
+.env.testing
+.env.*.local
 .phpunit.result.cache
 Homestead.json
 Homestead.yaml
@@ -17,6 +19,7 @@ npm-debug.log
 yarn-error.log
 /.fleet
 /.idea
+/.trae
 /.vscode
 
 # generic
@@ -59,5 +62,5 @@ yarn-error.log
 # coverage
 /build
 
-# Project exclude paths
-/bootstrap/cache/
+# bootstrap
+/bootstrap/cache/*.php

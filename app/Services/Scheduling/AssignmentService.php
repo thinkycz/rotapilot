@@ -60,22 +60,10 @@ class AssignmentService
                 continue;
             }
 
-            $assignment = new ShiftAssignment();
-            $assignment->forceFill([
-                'shift_requirement_id' => $requirement->getKey(),
-                'employee_profile_id' => $employee->getKey(),
-                'status' => ShiftAssignmentStatusEnum::Draft->value,
-                'source' => 'manual',
-                'assigned_by' => $actor->getKey(),
-            ])->save();
-
-            $created[] = $assignment;
+            $created[] = $this->createDraftAssignment($requirement, $employee, $actor, 'manual');
         }
 
-        $schedule = $requirement->schedule;
-        if ($schedule instanceof Schedule) {
-            $this->conflicts->recompute($schedule);
-        }
+        $this->recomputeForRequirement($requirement);
 
         return $created;
     }
@@ -90,19 +78,9 @@ class AssignmentService
             return $existing;
         }
 
-        $assignment = new ShiftAssignment();
-        $assignment->forceFill([
-            'shift_requirement_id' => $requirement->getKey(),
-            'employee_profile_id' => $employee->getKey(),
-            'status' => ShiftAssignmentStatusEnum::Draft->value,
-            'source' => 'manual',
-            'assigned_by' => $actor->getKey(),
-        ])->save();
+        $assignment = $this->createDraftAssignment($requirement, $employee, $actor, 'manual');
 
-        $schedule = $requirement->schedule;
-        if ($schedule instanceof Schedule) {
-            $this->conflicts->recompute($schedule);
-        }
+        $this->recomputeForRequirement($requirement);
 
         return $assignment;
     }
@@ -112,8 +90,40 @@ class AssignmentService
      */
     public function unassign(ShiftAssignment $assignment): void
     {
+        $requirement = $assignment->shiftRequirement;
         $assignment->delete();
-        $schedule = $assignment->shiftRequirement?->schedule;
+        if ($requirement instanceof ShiftRequirement) {
+            $this->recomputeForRequirement($requirement);
+        }
+    }
+
+    /**
+     * Create a draft ShiftAssignment row.
+     */
+    private function createDraftAssignment(
+        ShiftRequirement $requirement,
+        EmployeeProfile $employee,
+        User $actor,
+        string $source,
+    ): ShiftAssignment {
+        $assignment = new ShiftAssignment();
+        $assignment->forceFill([
+            'shift_requirement_id' => $requirement->getKey(),
+            'employee_profile_id' => $employee->getKey(),
+            'status' => ShiftAssignmentStatusEnum::Draft->value,
+            'source' => $source,
+            'assigned_by' => $actor->getKey(),
+        ])->save();
+
+        return $assignment;
+    }
+
+    /**
+     * Load the parent schedule and trigger a conflict recompute.
+     */
+    private function recomputeForRequirement(ShiftRequirement $requirement): void
+    {
+        $schedule = Schedule::query()->find($requirement->getScheduleId());
         if ($schedule instanceof Schedule) {
             $this->conflicts->recompute($schedule);
         }

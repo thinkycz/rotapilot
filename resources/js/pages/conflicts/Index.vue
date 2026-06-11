@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm, router } from '@inertiajs/vue3';
-import { AlertCircle, Sparkles, X, Check } from '@lucide/vue';
+import { Sparkles, X, Check } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import { ref } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';

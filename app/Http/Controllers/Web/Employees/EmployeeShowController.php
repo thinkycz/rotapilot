@@ -6,7 +6,9 @@ namespace App\Http\Controllers\Web\Employees;
 
 use App\Models\EmployeeProfile;
 use App\Models\User;
+use App\Support\Authorization;
 use App\Support\Db;
+use App\Support\ModelFinder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,24 +22,11 @@ class EmployeeShowController
     {
         $user = User::mustAuth();
         $id = (int) $request->query('id', '0');
-
-        $row = EmployeeProfile::query()->getQuery()->where('id', $id)->first();
-        if ($row === null) {
-            \abort(404);
-        }
-        $employee = Db::hydrateOne($row, EmployeeProfile::class);
-        if ($employee === null) {
-            \abort(404);
-        }
+        $employee = ModelFinder::findOrAbort(EmployeeProfile::class, $id);
 
         $employee->loadMissing('user');
 
-        if (!$user->isAdmin() && !$user->isStoreManager()) {
-            $profile = $user->employeeProfile;
-            if (!$profile instanceof EmployeeProfile || $profile->getKey() !== $employee->getKey()) {
-                \abort(403);
-            }
-        }
+        Authorization::mustViewEmployee($user, $employee);
 
         $storeRows = $employee->stores()->getQuery()->orderBy('name')->get();
         $storeList = Db::hydrate($storeRows, \App\Models\Store::class);
@@ -51,7 +40,7 @@ class EmployeeShowController
                 'role_label' => $employee->getRoleLabel(),
                 'max_hours_per_week' => $employee->getMaxHoursPerWeek(),
                 'is_active' => $employee->getIsActive(),
-                'has_login' => $employee->getUser() instanceof User,
+                'has_login' => $employee->hasLoginAccount(),
             ],
             'stores' => $storeList->map(static fn(\App\Models\Store $s): array => [
                 'id' => $s->getKey(),

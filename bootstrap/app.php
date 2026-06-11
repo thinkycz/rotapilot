@@ -63,6 +63,11 @@ return Application::configure(basePath: \dirname(__DIR__))
             ->hourly();
     })
     ->withExceptions(static function (Exceptions $exceptions): void {
+        $exceptions->map(
+            Illuminate\Database\Eloquent\ModelNotFoundException::class,
+            static fn(Illuminate\Database\Eloquent\ModelNotFoundException $exception): Symfony\Component\HttpKernel\Exception\NotFoundHttpException => new Symfony\Component\HttpKernel\Exception\NotFoundHttpException($exception->getMessage(), $exception),
+        );
+
         $exceptions->render(static function (Illuminate\Validation\ValidationException $exception, Illuminate\Http\Request $request): mixed {
             if ($request->header('X-Inertia') !== 'true') {
                 return null;

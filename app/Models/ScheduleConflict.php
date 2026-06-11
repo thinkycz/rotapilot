@@ -10,19 +10,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Thinkycz\LaravelCore\Models\BaseModel;
 
-/**
- * @property int $id
- * @property int $schedule_id
- * @property int|null $shift_requirement_id
- * @property int|null $employee_profile_id
- * @property string $type
- * @property string $severity
- * @property string $message
- * @property string|null $suggested_fix
- * @property \Illuminate\Support\Carbon|null $resolved_at
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
- */
 class ScheduleConflict extends BaseModel
 {
     /**
@@ -43,6 +30,16 @@ class ScheduleConflict extends BaseModel
     public static function scopeSearch(Builder $builder, string $search): void
     {
         $builder->getQuery()->where($builder->qualifyColumn('id'), (int) $search);
+    }
+
+    /**
+     * Scope to unresolved conflicts.
+     *
+     * @param Builder<static> $builder
+     */
+    public static function scopeUnresolved(Builder $builder): void
+    {
+        $builder->getQuery()->whereNull($builder->qualifyColumn('resolved_at'));
     }
 
     /**
@@ -129,6 +126,30 @@ class ScheduleConflict extends BaseModel
     public function employeeProfile(): BelongsTo
     {
         return $this->belongsTo(EmployeeProfile::class);
+    }
+
+    /**
+     * Employee profile id getter.
+     */
+    public function getEmployeeProfileId(): int|null
+    {
+        return $this->assertNullableInt('employee_profile_id');
+    }
+
+    /**
+     * Shift requirement id getter.
+     */
+    public function getShiftRequirementId(): int|null
+    {
+        return $this->assertNullableInt('shift_requirement_id');
+    }
+
+    /**
+     * Whether the conflict is critical.
+     */
+    public function isCritical(): bool
+    {
+        return $this->getSeverity() === ConflictSeverityEnum::Critical;
     }
 
     /**

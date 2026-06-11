@@ -11,7 +11,7 @@ use App\Models\ShiftRequirement;
 use App\Models\User;
 use App\Services\Scheduling\ConflictDetectionService;
 use App\Support\Authorization;
-use App\Support\Db;
+use App\Support\ModelFinder;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
@@ -30,14 +30,7 @@ class ShiftRequirementStoreController
     public function __invoke(Request $request): SymfonyResponse
     {
         $scheduleId = (int) $request->query('schedule_id', '0');
-        $row = Schedule::query()->getQuery()->getQuery()->where('id', $scheduleId)->first();
-        if ($row === null) {
-            \abort(404);
-        }
-        $schedule = Db::hydrateOne($row, Schedule::class);
-        if ($schedule === null) {
-            \abort(404);
-        }
+        $schedule = ModelFinder::findOrAbort(Schedule::class, $scheduleId);
 
         if (!Authorization::canManageSchedule(User::mustAuth(), $schedule)) {
             \abort(403);

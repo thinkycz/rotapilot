@@ -7,7 +7,7 @@ namespace App\Http\Controllers\Web\Schedules;
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Http\Validation\ScheduleValidity;
 use App\Models\Schedule;
-use App\Support\Db;
+use App\Support\ModelFinder;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
@@ -21,14 +21,7 @@ class ScheduleUpdateController
     public function __invoke(Request $request): SymfonyResponse
     {
         $id = (int) $request->query('id', '0');
-        $row = Schedule::query()->getQuery()->getQuery()->where('id', $id)->first();
-        if ($row === null) {
-            \abort(404);
-        }
-        $schedule = Db::hydrateOne($row, Schedule::class);
-        if ($schedule === null) {
-            \abort(404);
-        }
+        $schedule = ModelFinder::findOrAbort(Schedule::class, $id);
 
         $validity = ScheduleValidity::inject();
         $validated = $this->validateRequest($request, [

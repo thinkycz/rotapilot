@@ -7,10 +7,12 @@ namespace App\Http\Controllers\Web\Settings;
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Thinkycz\LaravelCore\Support\Resolver;
+use Thinkycz\LaravelCore\Support\Thrower;
+use Thinkycz\LaravelCore\Support\Typer;
 use Thinkycz\LaravelCore\Validation\AuthValidity;
 
 class PasswordController
@@ -40,24 +42,22 @@ class PasswordController
         ]);
 
         if ($validated->assertString('new_password') !== $validated->assertString('new_password_confirmation')) {
-            throw ValidationException::withMessages([
-                'new_password_confirmation' => \__('auth.password_mismatch'),
-            ]);
+            Thrower::default()->message('new_password_confirmation', Typer::assertString(\__('auth.password_mismatch')))->throw();
         }
 
         $hasher = Resolver::resolveHasher();
 
         if (!$hasher->check($validated->assertString('password'), $user->getAuthPassword())) {
-            throw ValidationException::withMessages([
-                'password' => \__('auth.password'),
-            ]);
+            Thrower::default()->message('password', Typer::assertString(\__('auth.password')))->throw();
         }
 
-        $user->forceFill([
-            'password' => $validated->assertString('new_password'),
-        ])->save();
+        DB::transaction(static function () use ($user, $validated): void {
+            $user->forceFill([
+                'password' => $validated->assertString('new_password'),
+            ])->save();
 
-        $user->databaseTokens()->getQuery()->delete();
+            $user->databaseTokens()->getQuery()->delete();
+        });
 
         $request->session()->flash('success', \__('Password updated.'));
 

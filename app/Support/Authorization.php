@@ -215,4 +215,80 @@ class Authorization
             ->values()
             ->all();
     }
+
+    /**
+     * Check whether the user can view the given employee profile.
+     *
+     * Admins and store managers can view any employee they manage
+     * (i.e. any employee that shares at least one of the manager's
+     * stores). Employees can view their own profile.
+     */
+    public static function canViewEmployee(User $user, EmployeeProfile $employee): bool
+    {
+        if ($user->isAdmin() || $user->isStoreManager()) {
+            $storeIds = static::managedStores($user)->pluck('id')->all();
+            if (\count($storeIds) === 0) {
+                return false;
+            }
+
+            $employee->loadMissing('stores');
+
+            return $employee->stores->contains(static fn(Store $s): bool => \in_array($s->getKey(), $storeIds, true));
+        }
+
+        if ($user->isEmployee()) {
+            $profile = $user->employeeProfile;
+
+            return $profile instanceof EmployeeProfile &&
+                $profile->getKey() === $employee->getKey();
+        }
+
+        return false;
+    }
+
+    /**
+     * Throw if the user cannot view the given employee profile.
+     */
+    public static function mustViewEmployee(User $user, EmployeeProfile $employee): void
+    {
+        if (!static::canViewEmployee($user, $employee)) {
+            throw new AccessDeniedHttpException('You cannot view this employee.');
+        }
+    }
+
+    /**
+     * Check whether the user can create a store.
+     */
+    public static function canCreateStore(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    /**
+     * Throw if the user cannot create a store.
+     */
+    public static function mustCreateStore(User $user): void
+    {
+        if (!static::canCreateStore($user)) {
+            throw new AccessDeniedHttpException('You cannot create a store.');
+        }
+    }
+
+    /**
+     * Check whether the user can delete a store.
+     */
+    public static function canDeleteStore(User $user, Store $store): bool
+    {
+        return $user->isAdmin();
+    }
+
+    /**
+     * Throw if the user cannot delete the given store.
+     */
+    public static function mustDeleteStore(User $user, Store $store): void
+    {
+        if (!static::canDeleteStore($user, $store)) {
+            throw new AccessDeniedHttpException('You cannot delete this store.');
+        }
+    }
 }

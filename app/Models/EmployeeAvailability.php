@@ -9,21 +9,8 @@ use App\Enums\AvailabilityTypeEnum;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Thinkycz\LaravelCore\Models\BaseModel;
+use Thinkycz\LaravelCore\Support\Typer;
 
-/**
- * @property int $id
- * @property int $employee_profile_id
- * @property int|null $store_id
- * @property string $date
- * @property string|null $start_time
- * @property string|null $end_time
- * @property string $type
- * @property string|null $note
- * @property string $source
- * @property int|null $created_by
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
- */
 class EmployeeAvailability extends BaseModel
 {
     /**
@@ -136,6 +123,18 @@ class EmployeeAvailability extends BaseModel
     public function store(): BelongsTo
     {
         return $this->belongsTo(Store::class);
+    }
+
+    /**
+     * Store getter.
+     */
+    public function getStore(): Store|null
+    {
+        if (!$this->relationLoaded('store')) {
+            return null;
+        }
+
+        return Typer::assertNullableInstance($this->getRelationValue('store'), Store::class);
     }
 
     /**

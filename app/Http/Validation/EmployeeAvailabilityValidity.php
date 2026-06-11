@@ -33,6 +33,40 @@ class EmployeeAvailabilityValidity
     }
 
     /**
+     * Create rules.
+     *
+     * @return array<string, mixed>
+     */
+    public function create(): array
+    {
+        return [
+            'date' => [$this->date()],
+            'type' => [$this->type()],
+            'source' => [$this->source()],
+            'start_time' => [$this->startTime()],
+            'end_time' => [$this->endTime()],
+            'note' => [$this->note()],
+        ];
+    }
+
+    /**
+     * Update rules.
+     *
+     * @return array<string, mixed>
+     */
+    public function update(): array
+    {
+        return [
+            'date' => [$this->date()],
+            'type' => [$this->type()],
+            'source' => [$this->source()],
+            'start_time' => [$this->startTime()],
+            'end_time' => [$this->endTime()],
+            'note' => [$this->note()],
+        ];
+    }
+
+    /**
      * Date validation.
      */
     public function date(): Validity

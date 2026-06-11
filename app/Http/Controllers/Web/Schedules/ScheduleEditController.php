@@ -9,7 +9,7 @@ use App\Models\Schedule;
 use App\Models\Store;
 use App\Models\User;
 use App\Support\Authorization;
-use App\Support\Db;
+use App\Support\ModelFinder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -25,14 +25,7 @@ class ScheduleEditController
     {
         $user = User::mustAuth();
         $id = (int) $request->query('id', '0');
-        $row = Schedule::query()->getQuery()->getQuery()->where('id', $id)->first();
-        if ($row === null) {
-            \abort(404);
-        }
-        $schedule = Db::hydrateOne($row, Schedule::class);
-        if ($schedule === null) {
-            \abort(404);
-        }
+        $schedule = ModelFinder::findOrAbort(Schedule::class, $id);
 
         $stores = Authorization::managedStores($user);
 

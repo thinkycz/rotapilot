@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\ShiftAssignmentStatusEnum;
 use App\Enums\ShiftSourceEnum;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -11,21 +12,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Thinkycz\LaravelCore\Models\BaseModel;
 
-/**
- * @property int $id
- * @property int $schedule_id
- * @property int $store_id
- * @property string $date
- * @property string $start_time
- * @property string $end_time
- * @property int $required_employee_count
- * @property string|null $role_label
- * @property string|null $note
- * @property string $source
- * @property int $created_by
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
- */
 class ShiftRequirement extends BaseModel
 {
     /**
@@ -169,8 +155,8 @@ class ShiftRequirement extends BaseModel
      */
     public function getAssignedCount(): int
     {
-        $assignments = $this->assignments()->getQuery()
-            ->where('status', '!=', 'cancelled')
+        $assignments = $this->assignments()
+            ->where('status', '!=', ShiftAssignmentStatusEnum::Cancelled->value)
             ->get();
 
         return \count($assignments);

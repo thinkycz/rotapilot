@@ -12,6 +12,7 @@ use App\Services\Scheduling\AssignmentService;
 use App\Services\Scheduling\ConflictDetectionService;
 use App\Support\Authorization;
 use App\Support\Db;
+use App\Support\ModelFinder;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
@@ -33,14 +34,7 @@ class ShiftAssignmentDestroyController
     public function __invoke(Request $request): SymfonyResponse
     {
         $id = (int) $request->query('id', '0');
-        $row = ShiftAssignment::query()->getQuery()->getQuery()->where('id', $id)->first();
-        if ($row === null) {
-            \abort(404);
-        }
-        $assignment = Db::hydrateOne($row, ShiftAssignment::class);
-        if ($assignment === null) {
-            \abort(404);
-        }
+        $assignment = ModelFinder::findOrAbort(ShiftAssignment::class, $id);
 
         $req = $assignment->getShiftRequirement();
         if ($req !== null) {

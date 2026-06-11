@@ -32,6 +32,36 @@ class ScheduleValidity
     }
 
     /**
+     * Create rules.
+     *
+     * @return array<string, mixed>
+     */
+    public function create(): array
+    {
+        return [
+            'name' => [$this->name()],
+            'period_start' => [$this->periodStart()],
+            'period_end' => [$this->periodEnd()],
+            'status' => [$this->status()],
+        ];
+    }
+
+    /**
+     * Update rules.
+     *
+     * @return array<string, mixed>
+     */
+    public function update(): array
+    {
+        return [
+            'name' => [$this->name()],
+            'period_start' => [$this->periodStart()],
+            'period_end' => [$this->periodEnd()],
+            'status' => [$this->status()],
+        ];
+    }
+
+    /**
      * Name validation.
      */
     public function name(): Validity
