@@ -32,7 +32,7 @@ return new class extends Migration {
             $table->text('note')->nullable();
             $table->timestamps();
 
-            $table->unique(['shift_requirement_id', 'employee_profile_id']);
+            $table->unique(['shift_requirement_id', 'employee_profile_id'], 'shift_assignments_unique');
         });
     }
 };
