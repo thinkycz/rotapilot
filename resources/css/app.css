@@ -1,0 +1,56 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.ts';
+@source '../**/*.vue';
+
+@theme {
+    --color-primary: #00685f;
+    --color-primary-container: #008378;
+    --color-primary-fixed: #91f4e6;
+    --color-primary-fixed-dim: #74d7ca;
+    --color-surface-bg: #f5faf8;
+    --color-surface-container: #eaefed;
+    --color-surface-container-low: #f0f5f2;
+    --color-surface-container-lowest: #ffffff;
+    --color-surface-bright: #f6faf8;
+    --color-on-surface: #171d1c;
+    --color-on-surface-variant: #3d4947;
+    --color-on-primary-container: #ffffff;
+    --color-secondary-cyan: #006780;
+    --color-tertiary-blue: #316bf3;
+    --color-outline-glass: rgba(109, 122, 119, 0.15);
+    --color-error-red: #ba1a1a;
+
+    --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    --font-heading: 'Hanken Grotesk', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+    * {
+        box-sizing: border-box;
+        border-color: #e4e4e7;
+    }
+
+    body {
+        min-height: 100vh;
+        margin: 0;
+        background: var(--color-surface-bg);
+        color: var(--color-on-surface);
+        font-family: var(--font-sans);
+    }
+
+    button,
+    input,
+    select {
+        font: inherit;
+    }
+}
+
+.glass-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(8px);
+}

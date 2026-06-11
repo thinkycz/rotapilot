@@ -1,0 +1,45 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\Web\Employees;
+
+use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
+use App\Models\EmployeeProfile;
+use App\Models\User;
+use App\Support\Authorization;
+use App\Support\Db;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class EmployeeIndexController
+{
+    use ValidatesWebRequests;
+
+    /**
+     * Show the employees list.
+     */
+    public function __invoke(Request $request): Response
+    {
+        $user = User::mustAuth();
+        $query = Authorization::managedEmployeesQuery($user);
+
+        $employees = $query->getQuery()->orderBy('name')->get();
+        $rows = Db::hydrate($employees, EmployeeProfile::class);
+        $rows->loadMissing('user');
+
+        return Inertia::render('employees/Index', [
+            'employees' => $rows->map(static fn(EmployeeProfile $e): array => [
+                'id' => $e->getKey(),
+                'name' => $e->getName(),
+                'email' => $e->getEmail(),
+                'phone' => $e->getPhone(),
+                'role_label' => $e->getRoleLabel(),
+                'max_hours_per_week' => $e->getMaxHoursPerWeek(),
+                'is_active' => $e->getIsActive(),
+                'has_login' => $e->getUser() instanceof User,
+            ])->values()->all(),
+        ]);
+    }
+}

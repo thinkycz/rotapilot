@@ -1,0 +1,1075 @@
+parameters:
+	ignoreErrors:
+		-
+			rawMessage: 'Method App\Ai\Agents\AvailabilityParserAgent::instructions() never returns Stringable so it can be removed from the return type.'
+			identifier: return.unusedType
+			count: 1
+			path: app/Ai/Agents/AvailabilityParserAgent.php
+
+		-
+			rawMessage: 'Cannot call method copy() on Carbon\Carbon|null.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Ai/Agents/FakeSchedulePlannerAgent.php
+
+		-
+			rawMessage: 'Method App\Ai\Agents\FakeSchedulePlannerAgent::prompt() has parameter $attachments with no value type specified in iterable type array.'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Ai/Agents/FakeSchedulePlannerAgent.php
+
+		-
+			rawMessage: 'Parameter #1 $date of method Carbon\Carbon::lte() expects DateTimeInterface|string, Carbon\Carbon|null given.'
+			identifier: argument.type
+			count: 1
+			path: app/Ai/Agents/FakeSchedulePlannerAgent.php
+
+		-
+			rawMessage: 'Return type (array<string, mixed>) of method App\Ai\Agents\FakeSchedulePlannerAgent::schema() should be covariant with return type (array<string, Illuminate\JsonSchema\Types\Type>) of method Laravel\Ai\Contracts\HasStructuredOutput::schema()'
+			identifier: method.childReturnType
+			count: 1
+			path: app/Ai/Agents/FakeSchedulePlannerAgent.php
+
+		-
+			rawMessage: 'Method App\Ai\Agents\SchedulePlannerAgent::instructions() never returns Stringable so it can be removed from the return type.'
+			identifier: return.unusedType
+			count: 1
+			path: app/Ai/Agents/SchedulePlannerAgent.php
+
+		-
+			rawMessage: 'Parameter #1 $message of class Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException constructor expects string, (array|string) given.'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/Auth/RegisterController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Query\Builder::getQuery().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerApplyPreviewController.php
+
+		-
+			rawMessage: Cannot access offset 'date' on mixed.
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerApplyPreviewController.php
+
+		-
+			rawMessage: Cannot access offset 'end_time' on mixed.
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerApplyPreviewController.php
+
+		-
+			rawMessage: Cannot access offset 'note' on mixed.
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerApplyPreviewController.php
+
+		-
+			rawMessage: Cannot access offset 'required_employee_count' on mixed.
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerApplyPreviewController.php
+
+		-
+			rawMessage: Cannot access offset 'role_label' on mixed.
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerApplyPreviewController.php
+
+		-
+			rawMessage: Cannot access offset 'start_time' on mixed.
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerApplyPreviewController.php
+
+		-
+			rawMessage: 'Cannot call method first() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerApplyPreviewController.php
+
+		-
+			rawMessage: 'Cannot call method getKey() on App\Models\Schedule|null.'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Web/Ai/PlannerApplyPreviewController.php
+
+		-
+			rawMessage: 'Cannot call method where() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerApplyPreviewController.php
+
+		-
+			rawMessage: Cannot cast mixed to int.
+			identifier: cast.int
+			count: 2
+			path: app/Http/Controllers/Web/Ai/PlannerApplyPreviewController.php
+
+		-
+			rawMessage: Cannot cast mixed to string.
+			identifier: cast.string
+			count: 10
+			path: app/Http/Controllers/Web/Ai/PlannerApplyPreviewController.php
+
+		-
+			rawMessage: 'Parameter #1 $row of static method App\Support\Db::hydrateOne() expects object|null, mixed given.'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerApplyPreviewController.php
+
+		-
+			rawMessage: 'Parameter #1 $schedule of method App\Services\Scheduling\ConflictDetectionService::recompute() expects App\Models\Schedule, App\Models\Schedule|null given.'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerApplyPreviewController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Query\Builder::getQuery().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerIndexController.php
+
+		-
+			rawMessage: 'Cannot call method first() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerIndexController.php
+
+		-
+			rawMessage: 'Cannot call method where() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerIndexController.php
+
+		-
+			rawMessage: 'Cannot cast (array|string) to string.'
+			identifier: cast.string
+			count: 3
+			path: app/Http/Controllers/Web/Ai/PlannerIndexController.php
+
+		-
+			rawMessage: 'Parameter #1 $row of static method App\Support\Db::hydrateOne() expects object|null, mixed given.'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerIndexController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Query\Builder::getQuery().'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/Web/Ai/PlannerMessageController.php
+
+		-
+			rawMessage: 'Cannot call method first() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerMessageController.php
+
+		-
+			rawMessage: 'Cannot call method format() on Carbon\Carbon|null.'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Web/Ai/PlannerMessageController.php
+
+		-
+			rawMessage: 'Cannot call method from() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerMessageController.php
+
+		-
+			rawMessage: 'Cannot call method get() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerMessageController.php
+
+		-
+			rawMessage: 'Cannot call method select() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerMessageController.php
+
+		-
+			rawMessage: 'Cannot call method where() on mixed.'
+			identifier: method.nonObject
+			count: 3
+			path: app/Http/Controllers/Web/Ai/PlannerMessageController.php
+
+		-
+			rawMessage: 'Cannot call method whereIn() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerMessageController.php
+
+		-
+			rawMessage: Cannot cast mixed to int.
+			identifier: cast.int
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerMessageController.php
+
+		-
+			rawMessage: Cannot cast mixed to string.
+			identifier: cast.string
+			count: 4
+			path: app/Http/Controllers/Web/Ai/PlannerMessageController.php
+
+		-
+			rawMessage: 'Parameter #1 $row of static method App\Support\Db::hydrateOne() expects object|null, mixed given.'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerMessageController.php
+
+		-
+			rawMessage: 'Parameter #1 $rows of static method App\Support\Db::hydrate() expects iterable<int, object>, mixed given.'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerMessageController.php
+
+		-
+			rawMessage: 'Parameter #2 $periodStart of method App\Services\Ai\ScheduleAiService::generate() expects Carbon\Carbon, Carbon\Carbon|null given.'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerMessageController.php
+
+		-
+			rawMessage: 'Parameter #3 $periodEnd of method App\Services\Ai\ScheduleAiService::generate() expects Carbon\Carbon, Carbon\Carbon|null given.'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/Ai/PlannerMessageController.php
+
+		-
+			rawMessage: 'Cannot call method startOfMonth() on Carbon\Carbon|null.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Availability/AvailabilityIndexController.php
+
+		-
+			rawMessage: 'Cannot cast (array|string) to string.'
+			identifier: cast.string
+			count: 1
+			path: app/Http/Controllers/Web/Availability/AvailabilityIndexController.php
+
+		-
+			rawMessage: Cannot cast mixed to int.
+			identifier: cast.int
+			count: 2
+			path: app/Http/Controllers/Web/Availability/AvailabilityIndexController.php
+
+		-
+			rawMessage: Cannot cast mixed to string.
+			identifier: cast.string
+			count: 4
+			path: app/Http/Controllers/Web/Availability/AvailabilityIndexController.php
+
+		-
+			rawMessage: Short ternary operator is not allowed. Use null coalesce operator if applicable or consider using long ternary.
+			identifier: ternary.shortNotAllowed
+			count: 1
+			path: app/Http/Controllers/Web/Availability/AvailabilityIndexController.php
+
+		-
+			rawMessage: Cannot cast mixed to int.
+			identifier: cast.int
+			count: 1
+			path: app/Http/Controllers/Web/Availability/AvailabilityParseAiController.php
+
+		-
+			rawMessage: Cannot cast mixed to string.
+			identifier: cast.string
+			count: 1
+			path: app/Http/Controllers/Web/Availability/AvailabilityParseAiController.php
+
+		-
+			rawMessage: 'Offset 2 might not exist on array{0: string, 1: non-falsy-string, 2?: non-falsy-string, 3?: non-falsy-string, 4?: non-falsy-string, 5?: non-falsy-string}.'
+			identifier: offsetAccess.notFound
+			count: 2
+			path: app/Http/Controllers/Web/Availability/AvailabilityParseAiController.php
+
+		-
+			rawMessage: 'Offset 3 might not exist on array{0: string, 1: non-falsy-string, 2?: non-falsy-string, 3?: non-falsy-string, 4?: non-falsy-string, 5?: non-falsy-string}.'
+			identifier: offsetAccess.notFound
+			count: 2
+			path: app/Http/Controllers/Web/Availability/AvailabilityParseAiController.php
+
+		-
+			rawMessage: 'Only booleans are allowed in an if condition, int<0, max>|false given.'
+			identifier: if.condNotBoolean
+			count: 2
+			path: app/Http/Controllers/Web/Availability/AvailabilityParseAiController.php
+
+		-
+			rawMessage: 'Strict comparison using !== between non-falsy-string and '''' will always evaluate to true.'
+			identifier: notIdentical.alwaysTrue
+			count: 2
+			path: app/Http/Controllers/Web/Availability/AvailabilityParseAiController.php
+
+		-
+			rawMessage: 'Strict comparison using === between non-falsy-string and null will always evaluate to false.'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: app/Http/Controllers/Web/Availability/AvailabilityParseAiController.php
+
+		-
+			rawMessage: Cannot cast mixed to int.
+			identifier: cast.int
+			count: 2
+			path: app/Http/Controllers/Web/Availability/AvailabilityStoreController.php
+
+		-
+			rawMessage: 'Cannot call method startOfMonth() on Carbon\Carbon|null.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Calendar/MyCalendarController.php
+
+		-
+			rawMessage: 'Cannot cast (array|string) to string.'
+			identifier: cast.string
+			count: 1
+			path: app/Http/Controllers/Web/Calendar/MyCalendarController.php
+
+		-
+			rawMessage: Cannot cast mixed to int.
+			identifier: cast.int
+			count: 8
+			path: app/Http/Controllers/Web/Calendar/MyCalendarController.php
+
+		-
+			rawMessage: Cannot cast mixed to string.
+			identifier: cast.string
+			count: 6
+			path: app/Http/Controllers/Web/Calendar/MyCalendarController.php
+
+		-
+			rawMessage: 'Construct empty() is not allowed. Use more strict comparison.'
+			identifier: empty.notAllowed
+			count: 3
+			path: app/Http/Controllers/Web/Calendar/MyCalendarController.php
+
+		-
+			rawMessage: 'Dynamic call to static method Illuminate\Database\Eloquent\Builder<App\Models\Store>::pluck().'
+			identifier: staticMethod.dynamicCall
+			count: 1
+			path: app/Http/Controllers/Web/Calendar/MyCalendarController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Query\Builder::getQuery().'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/Web/Conflicts/ConflictAskAiController.php
+
+		-
+			rawMessage: 'Cannot call method first() on mixed.'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Web/Conflicts/ConflictAskAiController.php
+
+		-
+			rawMessage: 'Cannot call method where() on mixed.'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Web/Conflicts/ConflictAskAiController.php
+
+		-
+			rawMessage: 'Parameter #1 $row of static method App\Support\Db::hydrateOne() expects object|null, mixed given.'
+			identifier: argument.type
+			count: 2
+			path: app/Http/Controllers/Web/Conflicts/ConflictAskAiController.php
+
+		-
+			rawMessage: 'Call to an undefined method App\Models\ScheduleConflict::getEmployeeProfileId().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/Conflicts/ConflictIndexController.php
+
+		-
+			rawMessage: 'Call to an undefined method App\Models\ScheduleConflict::getShiftRequirementId().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/Conflicts/ConflictIndexController.php
+
+		-
+			rawMessage: 'Cannot call method from() on mixed.'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Web/Conflicts/ConflictIndexController.php
+
+		-
+			rawMessage: 'Cannot call method select() on mixed.'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Web/Conflicts/ConflictIndexController.php
+
+		-
+			rawMessage: 'Cannot call method whereIn() on mixed.'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Web/Conflicts/ConflictIndexController.php
+
+		-
+			rawMessage: 'Parameter #1 $callback of method Illuminate\Support\Collection<int,stdClass>::map() contains unresolvable type.'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Web/Conflicts/ConflictIndexController.php
+
+		-
+			rawMessage: 'Parameter #1 $callback of method Illuminate\Support\Collection<int,stdClass>::map() expects callable(stdClass, int): array{id: int, type: ''max_hours_exceeded''|''missing_availability''|''outside_business_hours''|''overlapping_shift''|''unavailable_employee''|''understaffed'', severity: ''critical''|''info''|''warning'', message: string, suggested_fix: string|null, shift_requirement_id: mixed, employee_profile_id: mixed}, Closure(App\Models\ScheduleConflict): array{id: int, type: ''max_hours_exceeded''|''missing_availability''|''outside_business_hours''|''overlapping_shift''|''unavailable_employee''|''understaffed'', severity: ''critical''|''info''|''warning'', message: string, suggested_fix: string|null, shift_requirement_id: mixed, employee_profile_id: mixed} given.'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/Conflicts/ConflictIndexController.php
+
+		-
+			rawMessage: 'Return type of call to method Illuminate\Support\Collection<int,array<string, mixed>>::all() contains unresolvable type.'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Http/Controllers/Web/Conflicts/ConflictIndexController.php
+
+		-
+			rawMessage: 'Return type of call to method Illuminate\Support\Collection<int,array<string, mixed>>::values() contains unresolvable type.'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Http/Controllers/Web/Conflicts/ConflictIndexController.php
+
+		-
+			rawMessage: 'Return type of call to method Illuminate\Support\Collection<int,stdClass>::map() contains unresolvable type.'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Http/Controllers/Web/Conflicts/ConflictIndexController.php
+
+		-
+			rawMessage: Short ternary operator is not allowed. Use null coalesce operator if applicable or consider using long ternary.
+			identifier: ternary.shortNotAllowed
+			count: 2
+			path: app/Http/Controllers/Web/Conflicts/ConflictIndexController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Query\Builder::getQuery().'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/Web/Conflicts/ConflictResolveController.php
+
+		-
+			rawMessage: 'Cannot call method first() on mixed.'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Web/Conflicts/ConflictResolveController.php
+
+		-
+			rawMessage: 'Cannot call method where() on mixed.'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Web/Conflicts/ConflictResolveController.php
+
+		-
+			rawMessage: 'Parameter #1 $row of static method App\Support\Db::hydrateOne() expects object|null, mixed given.'
+			identifier: argument.type
+			count: 2
+			path: app/Http/Controllers/Web/Conflicts/ConflictResolveController.php
+
+		-
+			rawMessage: 'Cannot call method from() on mixed.'
+			identifier: method.nonObject
+			count: 3
+			path: app/Http/Controllers/Web/DashboardController.php
+
+		-
+			rawMessage: 'Cannot call method select() on mixed.'
+			identifier: method.nonObject
+			count: 3
+			path: app/Http/Controllers/Web/DashboardController.php
+
+		-
+			rawMessage: 'Cannot call method whereBetween() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/DashboardController.php
+
+		-
+			rawMessage: 'Cannot call method whereIn() on mixed.'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Web/DashboardController.php
+
+		-
+			rawMessage: 'Parameter #1 $rows of static method App\Support\Db::hydrate() expects iterable<int, object>, Illuminate\Support\Collection<(int|string), mixed> given.'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/DashboardController.php
+
+		-
+			rawMessage: Short ternary operator is not allowed. Use null coalesce operator if applicable or consider using long ternary.
+			identifier: ternary.shortNotAllowed
+			count: 5
+			path: app/Http/Controllers/Web/DashboardController.php
+
+		-
+			rawMessage: 'Dynamic call to static method Illuminate\Database\Eloquent\Builder<App\Models\Store>::orderBy().'
+			identifier: staticMethod.dynamicCall
+			count: 1
+			path: app/Http/Controllers/Web/Employees/EmployeeShowController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Query\Builder::getQuery().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleArchiveController.php
+
+		-
+			rawMessage: 'Cannot call method first() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleArchiveController.php
+
+		-
+			rawMessage: 'Cannot call method where() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleArchiveController.php
+
+		-
+			rawMessage: 'Parameter #1 $row of static method App\Support\Db::hydrateOne() expects object|null, mixed given.'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleArchiveController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Query\Builder::getQuery().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleDestroyController.php
+
+		-
+			rawMessage: 'Cannot call method first() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleDestroyController.php
+
+		-
+			rawMessage: 'Cannot call method where() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleDestroyController.php
+
+		-
+			rawMessage: 'Parameter #1 $row of static method App\Support\Db::hydrateOne() expects object|null, mixed given.'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleDestroyController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Query\Builder::getQuery().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleEditController.php
+
+		-
+			rawMessage: 'Cannot call method first() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleEditController.php
+
+		-
+			rawMessage: 'Cannot call method where() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleEditController.php
+
+		-
+			rawMessage: 'Parameter #1 $row of static method App\Support\Db::hydrateOne() expects object|null, mixed given.'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleEditController.php
+
+		-
+			rawMessage: 'Dynamic call to static method Illuminate\Database\Eloquent\Builder<App\Models\ShiftRequirement>::count().'
+			identifier: staticMethod.dynamicCall
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleIndexController.php
+
+		-
+			rawMessage: Short ternary operator is not allowed. Use null coalesce operator if applicable or consider using long ternary.
+			identifier: ternary.shortNotAllowed
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleIndexController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Query\Builder::getQuery().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/SchedulePublishController.php
+
+		-
+			rawMessage: 'Cannot call method first() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/SchedulePublishController.php
+
+		-
+			rawMessage: 'Cannot call method where() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/SchedulePublishController.php
+
+		-
+			rawMessage: 'Parameter #1 $row of static method App\Support\Db::hydrateOne() expects object|null, mixed given.'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/SchedulePublishController.php
+
+		-
+			rawMessage: 'Call to an undefined method App\Models\ScheduleConflict::getEmployeeProfileId().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleShowController.php
+
+		-
+			rawMessage: 'Call to an undefined method App\Models\ScheduleConflict::getShiftRequirementId().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleShowController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Query\Builder::getQuery().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleShowController.php
+
+		-
+			rawMessage: 'Cannot call method employees() on App\Models\Store|null.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleShowController.php
+
+		-
+			rawMessage: 'Cannot call method first() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleShowController.php
+
+		-
+			rawMessage: 'Cannot call method where() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleShowController.php
+
+		-
+			rawMessage: 'Parameter #1 $callback of method Illuminate\Database\Eloquent\Collection<int,App\Models\ScheduleConflict>::map() contains unresolvable type.'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleShowController.php
+
+		-
+			rawMessage: 'Parameter #1 $row of static method App\Support\Db::hydrateOne() expects object|null, mixed given.'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleShowController.php
+
+		-
+			rawMessage: 'Property App\Http\Controllers\Web\Schedules\ScheduleShowController::$conflicts is never read, only written.'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleShowController.php
+
+		-
+			rawMessage: 'Return type of call to method Illuminate\Database\Eloquent\Collection<int,App\Models\ScheduleConflict>::map() contains unresolvable type.'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleShowController.php
+
+		-
+			rawMessage: 'Return type of call to method Illuminate\Support\Collection<int,array<string, mixed>>::all() contains unresolvable type.'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleShowController.php
+
+		-
+			rawMessage: 'Return type of call to method Illuminate\Support\Collection<int,array<string, mixed>>::values() contains unresolvable type.'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleShowController.php
+
+		-
+			rawMessage: Cannot cast mixed to int.
+			identifier: cast.int
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleStoreController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Query\Builder::getQuery().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleUpdateController.php
+
+		-
+			rawMessage: 'Cannot call method first() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleUpdateController.php
+
+		-
+			rawMessage: 'Cannot call method where() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleUpdateController.php
+
+		-
+			rawMessage: 'Parameter #1 $row of static method App\Support\Db::hydrateOne() expects object|null, mixed given.'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ScheduleUpdateController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Query\Builder::getQuery().'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/Web/Schedules/ShiftAssignmentDestroyController.php
+
+		-
+			rawMessage: 'Cannot call method first() on mixed.'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Web/Schedules/ShiftAssignmentDestroyController.php
+
+		-
+			rawMessage: 'Cannot call method where() on mixed.'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Web/Schedules/ShiftAssignmentDestroyController.php
+
+		-
+			rawMessage: 'Parameter #1 $row of static method App\Support\Db::hydrateOne() expects object|null, mixed given.'
+			identifier: argument.type
+			count: 2
+			path: app/Http/Controllers/Web/Schedules/ShiftAssignmentDestroyController.php
+
+		-
+			rawMessage: 'Property App\Http\Controllers\Web\Schedules\ShiftAssignmentDestroyController::$conflicts is never read, only written.'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ShiftAssignmentDestroyController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Query\Builder::getQuery().'
+			identifier: method.notFound
+			count: 3
+			path: app/Http/Controllers/Web/Schedules/ShiftAssignmentStoreController.php
+
+		-
+			rawMessage: 'Cannot call method first() on mixed.'
+			identifier: method.nonObject
+			count: 3
+			path: app/Http/Controllers/Web/Schedules/ShiftAssignmentStoreController.php
+
+		-
+			rawMessage: 'Cannot call method where() on mixed.'
+			identifier: method.nonObject
+			count: 3
+			path: app/Http/Controllers/Web/Schedules/ShiftAssignmentStoreController.php
+
+		-
+			rawMessage: Cannot cast mixed to int.
+			identifier: cast.int
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ShiftAssignmentStoreController.php
+
+		-
+			rawMessage: 'Parameter #1 $row of static method App\Support\Db::hydrateOne() expects object|null, mixed given.'
+			identifier: argument.type
+			count: 3
+			path: app/Http/Controllers/Web/Schedules/ShiftAssignmentStoreController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Query\Builder::getQuery().'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/Web/Schedules/ShiftAutoFillController.php
+
+		-
+			rawMessage: 'Cannot call method first() on mixed.'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Web/Schedules/ShiftAutoFillController.php
+
+		-
+			rawMessage: 'Cannot call method where() on mixed.'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Web/Schedules/ShiftAutoFillController.php
+
+		-
+			rawMessage: 'Parameter #1 $row of static method App\Support\Db::hydrateOne() expects object|null, mixed given.'
+			identifier: argument.type
+			count: 2
+			path: app/Http/Controllers/Web/Schedules/ShiftAutoFillController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Query\Builder::getQuery().'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/Web/Schedules/ShiftRequirementDestroyController.php
+
+		-
+			rawMessage: 'Cannot call method first() on mixed.'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Web/Schedules/ShiftRequirementDestroyController.php
+
+		-
+			rawMessage: 'Cannot call method where() on mixed.'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Web/Schedules/ShiftRequirementDestroyController.php
+
+		-
+			rawMessage: 'Parameter #1 $row of static method App\Support\Db::hydrateOne() expects object|null, mixed given.'
+			identifier: argument.type
+			count: 2
+			path: app/Http/Controllers/Web/Schedules/ShiftRequirementDestroyController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Query\Builder::getQuery().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ShiftRequirementStoreController.php
+
+		-
+			rawMessage: 'Cannot call method first() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ShiftRequirementStoreController.php
+
+		-
+			rawMessage: 'Cannot call method where() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ShiftRequirementStoreController.php
+
+		-
+			rawMessage: Cannot cast mixed to int.
+			identifier: cast.int
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ShiftRequirementStoreController.php
+
+		-
+			rawMessage: 'Parameter #1 $row of static method App\Support\Db::hydrateOne() expects object|null, mixed given.'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ShiftRequirementStoreController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Query\Builder::getQuery().'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/Web/Schedules/ShiftRequirementUpdateController.php
+
+		-
+			rawMessage: 'Cannot call method first() on mixed.'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Web/Schedules/ShiftRequirementUpdateController.php
+
+		-
+			rawMessage: 'Cannot call method where() on mixed.'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Web/Schedules/ShiftRequirementUpdateController.php
+
+		-
+			rawMessage: Cannot cast mixed to int.
+			identifier: cast.int
+			count: 1
+			path: app/Http/Controllers/Web/Schedules/ShiftRequirementUpdateController.php
+
+		-
+			rawMessage: 'Parameter #1 $row of static method App\Support\Db::hydrateOne() expects object|null, mixed given.'
+			identifier: argument.type
+			count: 2
+			path: app/Http/Controllers/Web/Schedules/ShiftRequirementUpdateController.php
+
+		-
+			rawMessage: 'Dynamic call to static method Illuminate\Database\Eloquent\Builder<App\Models\EmployeeProfile>::orderBy().'
+			identifier: staticMethod.dynamicCall
+			count: 1
+			path: app/Http/Controllers/Web/Stores/StoreShowController.php
+
+		-
+			rawMessage: 'Dynamic call to static method Illuminate\Database\Eloquent\Builder<App\Models\Schedule>::limit().'
+			identifier: staticMethod.dynamicCall
+			count: 1
+			path: app/Http/Controllers/Web/Stores/StoreShowController.php
+
+		-
+			rawMessage: 'Dynamic call to static method Illuminate\Database\Eloquent\Builder<App\Models\Schedule>::orderBy().'
+			identifier: staticMethod.dynamicCall
+			count: 1
+			path: app/Http/Controllers/Web/Stores/StoreShowController.php
+
+		-
+			rawMessage: 'Dynamic call to static method Illuminate\Database\Eloquent\Builder<App\Models\User>::orderBy().'
+			identifier: staticMethod.dynamicCall
+			count: 1
+			path: app/Http/Controllers/Web/Stores/StoreShowController.php
+
+		-
+			rawMessage: Cannot cast mixed to int.
+			identifier: cast.int
+			count: 1
+			path: app/Jobs/ApplyAiPreviewAction.php
+
+		-
+			rawMessage: Cannot cast mixed to string.
+			identifier: cast.string
+			count: 5
+			path: app/Jobs/ApplyAiPreviewAction.php
+
+		-
+			rawMessage: Anonymous function should return string but returns mixed.
+			identifier: return.type
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Eloquent\Model::getName().'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Query\Builder::getQuery().'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: 'Call to an undefined method object::prompt().'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: 'Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''.'
+			identifier: larastan.noEnvCallsOutsideOfConfig
+			count: 9
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: Cannot access an offset on mixed.
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: 'Cannot call method get() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: 'Cannot call method orderBy() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: 'Cannot call method whereIn() on mixed.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: Cannot cast mixed to string.
+			identifier: cast.string
+			count: 2
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: Casting to string something that's already string.
+			identifier: cast.useless
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: 'Dynamic call to static method Illuminate\Database\Eloquent\Builder<App\Models\EmployeeProfile>::pluck().'
+			identifier: staticMethod.dynamicCall
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: 'Method App\Services\Ai\ScheduleAiService::extractStructured() return type has no value type specified in iterable type array.'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: 'Method App\Services\Ai\ScheduleAiService::generate() has parameter $employees with generic class Illuminate\Database\Eloquent\Collection but does not specify its types: TKey, TModel'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: 'Method App\Services\Ai\ScheduleAiService::generate() should return array{understanding: string, warnings: array<int, string>, shift_requirements: array<int, array<string, mixed>>, intent: string} but returns array{intent: string, understanding: string, warnings: list, shift_requirements: mixed}.'
+			identifier: return.type
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: 'Only booleans are allowed in an if condition, int<0, max>|false given.'
+			identifier: if.condNotBoolean
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: 'Parameter #1 $array of function array_unique expects array, mixed given.'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: 'Parameter #1 $response of method App\Services\Ai\ScheduleAiService::extractStructured() expects Laravel\Ai\Responses\AgentResponse, mixed given.'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: 'Parameter #2 $knownNames of method App\Services\Ai\ScheduleAiService::findMentionedUnknownNames() expects array<int, string>, array<string> given.'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: 'Parameter #4 $employees of class App\Ai\Agents\SchedulePlannerAgent constructor expects Illuminate\Database\Eloquent\Collection<int, App\Models\EmployeeProfile>, mixed given.'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: Short ternary operator is not allowed. Use null coalesce operator if applicable or consider using long ternary.
+			identifier: ternary.shortNotAllowed
+			count: 1
+			path: app/Services/Ai/ScheduleAiService.php
+
+		-
+			rawMessage: 'Parameter #1 $table of static method Illuminate\Support\Facades\Schema::create() expects string, mixed given.'
+			identifier: argument.type
+			count: 2
+			path: database/migrations/2026_06_09_131919_create_agent_conversations_table.php
+
+		-
+			rawMessage: 'Parameter #1 $table of static method Illuminate\Support\Facades\Schema::dropIfExists() expects string, mixed given.'
+			identifier: argument.type
+			count: 2
+			path: database/migrations/2026_06_09_131919_create_agent_conversations_table.php
+
+		-
+			rawMessage: 'Cannot call method getKey() on App\Models\Store|null.'
+			identifier: method.nonObject
+			count: 4
+			path: database/seeders/EmployeeStoreSeeder.php
+
+		-
+			rawMessage: Cannot cast mixed to int.
+			identifier: cast.int
+			count: 1
+			path: database/seeders/ScheduleSeeder.php

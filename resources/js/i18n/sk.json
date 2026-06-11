@@ -1,0 +1,249 @@
+{
+    "app": {
+        "name": "RotaPilot"
+    },
+    "nav": {
+        "skip_to_main": "Preskočiť na hlavný obsah",
+        "dashboard": "Nástenka",
+        "stores": "Predajne",
+        "employees": "Zamestnanci",
+        "schedules": "Plány",
+        "availability": "Dostupnosť",
+        "ai_planner": "AI plánovač",
+        "conflicts": "Konflikty",
+        "my_calendar": "Môj kalendár",
+        "profile": "Profil",
+        "password": "Heslo",
+        "logout": "Odhlásiť sa",
+        "primary": "Hlavné"
+    },
+    "auth": {
+        "login": {
+            "title": "Prihlásiť sa",
+            "subtitle": "Pre pokračovanie zadajte svoje prihlasovacie údaje.",
+            "submit": "Prihlásiť sa",
+            "forgot_link": "Zabudli ste heslo?",
+            "back_link": "Späť na prihlásenie"
+        },
+        "register": {
+            "title": "Vytvoriť účet správcu predajne",
+            "subtitle": "Zaregistrujte sa a spravujte svoje predajne, zamestnancov a zmeny. Zamestnancov pozýva ich správca.",
+            "submit": "Registrovať",
+            "login_link": "Prihlásiť sa"
+        },
+        "forgot": {
+            "title": "Zabudnuté heslo",
+            "subtitle": "Odošleme nové vygenerované heslo prostredníctvom core mail flow.",
+            "submit": "Odoslať heslo"
+        },
+        "reset": {
+            "title": "Obnoviť heslo",
+            "subtitle": "Nastavte nové heslo pomocou platného tokenu na obnovenie.",
+            "submit": "Aktualizovať heslo",
+            "back_to_profile": "Späť na profil",
+            "labels": {
+                "email": "E-mail",
+                "token": "Token",
+                "new_password": "Nové heslo"
+            }
+        },
+        "verify": {
+            "title": "Overiť e-mail",
+            "description": "Overenie e-mailu je riadené core notifikačným tokom. Odošlite novú overovaciu správu, ak aktuálny používateľ stále potrebuje overiť svoju adresu.",
+            "submit": "Odoslať overovací e-mail"
+        }
+    },
+    "settings": {
+        "profile": {
+            "title": "Nastavenie profilu",
+            "submit": "Uložiť profil",
+            "change_password": "Zmeniť heslo"
+        },
+        "password": {
+            "title": "Nastavenie hesla",
+            "submit": "Aktualizovať heslo",
+            "back_to_profile": "Späť na profil"
+        }
+    },
+    "dashboard": {
+        "title": "Nástenka",
+        "welcome": "Prihlásený používateľ",
+        "greeting_manager": "Dobrý deň,",
+        "greeting_employee": "Ahoj,",
+        "settings_heading": "Nastavenia",
+        "settings_description": "Aplikácia používa referenčný database-token cookie guard.",
+        "manage_profile": "Spravovať profil",
+        "stat_stores": "Spravované prevádzky",
+        "stat_employees": "Aktívni zamestnanci",
+        "stat_shifts": "Zmeny tento mesiac",
+        "stat_conflicts": "Otvorené konflikty",
+        "open_stores": "Otvoriť prevádzky",
+        "open_employees": "Otvoriť zamestnancov",
+        "open_schedules": "Otvoriť plány",
+        "open_conflicts": "Skontrolovať konflikty",
+        "ai_planner_label": "AI plánovač",
+        "ai_planner_title": "Povedzte RotaPilotu, aký plán potrebujete",
+        "ai_planner_description": "Opíšte vzor zmien a obmedzenia prirodzeným jazykom. RotaPilot pripraví plán, ktorý môžete skontrolovať a použiť.",
+        "ai_planner_placeholder": "Príklad: Vytvor zmeny na budúci týždeň pre Teacha Prague. Pracovné dni 1 osoba 10:00–18:00. Sobota a nedeľa 2 osoby 11:00–20:00. Anna preferuje ranné a Peter nemôže v stredu.",
+        "ai_planner_cta": "Otvoriť AI plánovač",
+        "ai_planner_create": "Vytvoriť plán ručne",
+        "get_started": "Začnite",
+        "get_started_description": "Vytvorte svoju prvú predajňu a začnite pridávať zamestnancov a zmeny.",
+        "create_store_cta": "Vytvoriť prvú predajňu",
+        "next_shift": "Vaša ďalšia zmena",
+        "next_shift_empty": "Žiadne nadchádzajúce zmeny.",
+        "assigned_stores": "Vaše prevádzky",
+        "assigned_stores_empty": "Zatiaľ nie ste priradení k žiadnej prevádzke.",
+        "this_week": "Tento týždeň",
+        "this_week_empty": "Tento týždeň nič.",
+        "open_my_calendar": "Otvoriť môj kalendár",
+        "recent_schedules": "Nedávne plány",
+        "upcoming_shifts": "Nadchádzajúce zmeny",
+        "no_schedules": "Zatiaľ žiadne plány.",
+        "no_upcoming": "Žiadne nadchádzajúce zmeny.",
+        "unavailabilities": "Voľno"
+    },
+    "common": {
+        "save": "Uložiť",
+        "cancel": "Zrušiť",
+        "create": "Vytvoriť",
+        "edit": "Upraviť",
+        "delete": "Zmazať",
+        "back": "Späť",
+        "loading": "Načítava sa…",
+        "no_data": "Zatiaľ žiadne dáta.",
+        "confirm": "Naozaj?",
+        "actions": "Akcie"
+    },
+    "stores": {
+        "title_index": "Prevádzky",
+        "title_show": "Detail prevádzky",
+        "title_create": "Vytvoriť prevádzku",
+        "title_edit": "Upraviť prevádzku",
+        "title_business_hours": "Otváracie hodiny",
+        "name": "Názov",
+        "address": "Adresa",
+        "city": "Mesto",
+        "timezone": "Časové pásmo",
+        "is_active": "Aktívna",
+        "create_cta": "Vytvoriť prevádzku",
+        "empty": "Zatiaľ žiadne prevádzky. Vytvorte prvú a začnite plánovať zmeny.",
+        "view": "Detail",
+        "edit_link": "Upraviť",
+        "business_hours_link": "Otváracie hodiny",
+        "schedule_link": "Plán"
+    },
+    "employees": {
+        "title_index": "Zamestnanci",
+        "title_show": "Detail zamestnanca",
+        "title_create": "Vytvoriť zamestnanca",
+        "title_edit": "Upraviť zamestnanca",
+        "name": "Meno",
+        "email": "E-mail",
+        "phone": "Telefón",
+        "role_label": "Pozícia",
+        "max_hours_per_week": "Max. hodín / týždeň",
+        "assigned_stores": "Priradené prevádzky",
+        "create_cta": "Vytvoriť zamestnanca",
+        "empty": "Zatiaľ žiadni zamestnanci.",
+        "view": "Detail",
+        "edit_link": "Upraviť",
+        "manage_availability": "Spravovať dostupnosť",
+        "view_shifts": "Zobraziť zmeny"
+    },
+    "schedules": {
+        "title_index": "Plány",
+        "title_show": "Plán",
+        "title_create": "Vytvoriť plán",
+        "title_edit": "Upraviť plán",
+        "name": "Názov",
+        "store": "Prevádzka",
+        "period": "Obdobie",
+        "status": "Stav",
+        "status_draft": "Koncept",
+        "status_published": "Publikované",
+        "status_archived": "Archivované",
+        "shift_count": "Zmeny",
+        "assignment_count": "Priradenia",
+        "conflict_count": "Konflikty",
+        "create_cta": "Vytvoriť plán",
+        "empty": "Zatiaľ žiadne plány.",
+        "publish_cta": "Publikovať",
+        "archive_cta": "Archivovať",
+        "view": "Detail",
+        "edit_link": "Upraviť",
+        "week_view": "Týždeň",
+        "month_view": "Mesiac"
+    },
+    "availability": {
+        "title": "Dostupnosť",
+        "month": "Mesiac",
+        "store": "Prevádzka",
+        "employee": "Zamestnanec",
+        "type": "Typ",
+        "type_available": "Dostupný",
+        "type_unavailable": "Nedostupný",
+        "type_preferred": "Preferovaný",
+        "type_missing": "Nenastavené",
+        "start_time": "Začiatok",
+        "end_time": "Koniec",
+        "note": "Poznámka",
+        "repeat": "Opakovanie",
+        "repeat_none": "Bez opakovania",
+        "repeat_weekly": "Každý týždeň v tento deň",
+        "repeat_until_date": "Každý deň do",
+        "parse_ai_label": "Opíšte dostupnosť",
+        "parse_ai_placeholder": "Príklad: Anna môže pracovať v pondelok a stredu od 10 do 16, preferuje piatky a nemôže 12.–15. júla.",
+        "parse_ai_cta": "Parsovať dostupnosť",
+        "create_cta": "Pridať dostupnosť"
+    },
+    "ai": {
+        "title": "AI plánovač",
+        "send_cta": "Odoslať",
+        "apply_cta": "Použiť zmeny",
+        "understanding": "Pochopil som",
+        "warnings": "Upozornenia",
+        "shift_requirements": "Navrhnuté zmeny",
+        "no_preview": "Odošlite zadanie pre vygenerovanie náhľadu plánu.",
+        "prompt_label": "Zadanie",
+        "prompt_placeholder": "Popíšte, aké zmeny potrebujete…"
+    },
+    "conflicts": {
+        "title": "Konflikty",
+        "subtitle": "Otvorené konflikty vo vašich plánoch.",
+        "type_understaffed": "Nedostatočné obsadenie",
+        "type_unavailable_employee": "Zamestnanec nedostupný",
+        "type_overlapping_shift": "Prekrývajúce sa zmeny",
+        "type_outside_business_hours": "Mimo otváracích hodín",
+        "type_max_hours_exceeded": "Prekročenie max. hodín",
+        "type_missing_availability": "Chýbajúca dostupnosť",
+        "severity_info": "Info",
+        "severity_warning": "Upozornenie",
+        "severity_critical": "Kritické",
+        "suggested_fix": "Odporúčané riešenie",
+        "fix_manually": "Opraviť ručne",
+        "ask_ai": "Opýtať sa AI",
+        "mark_resolved": "Označiť ako vyriešené",
+        "resolve": "Vyriešiť",
+        "empty": "Žiadne konflikty vo vašich plánoch. Skvelá práca.",
+        "empty_subtitle": "Všetko hotové."
+    },
+    "my_calendar": {
+        "title": "Môj kalendár",
+        "empty": "V tomto období nemáte naplánované žiadne zmeny."
+    },
+    "fields": {
+        "email": "E-mail",
+        "password": "Heslo",
+        "password_confirmation": "Potvrdiť heslo",
+        "current_password": "Súčasné heslo",
+        "new_password": "Nové heslo",
+        "locale": "Jazyk"
+    },
+    "locale": {
+        "switcher_label": "Jazyk",
+        "en": "Angličtina",
+        "cs": "Čeština",
+        "sk": "Slovenčina"
+    }
+}

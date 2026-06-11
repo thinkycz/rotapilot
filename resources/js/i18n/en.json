@@ -1,0 +1,249 @@
+{
+    "app": {
+        "name": "RotaPilot"
+    },
+    "nav": {
+        "skip_to_main": "Skip to main content",
+        "dashboard": "Dashboard",
+        "stores": "Stores",
+        "employees": "Employees",
+        "schedules": "Schedules",
+        "availability": "Availability",
+        "ai_planner": "AI Planner",
+        "conflicts": "Conflicts",
+        "my_calendar": "My Calendar",
+        "profile": "Profile",
+        "password": "Password",
+        "logout": "Log out",
+        "primary": "Primary"
+    },
+    "auth": {
+        "login": {
+            "title": "Log in",
+            "subtitle": "Enter your credentials to continue.",
+            "submit": "Log in",
+            "forgot_link": "Forgot password?",
+            "back_link": "Back to login"
+        },
+        "register": {
+            "title": "Create store manager account",
+            "subtitle": "Sign up to manage your stores, employees, and schedules. Employees are invited by their manager.",
+            "submit": "Register",
+            "login_link": "Log in"
+        },
+        "forgot": {
+            "title": "Forgot password",
+            "subtitle": "Send a new generated password using the core mail flow.",
+            "submit": "Send password"
+        },
+        "reset": {
+            "title": "Reset password",
+            "subtitle": "Set a new password with a valid reset token.",
+            "submit": "Update password",
+            "back_to_profile": "Back to profile",
+            "labels": {
+                "email": "Email",
+                "token": "Token",
+                "new_password": "New password"
+            }
+        },
+        "verify": {
+            "title": "Verify email",
+            "description": "Email verification is powered by the core notification flow. Send a fresh verification message when the current user still needs to verify their address.",
+            "submit": "Send verification email"
+        }
+    },
+    "settings": {
+        "profile": {
+            "title": "Profile settings",
+            "submit": "Save profile",
+            "change_password": "Change password"
+        },
+        "password": {
+            "title": "Password settings",
+            "submit": "Update password",
+            "back_to_profile": "Back to profile"
+        }
+    },
+    "dashboard": {
+        "title": "Dashboard",
+        "welcome": "Authenticated user",
+        "greeting_manager": "Good day,",
+        "greeting_employee": "Hi,",
+        "settings_heading": "Settings",
+        "settings_description": "The app is using the reference database-token cookie guard.",
+        "manage_profile": "Manage profile",
+        "stat_stores": "Stores managed",
+        "stat_employees": "Active employees",
+        "stat_shifts": "Shifts this month",
+        "stat_conflicts": "Open conflicts",
+        "open_stores": "Open stores",
+        "open_employees": "Open employees",
+        "open_schedules": "Open schedules",
+        "open_conflicts": "Review conflicts",
+        "ai_planner_label": "AI Planner",
+        "ai_planner_title": "Tell RotaPilot what schedule you need",
+        "ai_planner_description": "Describe the shift pattern and constraints in plain language. RotaPilot will draft a schedule you can review and apply.",
+        "ai_planner_placeholder": "Example: Create shifts for next week for Teacha Prague. Weekdays need 1 person from 10:00 to 18:00. Saturday and Sunday need 2 people from 11:00 to 20:00. Anna prefers mornings and Peter cannot work Wednesday.",
+        "ai_planner_cta": "Open AI Planner",
+        "ai_planner_create": "Create schedule manually",
+        "get_started": "Get started",
+        "get_started_description": "Create your first store to begin adding employees and shifts.",
+        "create_store_cta": "Create your first store",
+        "next_shift": "Your next shift",
+        "next_shift_empty": "No upcoming shifts scheduled.",
+        "assigned_stores": "Your stores",
+        "assigned_stores_empty": "You are not assigned to any stores yet.",
+        "this_week": "This week",
+        "this_week_empty": "Nothing scheduled this week.",
+        "open_my_calendar": "Open my calendar",
+        "recent_schedules": "Recent schedules",
+        "upcoming_shifts": "Upcoming shifts",
+        "no_schedules": "No schedules yet.",
+        "no_upcoming": "No upcoming shifts.",
+        "unavailabilities": "Time off"
+    },
+    "common": {
+        "save": "Save",
+        "cancel": "Cancel",
+        "create": "Create",
+        "edit": "Edit",
+        "delete": "Delete",
+        "back": "Back",
+        "loading": "Loading…",
+        "no_data": "No data yet.",
+        "confirm": "Are you sure?",
+        "actions": "Actions"
+    },
+    "stores": {
+        "title_index": "Stores",
+        "title_show": "Store detail",
+        "title_create": "Create store",
+        "title_edit": "Edit store",
+        "title_business_hours": "Business hours",
+        "name": "Name",
+        "address": "Address",
+        "city": "City",
+        "timezone": "Timezone",
+        "is_active": "Active",
+        "create_cta": "Create store",
+        "empty": "No stores yet. Create one to start managing shifts.",
+        "view": "View",
+        "edit_link": "Edit",
+        "business_hours_link": "Business hours",
+        "schedule_link": "Schedule"
+    },
+    "employees": {
+        "title_index": "Employees",
+        "title_show": "Employee detail",
+        "title_create": "Create employee",
+        "title_edit": "Edit employee",
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone",
+        "role_label": "Role label",
+        "max_hours_per_week": "Max hours / week",
+        "assigned_stores": "Assigned stores",
+        "create_cta": "Create employee",
+        "empty": "No employees yet.",
+        "view": "View",
+        "edit_link": "Edit",
+        "manage_availability": "Manage availability",
+        "view_shifts": "View shifts"
+    },
+    "schedules": {
+        "title_index": "Schedules",
+        "title_show": "Schedule",
+        "title_create": "Create schedule",
+        "title_edit": "Edit schedule",
+        "name": "Name",
+        "store": "Store",
+        "period": "Period",
+        "status": "Status",
+        "status_draft": "Draft",
+        "status_published": "Published",
+        "status_archived": "Archived",
+        "shift_count": "Shifts",
+        "assignment_count": "Assignments",
+        "conflict_count": "Conflicts",
+        "create_cta": "Create schedule",
+        "empty": "No schedules yet.",
+        "publish_cta": "Publish",
+        "archive_cta": "Archive",
+        "view": "View",
+        "edit_link": "Edit",
+        "week_view": "Week",
+        "month_view": "Month"
+    },
+    "availability": {
+        "title": "Availability",
+        "month": "Month",
+        "store": "Store",
+        "employee": "Employee",
+        "type": "Type",
+        "type_available": "Available",
+        "type_unavailable": "Unavailable",
+        "type_preferred": "Preferred",
+        "type_missing": "Not set",
+        "start_time": "Start time",
+        "end_time": "End time",
+        "note": "Note",
+        "repeat": "Repeat",
+        "repeat_none": "Does not repeat",
+        "repeat_weekly": "Every week on this weekday",
+        "repeat_until_date": "Every day until",
+        "parse_ai_label": "Describe availability",
+        "parse_ai_placeholder": "Example: Anna can work Mondays and Wednesdays from 10 to 16, prefers Fridays, and cannot work July 12 to July 15.",
+        "parse_ai_cta": "Parse availability",
+        "create_cta": "Add availability"
+    },
+    "ai": {
+        "title": "AI Planner",
+        "send_cta": "Send",
+        "apply_cta": "Apply changes",
+        "understanding": "I understood",
+        "warnings": "Warnings",
+        "shift_requirements": "Proposed shifts",
+        "no_preview": "Send a prompt to generate a schedule preview.",
+        "prompt_label": "Prompt",
+        "prompt_placeholder": "Describe the shifts you need…"
+    },
+    "conflicts": {
+        "title": "Conflicts",
+        "subtitle": "Open conflicts across your managed schedules.",
+        "type_understaffed": "Understaffed shifts",
+        "type_unavailable_employee": "Employee unavailable",
+        "type_overlapping_shift": "Overlapping shifts",
+        "type_outside_business_hours": "Outside business hours",
+        "type_max_hours_exceeded": "Max hours exceeded",
+        "type_missing_availability": "Missing availability",
+        "severity_info": "Info",
+        "severity_warning": "Warning",
+        "severity_critical": "Critical",
+        "suggested_fix": "Suggested fix",
+        "fix_manually": "Fix manually",
+        "ask_ai": "Ask AI",
+        "mark_resolved": "Mark resolved",
+        "resolve": "Resolve",
+        "empty": "No conflicts for any of your schedules. Nice work.",
+        "empty_subtitle": "All caught up."
+    },
+    "my_calendar": {
+        "title": "My calendar",
+        "empty": "You do not have any shifts scheduled for this period."
+    },
+    "fields": {
+        "email": "Email",
+        "password": "Password",
+        "password_confirmation": "Confirm password",
+        "current_password": "Current password",
+        "new_password": "New password",
+        "locale": "Locale"
+    },
+    "locale": {
+        "switcher_label": "Language",
+        "en": "English",
+        "cs": "Čeština",
+        "sk": "Slovenčina"
+    }
+}

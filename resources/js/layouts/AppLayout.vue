@@ -1,0 +1,248 @@
+<script setup lang="ts">
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import {
+    Activity,
+    CalendarRange,
+    Calendar,
+    CalendarCheck2,
+    Sparkles,
+    AlertTriangle,
+    Coffee,
+    UserRound,
+    KeyRound,
+    LogOut,
+} from '@lucide/vue';
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import LocaleSwitcher from '@/components/LocaleSwitcher.vue';
+import Brand from '@/components/ui/Brand.vue';
+import FlashAlerts from '@/components/ui/FlashAlerts.vue';
+import { useBoundLocale } from '@/composables/useBoundLocale';
+import { useSharedProps } from '@/composables/useSharedProps';
+
+defineProps<{
+    title: string;
+}>();
+
+const { auth } = useSharedProps();
+const { t } = useI18n();
+
+useBoundLocale();
+
+const activeUrl = computed(() => usePage().url);
+
+const isEmployee = computed(() => auth.value.user?.role === 'employee');
+
+const navItems = computed(() => {
+    if (isEmployee.value) {
+        return [
+            { href: '/dashboard', key: 'dashboard', icon: Activity },
+            { href: '/my-calendar', key: 'my_calendar', icon: Calendar },
+        ];
+    }
+    return [
+        { href: '/dashboard', key: 'dashboard', icon: Activity },
+        { href: '/stores/index', key: 'stores', icon: Coffee },
+        { href: '/employees/index', key: 'employees', icon: UserRound },
+        { href: '/schedules/index', key: 'schedules', icon: CalendarRange },
+        { href: '/availability', key: 'availability', icon: CalendarCheck2 },
+        { href: '/ai-planner', key: 'ai_planner', icon: Sparkles },
+        { href: '/conflicts', key: 'conflicts', icon: AlertTriangle },
+    ];
+});
+
+const settingsItems = computed(() => [
+    { href: '/settings/profile', key: 'profile', icon: UserRound },
+    { href: '/settings/password', key: 'password', icon: KeyRound },
+]);
+
+const isActive = (href: string): boolean => activeUrl.value.startsWith(href);
+
+const userInitials = computed(() => {
+    const email = auth.value.user?.email ?? '';
+    if (!email) return 'DU';
+    return email.substring(0, 2).toUpperCase();
+});
+
+function logout(): void {
+    router.post('/logout');
+}
+</script>
+
+<template>
+    <Head :title="title" />
+
+    <div
+        class="flex min-h-screen flex-col bg-surface-bg font-sans antialiased md:flex-row"
+    >
+        <!-- Desktop Persistent Sidebar -->
+        <aside
+            class="sticky top-0 z-20 hidden h-screen w-64 flex-col border-r border-outline-glass bg-surface-container px-4 py-6 text-left md:flex"
+        >
+            <!-- Brand App Header -->
+            <div
+                class="mb-8 flex cursor-default items-center gap-3 px-2 transition-all select-none"
+            >
+                <Brand href="/dashboard" />
+            </div>
+
+            <!-- Nav Links -->
+            <nav class="flex-1 space-y-1.5">
+                <Link
+                    v-for="item in navItems"
+                    :key="item.key"
+                    :href="item.href"
+                    :class="[
+                        'flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold transition-all',
+                        isActive(item.href)
+                            ? 'border-r-2 border-primary bg-surface-container-low font-bold text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]'
+                            : 'text-on-surface-variant hover:bg-surface-container-low',
+                    ]"
+                >
+                    <component :is="item.icon" :size="16" />
+                    {{ t(`nav.${item.key}`) }}
+                </Link>
+
+                <div
+                    class="my-2 ml-2 font-mono text-[9px] font-extrabold tracking-wider text-on-surface-variant opacity-70 uppercase"
+                >
+                    {{ t('settings.profile.title') }}
+                </div>
+                <Link
+                    v-for="item in settingsItems"
+                    :key="item.key"
+                    :href="item.href"
+                    :class="[
+                        'flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold transition-all',
+                        isActive(item.href)
+                            ? 'border-r-2 border-primary bg-surface-container-low font-bold text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]'
+                            : 'text-on-surface-variant hover:bg-surface-container-low',
+                    ]"
+                >
+                    <component :is="item.icon" :size="16" />
+                    {{ t(`nav.${item.key}`) }}
+                </Link>
+            </nav>
+
+            <!-- Language Switcher in Sidebar -->
+            <div class="mb-4 border-t border-outline-glass pt-4 px-2">
+                <div class="flex items-center justify-between gap-2">
+                    <span
+                        class="font-mono text-[9px] font-extrabold tracking-wider text-on-surface-variant uppercase"
+                        >{{ t('locale.switcher_label') }}</span
+                    >
+                    <LocaleSwitcher v-if="auth.user" />
+                </div>
+            </div>
+
+            <!-- Footer: User Identity + Quick Actions -->
+            <div
+                class="flex items-center justify-between gap-2 border-t border-outline-glass pt-4 px-2"
+            >
+                <div class="flex min-w-0 flex-1 items-center gap-3">
+                    <div
+                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-outline-glass bg-surface-container-low font-heading text-xs font-bold text-primary"
+                    >
+                        {{ userInitials }}
+                    </div>
+                    <div class="min-w-0 overflow-hidden">
+                        <p
+                            class="truncate text-xs font-semibold text-on-surface"
+                        >
+                            {{
+                                auth.user
+                                    ? auth.user.email.split('@')[0]
+                                    : 'User'
+                            }}
+                        </p>
+                        <p
+                            class="truncate text-[9px] text-on-surface-variant opacity-85 font-medium"
+                        >
+                            {{ auth.user ? auth.user.email : '' }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex shrink-0 items-center">
+                    <button
+                        @click="logout"
+                        class="cursor-pointer rounded-lg p-1.5 text-on-surface-variant transition-all hover:bg-rose-50/50 hover:text-error-red"
+                        :title="t('nav.logout')"
+                        :aria-label="t('nav.logout')"
+                    >
+                        <LogOut :size="14" />
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile Top Navigation Header -->
+        <header
+            class="glass-panel sticky top-0 z-30 flex h-15 w-full items-center justify-between border-b border-outline-glass px-4 shadow-sm md:hidden"
+        >
+            <div class="flex items-center gap-2">
+                <Brand href="/dashboard" />
+            </div>
+
+            <div class="flex items-center gap-1.5">
+                <Link
+                    v-for="item in navItems.slice(0, 4)"
+                    :key="item.key"
+                    :href="item.href"
+                    :class="[
+                        'rounded-lg p-2 transition-all',
+                        isActive(item.href)
+                            ? 'font-bold text-primary bg-surface-container-low'
+                            : 'text-on-surface-variant',
+                    ]"
+                    :title="t(`nav.${item.key}`)"
+                >
+                    <component :is="item.icon" :size="16" />
+                </Link>
+                <LocaleSwitcher v-if="auth.user" />
+                <button
+                    @click="logout"
+                    class="rounded-lg p-2 text-on-surface-variant transition-all hover:text-error-red"
+                >
+                    <LogOut :size="16" />
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <main class="flex min-h-screen flex-1 flex-col overflow-x-hidden">
+            <div class="relative flex flex-1 flex-col p-4 md:p-8">
+                <!-- Ambient Decorator -->
+                <div
+                    class="pointer-events-none absolute top-1/2 left-1/2 h-[70vw] w-[70vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-[100px]"
+                ></div>
+
+                <div class="z-10 flex flex-1 flex-col max-w-6xl w-full mx-auto">
+                    <div
+                        class="mb-6 flex items-center justify-between border-b border-outline-glass/40 pb-4"
+                    >
+                        <div>
+                            <h2
+                                class="font-heading text-2xl font-bold tracking-tight text-on-surface md:text-3xl"
+                            >
+                                {{ title }}
+                            </h2>
+                            <p
+                                v-if="auth.user"
+                                class="text-xs font-medium text-on-surface-variant mt-1"
+                            >
+                                {{ auth.user.email }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <FlashAlerts />
+
+                    <div class="flex-1">
+                        <slot />
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</template>
