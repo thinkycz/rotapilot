@@ -253,9 +253,17 @@ function dateLabel(d: string): string {
             v-if="criticalConflicts.length > 0"
             class="mb-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700"
         >
-            <p class="font-semibold">
+            <p class="font-semibold mb-2">
                 {{ t('schedules.critical_conflicts_warning') }}
             </p>
+            <ul class="list-disc pl-4 space-y-1">
+                <li v-for="c in criticalConflicts" :key="c.id">
+                    {{ c.message }}
+                    <span v-if="c.suggested_fix" class="italic opacity-85 ml-1">
+                        ({{ c.suggested_fix }})
+                    </span>
+                </li>
+            </ul>
         </div>
 
         <div class="space-y-3">
