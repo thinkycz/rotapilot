@@ -10,7 +10,7 @@ import { useConfirmDialog } from '@/composables/useConfirmDialog';
 import { useSharedProps } from '@/composables/useSharedProps';
 import { formatDate, formatDateRange } from '@/lib/date';
 
-const { t } = useI18n();
+const { t, tm } = useI18n();
 const { confirm } = useConfirmDialog();
 const { auth } = useSharedProps();
 
@@ -70,6 +70,7 @@ const criticalConflicts = computed(() =>
 );
 
 const dayKeys = computed(() => Object.keys(props.days).sort());
+const weekdays = computed(() => tm('common.weekdays') as string[]);
 
 const currentView = ref<'calendar' | 'list'>('calendar');
 
@@ -494,7 +495,7 @@ function dateLabel(d: string): string {
                     class="grid grid-cols-7 bg-surface-container-low border-b border-outline-glass"
                 >
                     <div
-                        v-for="dayName in t('common.weekdays')"
+                        v-for="dayName in weekdays"
                         :key="dayName"
                         class="py-2.5 text-center font-mono text-[10px] font-extrabold tracking-wider text-on-surface-variant uppercase"
                     >
