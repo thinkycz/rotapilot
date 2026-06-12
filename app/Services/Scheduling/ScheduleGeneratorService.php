@@ -10,6 +10,7 @@ use App\Models\ShiftAssignment;
 use App\Models\ShiftRequirement;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 /**
  * Deterministic scheduler. Picks up to N employees for a shift requirement.
@@ -246,16 +247,20 @@ class ScheduleGeneratorService
      */
     private function parseTime(string $value): \Carbon\Carbon
     {
-        $parsed = \Carbon\Carbon::createFromFormat('H:i', $value);
-
-        if ($parsed instanceof \Carbon\Carbon) {
-            return $parsed;
+        try {
+            $parsed = \Carbon\Carbon::createFromFormat('H:i:s', $value);
+            if ($parsed instanceof \Carbon\Carbon) {
+                return $parsed;
+            }
+        } catch (Throwable) {
         }
 
-        $parsed = \Carbon\Carbon::createFromFormat('H:i:s', $value);
-
-        if ($parsed instanceof \Carbon\Carbon) {
-            return $parsed;
+        try {
+            $parsed = \Carbon\Carbon::createFromFormat('H:i', $value);
+            if ($parsed instanceof \Carbon\Carbon) {
+                return $parsed;
+            }
+        } catch (Throwable) {
         }
 
         return \Carbon\Carbon::createFromTime(
