@@ -184,6 +184,10 @@ function statusColor(
     return 'bg-emerald-50 border-emerald-300 text-emerald-700';
 }
 
+function getShiftConflicts(shiftId: number): Conflict[] {
+    return props.conflicts.filter((c) => c.shift_requirement_id === shiftId);
+}
+
 function dateLabel(d: string): string {
     return formatDate(d);
 }
@@ -358,6 +362,24 @@ function dateLabel(d: string): string {
                                 </button>
                             </li>
                         </ul>
+
+                        <!-- Shift-specific conflicts -->
+                        <div
+                            v-if="getShiftConflicts(s.id).length > 0"
+                            class="mt-2 space-y-1 rounded-lg bg-rose-50/70 p-2 border border-rose-100 text-[11px] text-rose-700"
+                        >
+                            <div
+                                v-for="c in getShiftConflicts(s.id)"
+                                :key="c.id"
+                                class="flex items-start gap-1 font-semibold"
+                            >
+                                <AlertTriangle
+                                    :size="12"
+                                    class="shrink-0 mt-0.5 text-rose-500"
+                                />
+                                <span>{{ c.message }}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
