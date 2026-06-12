@@ -33,6 +33,7 @@ class ShiftAssignmentDestroyController
         $idRaw = $request->input('id');
         $id = \is_scalar($idRaw) ? (int) $idRaw : 0;
         $assignment = ModelFinder::findOrAbort(ShiftAssignment::class, $id);
+        $assignment->load('shiftRequirement');
 
         $req = $assignment->getShiftRequirement();
         if ($req !== null) {

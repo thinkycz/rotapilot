@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import { Link, router, useForm } from '@inertiajs/vue3';
-import { Plus, Trash2, X, Wand2, AlertTriangle, Edit } from '@lucide/vue';
+import {
+    Plus,
+    Trash2,
+    X,
+    Wand2,
+    AlertTriangle,
+    Edit,
+    Clock,
+    Briefcase,
+    FileText,
+    User,
+} from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import { computed, ref } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -390,83 +401,122 @@ function dateLabel(d: string): string {
                 </div>
                 <div
                     v-if="props.days[date]?.shifts.length === 0"
-                    class="text-xs text-on-surface-variant italic"
+                    class="flex items-center justify-center rounded-xl border border-dashed border-outline-glass/60 bg-surface-container-lowest py-8 text-center text-xs text-on-surface-variant/80"
                 >
-                    {{ t('schedules.no_shifts') }}
+                    <div class="flex flex-col items-center gap-1.5">
+                        <Clock :size="16" class="text-on-surface-variant/50" />
+                        <span>{{ t('schedules.no_shifts') }}</span>
+                    </div>
                 </div>
                 <div v-else class="space-y-2">
                     <div
                         v-for="s in props.days[date]?.shifts"
                         :key="s.id"
+                        @click="openShift(s)"
                         :class="[
-                            'rounded-xl border-2 p-3',
-                            statusColor(
-                                s.required_employee_count,
-                                s.required_employee_count,
-                                s.assignments.length,
-                            ),
+                            'group relative flex flex-col justify-between rounded-xl border border-outline-glass/40 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-outline-glass cursor-pointer border-l-4',
+                            s.assignments.length === 0
+                                ? 'border-l-rose-500'
+                                : s.assignments.length <
+                                    s.required_employee_count
+                                  ? 'border-l-amber-500'
+                                  : 'border-l-emerald-500',
                         ]"
                     >
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p
-                                    class="font-mono text-sm font-bold text-on-surface"
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="space-y-1.5">
+                                <div class="flex items-center gap-2">
+                                    <Clock
+                                        :size="14"
+                                        class="text-on-surface-variant/70"
+                                    />
+                                    <span
+                                        class="font-mono text-sm font-bold text-on-surface"
+                                    >
+                                        {{ s.start_time }} – {{ s.end_time }}
+                                    </span>
+                                </div>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <span
+                                        v-if="s.role_label"
+                                        class="inline-flex items-center gap-1 rounded-md bg-surface-container-low px-2 py-0.5 text-xs font-semibold text-on-surface-variant border border-outline-glass/30"
+                                    >
+                                        <Briefcase
+                                            :size="12"
+                                            class="text-on-surface-variant/70"
+                                        />
+                                        {{ s.role_label }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex flex-col items-end gap-2 shrink-0">
+                                <span
+                                    :class="[
+                                        'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold border',
+                                        s.assignments.length === 0
+                                            ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                            : s.assignments.length <
+                                                s.required_employee_count
+                                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                              : 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                                    ]"
                                 >
-                                    {{ s.start_time }} – {{ s.end_time }}
-                                </p>
-                                <p class="mt-1 text-xs text-on-surface-variant">
                                     {{ s.assignments.length }}/{{
                                         s.required_employee_count
                                     }}
                                     {{ t('schedules.assigned').toLowerCase() }}
-                                    <span v-if="s.role_label">
-                                        · {{ s.role_label }}</span
-                                    >
-                                </p>
-                            </div>
-                            <div class="flex gap-1">
+                                </span>
                                 <button
                                     v-if="
                                         s.assignments.length <
                                         s.required_employee_count
                                     "
-                                    @click="autoFill(s.id)"
-                                    class="inline-flex h-6 cursor-pointer items-center gap-1 rounded-md border border-primary/20 bg-gradient-to-b from-primary-container to-primary px-2 text-[10px] font-bold text-white hover:brightness-105"
+                                    @click.stop="autoFill(s.id)"
+                                    class="inline-flex h-6 cursor-pointer items-center gap-1 rounded-md border border-primary/20 bg-gradient-to-b from-primary-container to-primary px-2 text-[10px] font-bold text-white hover:brightness-105 transition-all active:scale-95"
                                 >
                                     <Wand2 :size="10" />
                                     {{ t('schedules.auto_fill') }}
                                 </button>
-                                <button
-                                    @click="openShift(s)"
-                                    class="inline-flex h-6 items-center rounded-md border border-outline-glass bg-white px-2 text-[10px] font-bold text-on-surface hover:bg-surface-container-low"
-                                >
-                                    {{ t('common.open') }}
-                                </button>
                             </div>
                         </div>
-                        <ul
-                            v-if="s.assignments.length > 0"
-                            class="mt-2 flex flex-wrap gap-1.5"
+
+                        <p
+                            v-if="s.note"
+                            class="mt-2.5 flex items-start gap-1 text-xs text-on-surface-variant/80 italic border-t border-dashed border-outline-glass/20 pt-2"
                         >
-                            <li
-                                v-for="a in s.assignments"
-                                :key="a.id"
-                                class="flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-semibold text-on-surface"
-                            >
-                                {{ a.employee_name }}
-                                <button
-                                    @click="removeAssignment(a.id)"
-                                    class="rounded-full p-0.5 text-rose-500 hover:bg-rose-50"
+                            <FileText
+                                :size="12"
+                                class="mt-0.5 shrink-0 text-on-surface-variant/60"
+                            />
+                            <span>{{ s.note }}</span>
+                        </p>
+
+                        <div v-if="s.assignments.length > 0" class="mt-3">
+                            <ul class="flex flex-wrap gap-1.5">
+                                <li
+                                    v-for="a in s.assignments"
+                                    :key="a.id"
+                                    class="flex items-center gap-1 rounded-full bg-surface-container-low border border-outline-glass/40 px-2 py-0.5 text-[11px] font-semibold text-on-surface hover:bg-surface-container-medium transition-colors"
                                 >
-                                    <X :size="10" />
-                                </button>
-                            </li>
-                        </ul>
+                                    <User
+                                        :size="10"
+                                        class="text-on-surface-variant/70"
+                                    />
+                                    {{ a.employee_name }}
+                                    <button
+                                        @click.stop="removeAssignment(a.id)"
+                                        class="rounded-full p-0.5 text-rose-500 hover:bg-rose-100 transition-colors"
+                                    >
+                                        <X :size="10" />
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
 
                         <!-- Shift-specific conflicts -->
                         <div
                             v-if="getShiftConflicts(s.id).length > 0"
-                            class="mt-2 space-y-1 rounded-lg bg-rose-50/70 p-2 border border-rose-100 text-[11px] text-rose-700"
+                            class="mt-3 space-y-1 rounded-lg bg-rose-50/70 p-2 border border-rose-100 text-[11px] text-rose-700"
                         >
                             <div
                                 v-for="c in getShiftConflicts(s.id)"
