@@ -64,7 +64,9 @@ const props = defineProps<{
 const isPublished = computed(() => props.schedule.status === 'published');
 const isManager = computed(() => auth.value.user?.role === 'store_manager');
 const criticalConflicts = computed(() =>
-    props.conflicts.filter((c) => c.severity === 'critical'),
+    props.conflicts.filter(
+        (c) => c.severity === 'critical' && c.shift_requirement_id === null,
+    ),
 );
 
 const dayKeys = computed(() => Object.keys(props.days).sort());
