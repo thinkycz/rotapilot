@@ -31,13 +31,7 @@ class ScheduleGeneratorService
      */
     public function proposeAssignments(ShiftRequirement $requirement): array
     {
-        $store = $requirement->store;
-
-        if (!$store instanceof \App\Models\Store) {
-            return [];
-        }
-
-        $storeId = $store->getKey();
+        $storeId = $requirement->getStoreId();
         $date = $requirement->getDate();
         $start = $requirement->getStartTime();
         $end = $requirement->getEndTime();

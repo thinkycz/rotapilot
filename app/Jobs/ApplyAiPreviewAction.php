@@ -7,7 +7,6 @@ namespace App\Jobs;
 use App\Enums\ShiftSourceEnum;
 use App\Models\Schedule;
 use App\Models\ShiftRequirement;
-use App\Models\Store;
 use App\Models\User;
 use App\Services\Scheduling\ConflictDetectionService;
 use Illuminate\Bus\Queueable;
@@ -52,10 +51,7 @@ class ApplyAiPreviewAction implements ShouldQueue
             return;
         }
 
-        $store = $schedule->store;
-        if (!$store instanceof Store) {
-            return;
-        }
+        $storeId = $schedule->getStoreId();
 
         foreach ($this->shiftRequirements as $row) {
             if (!\is_array($row)) {
@@ -71,7 +67,7 @@ class ApplyAiPreviewAction implements ShouldQueue
             $req = new ShiftRequirement();
             $req->forceFill([
                 'schedule_id' => $schedule->getKey(),
-                'store_id' => $store->getKey(),
+                'store_id' => $storeId,
                 'date' => \is_string($date) ? $date : '',
                 'start_time' => \is_string($startTime) ? $startTime : '',
                 'end_time' => \is_string($endTime) ? $endTime : '',
