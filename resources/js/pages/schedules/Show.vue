@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { Link, router, useForm } from '@inertiajs/vue3';
-import { Sparkles, Plus, Trash2, X, Wand2, AlertTriangle } from '@lucide/vue';
+import { Plus, Trash2, X, Wand2, AlertTriangle, Edit } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import { computed, ref } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import ModalOverlay from '@/components/ui/ModalOverlay.vue';
 import { useBoundLocale } from '@/composables/useBoundLocale';
 import { useConfirmDialog } from '@/composables/useConfirmDialog';
+import { useSharedProps } from '@/composables/useSharedProps';
+import { formatDate, formatDateRange } from '@/lib/date';
 
 const { t } = useI18n();
 const { confirm } = useConfirmDialog();
+const { auth } = useSharedProps();
 
 useBoundLocale();
 
@@ -58,6 +62,7 @@ const props = defineProps<{
 }>();
 
 const isPublished = computed(() => props.schedule.status === 'published');
+const isManager = computed(() => auth.value.user?.role === 'store_manager');
 const criticalConflicts = computed(() =>
     props.conflicts.filter((c) => c.severity === 'critical'),
 );
@@ -75,6 +80,7 @@ const createForm = useForm({
     required_employee_count: 1,
     role_label: '',
     note: '',
+    employee_profile_ids: [] as number[],
 });
 
 function openShift(shift: Shift): void {
@@ -85,13 +91,27 @@ function openShift(shift: Shift): void {
 function openCreate(date: string): void {
     showCreateShift.value = date;
     createForm.date = date;
+    createForm.employee_profile_ids = [];
+    createForm.clearErrors();
 }
 
 function submitCreate(): void {
     createForm.post(
         `/shift-requirements/store?schedule_id=${props.schedule.id}`,
+        {
+            onSuccess: () => {
+                showCreateShift.value = null;
+                createForm.reset(
+                    'start_time',
+                    'end_time',
+                    'required_employee_count',
+                    'role_label',
+                    'note',
+                    'employee_profile_ids',
+                );
+            },
+        },
     );
-    showCreateShift.value = null;
 }
 
 function autoFill(shiftId: number): void {
@@ -143,6 +163,16 @@ function archive(): void {
     router.post(`/schedules/archive?id=${props.schedule.id}`);
 }
 
+async function removeSchedule(): Promise<void> {
+    if (
+        await confirm(t('common.confirm_title'), {
+            variant: 'danger',
+        })
+    ) {
+        router.post(`/schedules/destroy?id=${props.schedule.id}`);
+    }
+}
+
 function statusColor(
     _count: number,
     required: number,
@@ -155,10 +185,7 @@ function statusColor(
 }
 
 function dateLabel(d: string): string {
-    return new Date(d).toLocaleDateString(undefined, {
-        weekday: 'short',
-        day: 'numeric',
-    });
+    return formatDate(d);
 }
 </script>
 
@@ -170,38 +197,54 @@ function dateLabel(d: string): string {
                     {{ schedule.name }}
                 </h1>
                 <p class="mt-1 text-xs text-on-surface-variant">
-                    {{ schedule.store_name }} · {{ schedule.period_start }} →
-                    {{ schedule.period_end }}
+                    {{ schedule.store_name }} ·
+                    {{
+                        formatDateRange(
+                            schedule.period_start,
+                            schedule.period_end,
+                        )
+                    }}
                 </p>
             </div>
             <div class="flex gap-2">
                 <Link
-                    :href="`/ai-planner?schedule_id=${schedule.id}&store_id=${schedule.store_id}`"
-                    class="inline-flex h-9 items-center rounded-xl border border-primary/20 bg-gradient-to-b from-primary-container to-primary px-4 text-xs font-semibold text-white shadow-sm hover:brightness-105"
+                    v-if="isManager"
+                    :href="`/schedules/edit?id=${schedule.id}`"
+                    class="inline-flex h-9 items-center rounded-xl border border-outline-glass bg-white px-4 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
                 >
-                    <Sparkles :size="14" class="mr-1.5" />
-                    AI Planner
+                    <Edit :size="14" class="mr-1.5" />
+                    {{ t('schedules.edit_link') }}
                 </Link>
                 <Link
                     :href="`/conflicts?schedule_id=${schedule.id}`"
                     class="inline-flex h-9 items-center rounded-xl border border-outline-glass bg-white px-4 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
                 >
                     <AlertTriangle :size="14" class="mr-1.5" />
-                    {{ conflicts.length }} conflicts
+                    {{ conflicts.length }}
+                    {{ t('schedules.conflict_count').toLowerCase() }}
                 </Link>
                 <button
-                    v-if="!isPublished"
+                    v-if="isManager && !isPublished"
                     @click="publish"
                     class="inline-flex h-9 cursor-pointer items-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
                 >
                     {{ t('schedules.publish_cta') }}
                 </button>
                 <button
-                    v-else
+                    v-else-if="isManager"
                     @click="archive"
                     class="inline-flex h-9 cursor-pointer items-center rounded-xl border border-outline-glass bg-white px-4 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
                 >
                     {{ t('schedules.archive_cta') }}
+                </button>
+                <button
+                    v-if="isManager"
+                    type="button"
+                    @click="removeSchedule"
+                    class="inline-flex h-9 cursor-pointer items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-4 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                >
+                    <Trash2 :size="14" />
+                    {{ t('common.delete') }}
                 </button>
             </div>
         </div>
@@ -211,9 +254,7 @@ function dateLabel(d: string): string {
             class="mb-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700"
         >
             <p class="font-semibold">
-                {{ criticalConflicts.length }} critical conflict{{
-                    criticalConflicts.length === 1 ? '' : 's'
-                }}. Publishing is blocked.
+                {{ t('schedules.critical_conflicts_warning') }}
             </p>
         </div>
 
@@ -232,14 +273,14 @@ function dateLabel(d: string): string {
                         class="inline-flex h-6 cursor-pointer items-center gap-1 rounded-md border border-outline-glass bg-white px-2 text-[10px] font-bold text-on-surface hover:bg-surface-container-low"
                     >
                         <Plus :size="10" />
-                        Shift
+                        {{ t('schedules.new_shift') }}
                     </button>
                 </div>
                 <div
                     v-if="props.days[date]?.shifts.length === 0"
                     class="text-xs text-on-surface-variant italic"
                 >
-                    No shifts.
+                    {{ t('schedules.no_shifts') }}
                 </div>
                 <div v-else class="space-y-2">
                     <div
@@ -265,7 +306,7 @@ function dateLabel(d: string): string {
                                     {{ s.assignments.length }}/{{
                                         s.required_employee_count
                                     }}
-                                    assigned
+                                    {{ t('schedules.assigned').toLowerCase() }}
                                     <span v-if="s.role_label">
                                         · {{ s.role_label }}</span
                                     >
@@ -281,13 +322,13 @@ function dateLabel(d: string): string {
                                     class="inline-flex h-6 cursor-pointer items-center gap-1 rounded-md border border-primary/20 bg-gradient-to-b from-primary-container to-primary px-2 text-[10px] font-bold text-white hover:brightness-105"
                                 >
                                     <Wand2 :size="10" />
-                                    Auto-fill
+                                    {{ t('schedules.auto_fill') }}
                                 </button>
                                 <button
                                     @click="openShift(s)"
                                     class="inline-flex h-6 items-center rounded-md border border-outline-glass bg-white px-2 text-[10px] font-bold text-on-surface hover:bg-surface-container-low"
                                 >
-                                    Open
+                                    {{ t('common.open') }}
                                 </button>
                             </div>
                         </div>
@@ -315,14 +356,13 @@ function dateLabel(d: string): string {
         </div>
 
         <!-- Shift side panel -->
-        <div
-            v-if="showShiftPanel && selectedShift"
-            class="fixed inset-0 z-30 flex justify-end bg-black/30"
-            @click.self="showShiftPanel = false"
+        <ModalOverlay
+            :open="showShiftPanel && selectedShift !== null"
+            variant="drawer"
+            panel-class="gap-4"
+            @close="showShiftPanel = false"
         >
-            <aside
-                class="flex h-full w-full max-w-md flex-col gap-4 overflow-y-auto bg-white p-6 shadow-lg"
-            >
+            <template v-if="selectedShift">
                 <div class="flex items-center justify-between">
                     <h3
                         class="font-heading text-base font-bold text-on-surface"
@@ -342,17 +382,18 @@ function dateLabel(d: string): string {
                     class="rounded-xl border border-outline-glass bg-surface-container-lowest p-3 text-xs"
                 >
                     <p>
-                        Required:
+                        {{ t('schedules.required') }}:
                         <strong>{{
                             selectedShift.required_employee_count
                         }}</strong>
                     </p>
                     <p>
-                        Assigned:
+                        {{ t('schedules.assigned') }}:
                         <strong>{{ selectedShift.assignments.length }}</strong>
                     </p>
                     <p v-if="selectedShift.role_label">
-                        Role: <strong>{{ selectedShift.role_label }}</strong>
+                        {{ t('schedules.role') }}:
+                        <strong>{{ selectedShift.role_label }}</strong>
                     </p>
                     <p
                         v-if="selectedShift.note"
@@ -366,7 +407,7 @@ function dateLabel(d: string): string {
                     <h4
                         class="mb-2 font-heading text-xs font-bold text-on-surface"
                     >
-                        Assigned employees
+                        {{ t('schedules.assigned_employees') }}
                     </h4>
                     <ul
                         v-if="selectedShift.assignments.length > 0"
@@ -387,7 +428,7 @@ function dateLabel(d: string): string {
                         </li>
                     </ul>
                     <p v-else class="text-xs text-on-surface-variant italic">
-                        No one assigned yet.
+                        {{ t('schedules.no_assignments') }}
                     </p>
                 </div>
 
@@ -395,14 +436,16 @@ function dateLabel(d: string): string {
                     <h4
                         class="mb-2 font-heading text-xs font-bold text-on-surface"
                     >
-                        Add employee
+                        {{ t('schedules.add_employee') }}
                     </h4>
                     <div class="flex gap-2">
                         <select
                             v-model.number="assignForm.employee_profile_id"
                             class="flex-1 rounded-lg border border-outline-glass bg-white px-2 py-1.5 text-xs"
                         >
-                            <option :value="0">— select —</option>
+                            <option :value="0">
+                                {{ t('schedules.select_employee') }}
+                            </option>
                             <option
                                 v-for="e in employees"
                                 :key="e.id"
@@ -416,7 +459,7 @@ function dateLabel(d: string): string {
                             :disabled="!assignForm.employee_profile_id"
                             class="rounded-lg border border-primary/20 bg-gradient-to-b from-primary-container to-primary px-3 text-xs font-bold text-white disabled:opacity-50"
                         >
-                            Add
+                            {{ t('schedules.add') }}
                         </button>
                     </div>
                 </div>
@@ -426,29 +469,26 @@ function dateLabel(d: string): string {
                     class="mt-auto inline-flex h-9 items-center justify-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-4 text-xs font-bold text-rose-700 hover:bg-rose-100"
                 >
                     <Trash2 :size="12" />
-                    Delete shift
+                    {{ t('schedules.delete_shift') }}
                 </button>
-            </aside>
-        </div>
+            </template>
+        </ModalOverlay>
 
         <!-- Create shift modal -->
-        <div
-            v-if="showCreateShift"
-            class="fixed inset-0 z-30 flex items-center justify-center bg-black/30 p-4"
-            @click.self="showCreateShift = null"
+        <ModalOverlay
+            :open="showCreateShift !== null"
+            panel-class="max-w-lg"
+            @close="showCreateShift = null"
         >
-            <form
-                @submit.prevent="submitCreate"
-                class="w-full max-w-md space-y-3 rounded-2xl border border-outline-glass bg-white p-5 shadow-lg"
-            >
+            <form @submit.prevent="submitCreate" class="space-y-3">
                 <h3 class="font-heading text-sm font-bold text-on-surface">
-                    New shift
+                    {{ t('schedules.new_shift') }}
                 </h3>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label
                             class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-on-surface-variant"
-                            >Start</label
+                            >{{ t('schedules.start') }}</label
                         >
                         <input
                             v-model="createForm.start_time"
@@ -460,7 +500,7 @@ function dateLabel(d: string): string {
                     <div>
                         <label
                             class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-on-surface-variant"
-                            >End</label
+                            >{{ t('schedules.end') }}</label
                         >
                         <input
                             v-model="createForm.end_time"
@@ -473,7 +513,7 @@ function dateLabel(d: string): string {
                 <div>
                     <label
                         class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-on-surface-variant"
-                        >Required count</label
+                        >{{ t('schedules.required_count') }}</label
                     >
                     <input
                         v-model.number="createForm.required_employee_count"
@@ -487,13 +527,50 @@ function dateLabel(d: string): string {
                 <div>
                     <label
                         class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-on-surface-variant"
-                        >Role label (optional)</label
+                        >{{ t('schedules.role_label_optional') }}</label
                     >
                     <input
                         v-model="createForm.role_label"
                         type="text"
                         class="w-full rounded-lg border border-outline-glass bg-white px-2 py-1.5 text-xs"
                     />
+                </div>
+                <div>
+                    <label
+                        class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-on-surface-variant"
+                    >
+                        {{ t('schedules.employees') }}
+                    </label>
+                    <p class="mb-2 text-xs text-on-surface-variant">
+                        {{ t('schedules.create_shift_employees_help') }}
+                    </p>
+                    <div
+                        v-if="employees.length > 0"
+                        class="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-outline-glass bg-white p-2"
+                    >
+                        <label
+                            v-for="employee in employees"
+                            :key="employee.id"
+                            class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-on-surface hover:bg-surface-container-low"
+                        >
+                            <input
+                                v-model="createForm.employee_profile_ids"
+                                type="checkbox"
+                                :value="employee.id"
+                                class="rounded border-outline-glass text-primary"
+                            />
+                            <span>{{ employee.name }}</span>
+                        </label>
+                    </div>
+                    <p v-else class="text-xs text-on-surface-variant italic">
+                        {{ t('schedules.no_employees_available') }}
+                    </p>
+                    <p
+                        v-if="createForm.errors.employee_profile_ids"
+                        class="mt-1 text-xs text-rose-600"
+                    >
+                        {{ createForm.errors.employee_profile_ids }}
+                    </p>
                 </div>
                 <div class="flex items-center gap-2 pt-2">
                     <button
@@ -512,6 +589,6 @@ function dateLabel(d: string): string {
                     </button>
                 </div>
             </form>
-        </div>
+        </ModalOverlay>
     </AppLayout>
 </template>

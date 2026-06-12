@@ -90,6 +90,6 @@ class StoreBusinessHoursUpdateController
 
         $request->session()->flash('success', \__('Business hours updated.'));
 
-        return \redirect('/stores/business-hours?id=' . $store->getKey());
+        return \redirect('/stores/show?id=' . $store->getKey());
     }
 }

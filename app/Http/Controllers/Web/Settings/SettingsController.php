@@ -15,22 +15,45 @@ use Thinkycz\LaravelCore\Support\Thrower;
 use Thinkycz\LaravelCore\Support\Typer;
 use Thinkycz\LaravelCore\Validation\AuthValidity;
 
-class PasswordController
+class SettingsController
 {
     use ValidatesWebRequests;
 
     /**
-     * Show password settings.
+     * Show the unified settings page.
      */
     public function edit(): Response
     {
-        return Inertia::render('settings/Password');
+        return Inertia::render('settings/Index');
+    }
+
+    /**
+     * Update profile details (email, locale).
+     */
+    public function updateProfile(Request $request): Response
+    {
+        $user = User::mustAuth();
+        $authValidity = AuthValidity::inject();
+
+        $validated = $this->validateRequest($request, [
+            'email' => $authValidity->email()->unique('users', 'email', $user->getKey())->required()->toArray(),
+            'locale' => $authValidity->locale()->required()->toArray(),
+        ]);
+
+        $user->update([
+            'email' => $validated->assertString('email'),
+            'locale' => $validated->assertString('locale'),
+        ]);
+
+        $request->session()->flash('success', \__('Profile updated.'));
+
+        return Inertia::render('settings/Index');
     }
 
     /**
      * Update the user's password.
      */
-    public function update(Request $request): Response
+    public function updatePassword(Request $request): Response
     {
         $user = User::mustAuth();
         $authValidity = AuthValidity::inject();
@@ -61,6 +84,6 @@ class PasswordController
 
         $request->session()->flash('success', \__('Password updated.'));
 
-        return Inertia::render('settings/Password');
+        return Inertia::render('settings/Index');
     }
 }

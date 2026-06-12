@@ -25,12 +25,6 @@ class Authorization
      */
     public static function managedStores(User $user): Collection
     {
-        if ($user->isAdmin()) {
-            return Db::hydrate(Store::query()->getQuery()->get(), Store::class)
-                ->sortBy('name')
-                ->values();
-        }
-
         if ($user->isStoreManager()) {
             $user->loadMissing('managedStores');
 
@@ -45,10 +39,6 @@ class Authorization
      */
     public static function canManageStore(User $user, Store $store): bool
     {
-        if ($user->isAdmin()) {
-            return true;
-        }
-
         if (!$user->isStoreManager()) {
             return false;
         }
@@ -73,7 +63,7 @@ class Authorization
      */
     public static function canViewStore(User $user, Store $store): bool
     {
-        if ($user->isAdmin() || $user->isStoreManager()) {
+        if ($user->isStoreManager()) {
             return static::canManageStore($user, $store);
         }
 
@@ -99,7 +89,7 @@ class Authorization
      */
     public static function visibleStores(User $user): Collection
     {
-        if ($user->isAdmin() || $user->isStoreManager()) {
+        if ($user->isStoreManager()) {
             return static::managedStores($user);
         }
 
@@ -123,11 +113,8 @@ class Authorization
      */
     public static function canManageSchedule(User $user, Schedule $schedule): bool
     {
-        $store = $schedule->store;
-
-        if (!$store instanceof Store) {
-            return false;
-        }
+        $schedule->loadMissing('store');
+        $store = $schedule->getStore();
 
         return static::canManageStore($user, $store);
     }
@@ -147,13 +134,14 @@ class Authorization
      */
     public static function canViewSchedule(User $user, Schedule $schedule): bool
     {
-        $store = $schedule->store;
+        $schedule->loadMissing('store');
+        $store = $schedule->getStore();
 
-        if ($store instanceof Store && static::canManageStore($user, $store)) {
+        if (static::canManageStore($user, $store)) {
             return true;
         }
 
-        if ($user->isEmployee() && $schedule->isPublished() && $store instanceof Store) {
+        if ($user->isEmployee() && $schedule->isPublished()) {
             return static::canViewStore($user, $store);
         }
 
@@ -165,11 +153,8 @@ class Authorization
      */
     public static function canManageShiftRequirement(User $user, ShiftRequirement $requirement): bool
     {
-        $schedule = $requirement->schedule;
-
-        if (!$schedule instanceof Schedule) {
-            return false;
-        }
+        $requirement->loadMissing('schedule');
+        $schedule = $requirement->getSchedule();
 
         return static::canManageSchedule($user, $schedule);
     }
@@ -181,10 +166,6 @@ class Authorization
      */
     public static function managedEmployeesQuery(User $user): Builder
     {
-        if ($user->isAdmin()) {
-            return EmployeeProfile::query();
-        }
-
         if ($user->isStoreManager()) {
             $user->loadMissing('managedStores');
             $storeIds = $user->managedStores->pluck('id')->all();
@@ -219,13 +200,13 @@ class Authorization
     /**
      * Check whether the user can view the given employee profile.
      *
-     * Admins and store managers can view any employee they manage
-     * (i.e. any employee that shares at least one of the manager's
-     * stores). Employees can view their own profile.
+     * Store managers can view any employee they manage (i.e. any
+     * employee that shares at least one of the manager's stores).
+     * Employees can view their own profile.
      */
     public static function canViewEmployee(User $user, EmployeeProfile $employee): bool
     {
-        if ($user->isAdmin() || $user->isStoreManager()) {
+        if ($user->isStoreManager()) {
             $storeIds = static::managedStores($user)->pluck('id')->all();
             if (\count($storeIds) === 0) {
                 return false;
@@ -261,7 +242,7 @@ class Authorization
      */
     public static function canCreateStore(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->isStoreManager();
     }
 
     /**
@@ -279,7 +260,7 @@ class Authorization
      */
     public static function canDeleteStore(User $user, Store $store): bool
     {
-        return $user->isAdmin();
+        return static::canManageStore($user, $store);
     }
 
     /**

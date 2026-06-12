@@ -9,9 +9,7 @@ use App\Models\Schedule;
 use App\Models\ShiftAssignment;
 use App\Models\User;
 use App\Services\Scheduling\AssignmentService;
-use App\Services\Scheduling\ConflictDetectionService;
 use App\Support\Authorization;
-use App\Support\Db;
 use App\Support\ModelFinder;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
@@ -25,7 +23,6 @@ class ShiftAssignmentDestroyController
      */
     public function __construct(
         private readonly AssignmentService $assignments,
-        private readonly ConflictDetectionService $conflicts,
     ) {}
 
     /**
@@ -33,17 +30,15 @@ class ShiftAssignmentDestroyController
      */
     public function __invoke(Request $request): SymfonyResponse
     {
-        $id = (int) $request->query('id', '0');
+        $idRaw = $request->input('id');
+        $id = \is_scalar($idRaw) ? (int) $idRaw : 0;
         $assignment = ModelFinder::findOrAbort(ShiftAssignment::class, $id);
 
         $req = $assignment->getShiftRequirement();
         if ($req !== null) {
-            $scheduleRow = Schedule::query()->getQuery()->getQuery()->where('id', $req->getScheduleId())->first();
-            if ($scheduleRow !== null) {
-                $schedule = Db::hydrateOne($scheduleRow, Schedule::class);
-                if ($schedule !== null && !Authorization::canManageSchedule(User::mustAuth(), $schedule)) {
-                    \abort(403);
-                }
+            $schedule = ModelFinder::findOrAbort(Schedule::class, $req->getScheduleId());
+            if (!Authorization::canManageSchedule(User::mustAuth(), $schedule)) {
+                \abort(403);
             }
         }
 

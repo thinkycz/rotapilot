@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Web\Schedules;
 
+use App\Models\EmployeeProfile;
 use App\Models\Schedule;
 use App\Models\ScheduleConflict;
 use App\Models\ShiftAssignment;
 use App\Models\User;
-use App\Services\Scheduling\AssignmentService;
-use App\Services\Scheduling\ConflictDetectionService;
 use App\Support\Authorization;
-use App\Support\Db;
 use App\Support\ModelFinder;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,14 +19,9 @@ use Inertia\Response;
 class ScheduleShowController
 {
     /**
-     * Constructor.
-     */
-    public function __construct(private readonly ConflictDetectionService $conflicts) {}
-
-    /**
      * Show a schedule.
      */
-    public function __invoke(Request $request, AssignmentService $assignments): Response
+    public function __invoke(Request $request): Response
     {
         $user = User::mustAuth();
         $id = (int) $request->query('id', '0');
@@ -37,39 +31,47 @@ class ScheduleShowController
             \abort(403);
         }
 
-        $store = $schedule->store;
-        $requirements = $schedule->shiftRequirements;
-        $conflicts = $schedule->conflicts()->get();
+        $schedule->loadMissing(['store', 'shiftRequirements', 'conflicts']);
+        $store = $schedule->getStore();
+        $requirements = $schedule->getShiftRequirements();
+        $conflicts = $schedule->getConflicts();
+
+        $start = Carbon::parse($schedule->getPeriodStart());
+        $end = Carbon::parse($schedule->getPeriodEnd());
 
         $byDate = [];
+        for ($d = $start->copy(); $d->lte($end); $d->addDay()) {
+            $byDate[$d->format('Y-m-d')] = [
+                'shifts' => [],
+            ];
+        }
+
         foreach ($requirements as $r) {
             $date = $r->getDate();
-            if (!isset($byDate[$date])) {
-                $byDate[$date] = [];
+            if (isset($byDate[$date])) {
+                $byDate[$date]['shifts'][] = [
+                    'id' => $r->getKey(),
+                    'start_time' => $r->getStartTime(),
+                    'end_time' => $r->getEndTime(),
+                    'required_employee_count' => $r->getRequiredEmployeeCount(),
+                    'role_label' => $r->getRoleLabel(),
+                    'note' => $r->getNote(),
+                    'source' => $r->getSource()->value,
+                    'assignments' => $r->assignments()
+                        ->with('employeeProfile')
+                        ->get()
+                        ->map(static fn(ShiftAssignment $a): array => [
+                            'id' => $a->getKey(),
+                            'employee_profile_id' => $a->getEmployeeProfileId(),
+                            'employee_name' => $a->getEmployeeProfile()->getName(),
+                            'status' => $a->getStatus()->value,
+                        ])->values()->all(),
+                ];
             }
-            $byDate[$date][] = [
-                'id' => $r->getKey(),
-                'start_time' => $r->getStartTime(),
-                'end_time' => $r->getEndTime(),
-                'required_employee_count' => $r->getRequiredEmployeeCount(),
-                'role_label' => $r->getRoleLabel(),
-                'note' => $r->getNote(),
-                'source' => $r->getSource()->value,
-                'assignments' => $r->assignments()
-                    ->getQuery()
-                    ->get()
-                    ->map(static fn(ShiftAssignment $a): array => [
-                        'id' => $a->getKey(),
-                        'employee_profile_id' => $a->getEmployeeProfileId(),
-                        'employee_name' => $a->getEmployeeProfile()->getName(),
-                        'status' => $a->getStatus()->value,
-                    ])->values()->all(),
-            ];
         }
         \ksort($byDate);
 
-        $employeeRows = $store->employees()->getQuery()->getQuery()->orderBy('name')->get();
-        $employees = Db::hydrate($employeeRows, \App\Models\EmployeeProfile::class);
+        $employees = $store->employees()->orderBy('name')->get();
 
         return Inertia::render('schedules/Show', [
             'schedule' => [
@@ -79,7 +81,7 @@ class ScheduleShowController
                 'period_start' => $schedule->getPeriodStart(),
                 'period_end' => $schedule->getPeriodEnd(),
                 'store_id' => $schedule->getStoreId(),
-                'store_name' => $store?->getName() ?? '—',
+                'store_name' => $store->getName(),
             ],
             'days' => $byDate,
             'conflicts' => $conflicts->map(static fn(ScheduleConflict $c): array => [
@@ -91,7 +93,7 @@ class ScheduleShowController
                 'employee_id' => $c->getEmployeeProfileId(),
                 'shift_requirement_id' => $c->getShiftRequirementId(),
             ])->values()->all(),
-            'employees' => $employees->map(static fn(\App\Models\EmployeeProfile $e): array => [
+            'employees' => $employees->map(static fn(EmployeeProfile $e): array => [
                 'id' => $e->getKey(),
                 'name' => $e->getName(),
             ])->values()->all(),

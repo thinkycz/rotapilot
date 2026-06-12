@@ -72,7 +72,7 @@ class ShiftRequirementValidity
      */
     public function date(): Validity
     {
-        return $this->baseValidity->make()->date();
+        return $this->baseValidity->make()->string(null)->date();
     }
 
     /**
@@ -80,7 +80,7 @@ class ShiftRequirementValidity
      */
     public function startTime(): Validity
     {
-        return $this->baseValidity->make()->dateFormat('H:i');
+        return $this->baseValidity->make()->string(null)->dateFormat('H:i');
     }
 
     /**
@@ -88,7 +88,7 @@ class ShiftRequirementValidity
      */
     public function endTime(): Validity
     {
-        return $this->baseValidity->make()->dateFormat('H:i');
+        return $this->baseValidity->make()->string(null)->dateFormat('H:i');
     }
 
     /**

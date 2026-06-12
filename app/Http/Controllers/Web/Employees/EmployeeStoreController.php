@@ -11,6 +11,7 @@ use App\Models\EmployeeStore;
 use App\Models\Store;
 use App\Models\User;
 use App\Support\Authorization;
+use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
@@ -33,9 +34,36 @@ class EmployeeStoreController
             'role_label' => $validity->roleLabel()->nullable()->toArray(),
             'max_hours_per_week' => $validity->maxHoursPerWeek()->nullable()->toArray(),
             'is_active' => $validity->isActive()->nullable()->toArray(),
-            'store_ids' => 'array',
+            'store_ids' => [
+                'required',
+                'array',
+                'min:1',
+                static function (string $attribute, mixed $value, Closure $fail) use ($actor): void {
+                    if (!\is_array($value)) {
+                        return;
+                    }
+                    foreach ($value as $storeId) {
+                        $storeIdInt = \is_int($storeId) ? $storeId : (\is_string($storeId) && \ctype_digit($storeId) ? (int) $storeId : 0);
+                        $store = Store::query()->find($storeIdInt);
+                        if ($store instanceof Store && Authorization::canManageStore($actor, $store)) {
+                            return;
+                        }
+                    }
+                    $fail(\__('You must select at least one store that you manage.'));
+                },
+            ],
             'store_ids.*' => 'integer|exists:stores,id',
         ]);
+
+        $storeIds = $validated->array('store_ids');
+        $validStoreIds = [];
+        foreach ($storeIds as $storeId) {
+            $storeIdInt = \is_int($storeId) ? $storeId : (\is_string($storeId) && \ctype_digit($storeId) ? (int) $storeId : 0);
+            $store = Store::query()->find($storeIdInt);
+            if ($store instanceof Store && Authorization::canManageStore($actor, $store)) {
+                $validStoreIds[] = $store->getKey();
+            }
+        }
 
         $maxHoursRaw = $validated->mixed('max_hours_per_week');
         $maxHours = null;
@@ -58,19 +86,10 @@ class EmployeeStoreController
             'is_active' => $isActive,
         ])->save();
 
-        $storeIds = $validated->array('store_ids');
-        foreach ($storeIds as $storeId) {
-            $storeIdInt = \is_int($storeId) ? $storeId : (\is_string($storeId) && \ctype_digit($storeId) ? (int) $storeId : 0);
-            $store = Store::query()->find($storeIdInt);
-            if (!$store instanceof Store) {
-                continue;
-            }
-            if (!Authorization::canManageStore($actor, $store)) {
-                continue;
-            }
+        foreach ($validStoreIds as $validStoreId) {
             EmployeeStore::query()->getQuery()->insert([
                 'employee_profile_id' => $employee->getKey(),
-                'store_id' => $store->getKey(),
+                'store_id' => $validStoreId,
                 'created_at' => \now(),
                 'updated_at' => \now(),
             ]);

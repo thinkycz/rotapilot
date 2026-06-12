@@ -7,7 +7,6 @@ namespace App\Http\Controllers\Web\Employees;
 use App\Models\EmployeeProfile;
 use App\Models\User;
 use App\Support\Authorization;
-use App\Support\Db;
 use App\Support\ModelFinder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -28,8 +27,7 @@ class EmployeeShowController
 
         Authorization::mustViewEmployee($user, $employee);
 
-        $storeRows = $employee->stores()->getQuery()->orderBy('name')->get();
-        $storeList = Db::hydrate($storeRows, \App\Models\Store::class);
+        $storeList = $employee->stores()->orderBy('name')->get();
 
         return Inertia::render('employees/Show', [
             'employee' => [

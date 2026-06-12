@@ -8,7 +8,6 @@ use App\Models\Schedule;
 use App\Models\ScheduleConflict;
 use App\Models\User;
 use App\Support\Authorization;
-use App\Support\Db;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -29,7 +28,6 @@ class ConflictIndexController
         $scheduleId = (int) $request->query('schedule_id', '0');
 
         $query = ScheduleConflict::query()
-            ->getQuery()
             ->whereNull('resolved_at');
 
         if ($scheduleId > 0) {
@@ -39,8 +37,8 @@ class ConflictIndexController
         $managedStores = Authorization::managedStores($user);
         $storeIds = $managedStores->pluck('id')->all();
 
-        $query->whereIn('schedule_id', function ($sub) use ($storeIds): void {
-            $sub->select('id')->from('schedules')->whereIn('store_id', $storeIds ?: [0]);
+        $query->whereIn('schedule_id', function (\Illuminate\Database\Query\Builder $sub) use ($storeIds): void {
+            $sub->select('id')->from('schedules')->whereIn('store_id', \count($storeIds) === 0 ? [0] : $storeIds);
         });
 
         $conflicts = $query->get();
@@ -59,19 +57,17 @@ class ConflictIndexController
             $byType[$row['type']][] = $row;
         }
 
-        $schedules = Schedule::query()
-            ->getQuery()
-            ->whereIn('id', function ($sub) use ($storeIds): void {
-                $sub->select('id')->from('schedules')->whereIn('store_id', $storeIds ?: [0]);
+        $scheduleList = Schedule::query()
+            ->whereIn('id', function (\Illuminate\Database\Query\Builder $sub) use ($storeIds): void {
+                $sub->select('id')->from('schedules')->whereIn('store_id', \count($storeIds) === 0 ? [0] : $storeIds);
             })
             ->orderBy('period_start', 'desc')
             ->limit(20)
-            ->get();
-
-        $scheduleList = Db::hydrate($schedules, Schedule::class)->map(static fn(Schedule $s): array => [
-            'id' => $s->getKey(),
-            'name' => $s->getName(),
-        ])->values()->all();
+            ->get()
+            ->map(static fn(Schedule $s): array => [
+                'id' => $s->getKey(),
+                'name' => $s->getName(),
+            ])->values()->all();
 
         return Inertia::render('conflicts/Index', [
             'conflicts' => $rows,

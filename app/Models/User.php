@@ -59,14 +59,6 @@ class User extends BaseUser implements MustVerifyEmail
     }
 
     /**
-     * Is admin.
-     */
-    public function isAdmin(): bool
-    {
-        return $this->getRole() === UserRoleEnum::Admin;
-    }
-
-    /**
      * Is store manager.
      */
     public function isStoreManager(): bool

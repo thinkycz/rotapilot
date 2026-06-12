@@ -8,9 +8,8 @@ use App\Models\EmployeeAvailability;
 use App\Models\EmployeeProfile;
 use App\Models\ShiftAssignment;
 use App\Models\ShiftRequirement;
-use App\Support\Db;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-use stdClass;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Deterministic scheduler. Picks up to N employees for a shift requirement.
@@ -48,15 +47,10 @@ class ScheduleGeneratorService
             return [];
         }
 
-        /** @var \Illuminate\Support\Collection<int, stdClass> $rawEmployees */
-        $rawEmployees = EmployeeProfile::query()
-            ->getQuery()
-            ->where('id', $candidateIds)
-            ->where('is_active', true)
+        $employees = EmployeeProfile::query()
+            ->whereIn('id', $candidateIds)
+            ->tap(static fn($q) => EmployeeProfile::scopeActive($q))
             ->get();
-
-        /** @var EloquentCollection<int, EmployeeProfile> $employees */
-        $employees = Db::hydrate($rawEmployees, EmployeeProfile::class);
 
         if ($employees->isEmpty()) {
             return [];
@@ -67,29 +61,20 @@ class ScheduleGeneratorService
             $employeeIds[] = $e->getKey();
         }
 
-        $availabilityRows = EmployeeAvailability::query()
-            ->getQuery()
+        $availabilities = EmployeeAvailability::query()
             ->whereIn('employee_profile_id', $employeeIds)
             ->where('date', $date)
-            ->get();
-
-        /** @var \Illuminate\Support\Collection<int, stdClass> $availabilityRows */
-        $availabilities = $availabilityRows->groupBy('employee_profile_id');
+            ->get()
+            ->groupBy('employee_profile_id');
 
         $weeklyHours = $this->weeklyHoursForEmployees($employeeIds, $requirement);
 
         $ranked = [];
         foreach ($employees as $employee) {
             $employeeId = $employee->getKey();
-            $bucket = $availabilities[$employeeId] ?? null;
-            $models = [];
-            if ($bucket !== null) {
-                foreach ($bucket as $item) {
-                    $model = new EmployeeAvailability();
-                    $model->setRawAttributes((array) $item, true);
-                    $models[] = $model;
-                }
-            }
+            $bucket = $availabilities->get($employeeId);
+            /** @var array<int, EmployeeAvailability> $models */
+            $models = $bucket instanceof EloquentCollection ? $bucket->all() : [];
 
             $verdict = $this->availability->check($models, $date, $start, $end);
 
@@ -131,7 +116,7 @@ class ScheduleGeneratorService
                 break;
             }
 
-            $picks[] = (int) $row['id'];
+            $picks[] = $row['id'];
         }
 
         return $picks;
@@ -144,19 +129,17 @@ class ScheduleGeneratorService
      */
     private function candidateIdsForStore(int $storeId): array
     {
-        $rows = \Illuminate\Database\Eloquent\Model::query()
-            ->getQuery()
-            ->from('employee_store')
-            ->where('store_id', $storeId)
-            ->get(['employee_profile_id']);
-
         $ids = [];
-        foreach ($rows as $r) {
-            $raw = $r->employee_profile_id;
-            if (\is_int($raw)) {
-                $ids[] = $raw;
-            } elseif (\is_string($raw) && \ctype_digit($raw)) {
-                $ids[] = (int) $raw;
+        $profileIds = DB::table('employee_store')
+            ->where('store_id', $storeId)
+            ->pluck('employee_profile_id')
+            ->all();
+
+        foreach ($profileIds as $id) {
+            if (\is_int($id)) {
+                $ids[] = $id;
+            } elseif (\is_string($id) && \ctype_digit($id)) {
+                $ids[] = (int) $id;
             }
         }
 
@@ -175,14 +158,10 @@ class ScheduleGeneratorService
         $weekStart = \Carbon\Carbon::parse($requirement->getDate())->startOfWeek()->format('Y-m-d');
         $weekEnd = \Carbon\Carbon::parse($requirement->getDate())->endOfWeek()->format('Y-m-d');
 
-        /** @var \Illuminate\Support\Collection<int, stdClass> $rawAssignments */
-        $rawAssignments = ShiftAssignment::query()
-            ->active()
+        $assignments = ShiftAssignment::query()
+            ->tap(static fn($q) => ShiftAssignment::scopeActive($q))
             ->whereIn('employee_profile_id', $candidateIds)
             ->get();
-
-        /** @var EloquentCollection<int, ShiftAssignment> $assignments */
-        $assignments = Db::hydrate($rawAssignments, ShiftAssignment::class);
 
         $requirementIds = [];
         foreach ($assignments as $a) {
@@ -193,14 +172,9 @@ class ScheduleGeneratorService
             return [];
         }
 
-        /** @var \Illuminate\Support\Collection<int, stdClass> $rawRequirements */
-        $rawRequirements = ShiftRequirement::query()
-            ->getQuery()
+        $requirements = ShiftRequirement::query()
             ->whereIn('id', $requirementIds)
             ->get();
-
-        /** @var EloquentCollection<int, ShiftRequirement> $requirements */
-        $requirements = Db::hydrate($rawRequirements, ShiftRequirement::class);
 
         $byId = [];
         foreach ($requirements as $r) {
@@ -231,12 +205,10 @@ class ScheduleGeneratorService
      */
     private function hasOverlap(int $employeeId, ShiftRequirement $r): bool
     {
-        $rawOverlapping = ShiftAssignment::query()
-            ->active()
+        $overlapping = ShiftAssignment::query()
+            ->tap(static fn($q) => ShiftAssignment::scopeActive($q))
             ->where('employee_profile_id', $employeeId)
             ->get();
-
-        $overlapping = Db::hydrate($rawOverlapping, ShiftAssignment::class);
 
         $requirementIds = [];
         foreach ($overlapping as $a) {
@@ -247,11 +219,9 @@ class ScheduleGeneratorService
             return false;
         }
 
-        $rawOthers = ShiftRequirement::query()
+        $others = ShiftRequirement::query()
             ->whereIn('id', $requirementIds)
             ->get();
-
-        $others = Db::hydrate($rawOthers, ShiftRequirement::class);
 
         return $this->overlaps->hasOverlap(
             $others->all(),

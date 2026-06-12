@@ -6,11 +6,10 @@ namespace App\Http\Controllers\Web\Availability;
 
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Models\EmployeeAvailability;
-use App\Models\EmployeeProfile;
 use App\Models\Store;
 use App\Models\User;
 use App\Support\Authorization;
-use App\Support\Db;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -30,20 +29,21 @@ class AvailabilityIndexController
     public function __invoke(Request $request): Response
     {
         $user = User::mustAuth();
-        $month = (string) $request->query('month', \now()->format('Y-m'));
-        $storeId = (int) $request->query('store_id', '0');
-        $employeeId = (int) $request->query('employee_id', '0');
+        $monthVal = $request->query('month');
+        $month = \is_string($monthVal) ? $monthVal : \now()->format('Y-m');
+        $storeIdVal = $request->query('store_id');
+        $storeId = \is_numeric($storeIdVal) ? (int) $storeIdVal : 0;
+        $employeeIdVal = $request->query('employee_id');
+        $employeeId = \is_numeric($employeeIdVal) ? (int) $employeeIdVal : 0;
 
-        $start = \Carbon\Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        $start = Carbon::parse($month)->startOfMonth();
         $end = $start->copy()->endOfMonth();
         $days = [];
         for ($d = $start->copy(); $d->lte($end); $d->addDay()) {
             $days[] = $d->format('Y-m-d');
         }
 
-        $employeesQuery = Authorization::managedEmployeesQuery($user);
-        $employees = $employeesQuery->getQuery()->orderBy('name')->get();
-        $employeeList = Db::hydrate($employees, EmployeeProfile::class);
+        $employeeList = Authorization::managedEmployeesQuery($user)->orderBy('name')->get();
 
         $stores = Authorization::managedStores($user);
 
@@ -53,15 +53,14 @@ class AvailabilityIndexController
         }
 
         $availabilities = EmployeeAvailability::query()
-            ->getQuery()
-            ->whereIn('employee_profile_id', $employeeIds ?: [0])
+            ->whereIn('employee_profile_id', $employeeIds === [] ? [0] : $employeeIds)
             ->whereBetween('date', [$start->format('Y-m-d'), $end->format('Y-m-d')])
             ->get();
 
         $byEmployeeDay = [];
         foreach ($availabilities as $row) {
-            $empId = (int) $row->employee_profile_id;
-            $date = (string) $row->date;
+            $empId = $row->getEmployeeProfileId();
+            $date = $row->getDate();
             $byEmployeeDay[$empId][$date] = $row;
         }
 
@@ -78,10 +77,11 @@ class AvailabilityIndexController
             foreach ($days as $d) {
                 $entry = $byEmployeeDay[$empId][$d] ?? null;
                 $row['days'][$d] = $entry === null ? null : [
-                    'id' => (int) $entry->id,
-                    'type' => (string) $entry->type,
-                    'start_time' => $entry->start_time !== null ? (string) $entry->start_time : null,
-                    'end_time' => $entry->end_time !== null ? (string) $entry->end_time : null,
+                    'id' => $entry->getKey(),
+                    'type' => $entry->getType()->value,
+                    'start_time' => $entry->getStartTime(),
+                    'end_time' => $entry->getEndTime(),
+                    'note' => $entry->getNote(),
                 ];
             }
             $grid[] = $row;

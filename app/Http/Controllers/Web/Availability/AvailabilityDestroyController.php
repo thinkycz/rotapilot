@@ -6,6 +6,9 @@ namespace App\Http\Controllers\Web\Availability;
 
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Models\EmployeeAvailability;
+use App\Models\EmployeeProfile;
+use App\Models\User;
+use App\Support\Authorization;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
@@ -18,13 +21,22 @@ class AvailabilityDestroyController
      */
     public function __invoke(Request $request): SymfonyResponse
     {
+        $actor = User::mustAuth();
         $id = (int) $request->query('id', '0');
-        $row = EmployeeAvailability::query()->getQuery()->where('id', $id)->first();
-        if ($row === null) {
+        $row = EmployeeAvailability::query()->find($id);
+        if (!$row instanceof EmployeeAvailability) {
             \abort(404);
         }
 
-        EmployeeAvailability::query()->getQuery()->where('id', $id)->delete();
+        $row->loadMissing('employeeProfile');
+        $employee = $row->employeeProfile;
+        if (!$employee instanceof EmployeeProfile) {
+            \abort(404);
+        }
+
+        Authorization::mustViewEmployee($actor, $employee);
+
+        $row->delete();
 
         $request->session()->flash('success', \__('Availability removed.'));
 

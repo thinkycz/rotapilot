@@ -5,16 +5,14 @@ import {
     CalendarRange,
     Calendar,
     CalendarCheck2,
-    Sparkles,
     AlertTriangle,
     Coffee,
     UserRound,
-    KeyRound,
+    Settings as SettingsIcon,
     LogOut,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import LocaleSwitcher from '@/components/LocaleSwitcher.vue';
 import Brand from '@/components/ui/Brand.vue';
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
 import FlashAlerts from '@/components/ui/FlashAlerts.vue';
@@ -47,15 +45,11 @@ const navItems = computed(() => {
         { href: '/employees/index', key: 'employees', icon: UserRound },
         { href: '/schedules/index', key: 'schedules', icon: CalendarRange },
         { href: '/availability', key: 'availability', icon: CalendarCheck2 },
-        { href: '/ai-planner', key: 'ai_planner', icon: Sparkles },
         { href: '/conflicts', key: 'conflicts', icon: AlertTriangle },
     ];
 });
 
-const settingsItems = computed(() => [
-    { href: '/settings/profile', key: 'profile', icon: UserRound },
-    { href: '/settings/password', key: 'password', icon: KeyRound },
-]);
+const settingsActive = computed(() => activeUrl.value.startsWith('/settings'));
 
 const isActive = (href: string): boolean => activeUrl.value.startsWith(href);
 
@@ -103,38 +97,7 @@ function logout(): void {
                     <component :is="item.icon" :size="16" />
                     {{ t(`nav.${item.key}`) }}
                 </Link>
-
-                <div
-                    class="my-2 ml-2 font-mono text-[9px] font-extrabold tracking-wider text-on-surface-variant opacity-70 uppercase"
-                >
-                    {{ t('settings.profile.title') }}
-                </div>
-                <Link
-                    v-for="item in settingsItems"
-                    :key="item.key"
-                    :href="item.href"
-                    :class="[
-                        'flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold transition-all',
-                        isActive(item.href)
-                            ? 'border-r-2 border-primary bg-surface-container-low font-bold text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]'
-                            : 'text-on-surface-variant hover:bg-surface-container-low',
-                    ]"
-                >
-                    <component :is="item.icon" :size="16" />
-                    {{ t(`nav.${item.key}`) }}
-                </Link>
             </nav>
-
-            <!-- Language Switcher in Sidebar -->
-            <div class="mb-4 border-t border-outline-glass pt-4 px-2">
-                <div class="flex items-center justify-between gap-2">
-                    <span
-                        class="font-mono text-[9px] font-extrabold tracking-wider text-on-surface-variant uppercase"
-                        >{{ t('locale.switcher_label') }}</span
-                    >
-                    <LocaleSwitcher v-if="auth.user" />
-                </div>
-            </div>
 
             <!-- Footer: User Identity + Quick Actions -->
             <div
@@ -164,7 +127,21 @@ function logout(): void {
                     </div>
                 </div>
 
-                <div class="flex shrink-0 items-center">
+                <div class="flex shrink-0 items-center gap-1">
+                    <Link
+                        v-if="auth.user"
+                        href="/settings"
+                        :class="[
+                            'rounded-lg p-1.5 transition-colors',
+                            settingsActive
+                                ? 'bg-surface-container-lowest text-primary'
+                                : 'text-on-surface-variant hover:bg-surface-container-low hover:text-primary',
+                        ]"
+                        :title="t('nav.settings')"
+                        :aria-label="t('nav.settings')"
+                    >
+                        <SettingsIcon :size="14" />
+                    </Link>
                     <button
                         @click="logout"
                         class="cursor-pointer rounded-lg p-1.5 text-on-surface-variant transition-all hover:bg-rose-50/50 hover:text-error-red"
@@ -200,7 +177,20 @@ function logout(): void {
                 >
                     <component :is="item.icon" :size="16" />
                 </Link>
-                <LocaleSwitcher v-if="auth.user" />
+                <Link
+                    v-if="auth.user"
+                    href="/settings"
+                    :class="[
+                        'rounded-lg p-2 transition-all',
+                        settingsActive
+                            ? 'bg-surface-container-lowest text-primary'
+                            : 'text-on-surface-variant',
+                    ]"
+                    :title="t('nav.settings')"
+                    :aria-label="t('nav.settings')"
+                >
+                    <SettingsIcon :size="16" />
+                </Link>
                 <button
                     @click="logout"
                     class="rounded-lg p-2 text-on-surface-variant transition-all hover:text-error-red"
@@ -219,24 +209,6 @@ function logout(): void {
                 ></div>
 
                 <div class="z-10 flex flex-1 flex-col max-w-6xl w-full mx-auto">
-                    <div
-                        class="mb-6 flex items-center justify-between border-b border-outline-glass/40 pb-4"
-                    >
-                        <div>
-                            <h2
-                                class="font-heading text-2xl font-bold tracking-tight text-on-surface md:text-3xl"
-                            >
-                                {{ title }}
-                            </h2>
-                            <p
-                                v-if="auth.user"
-                                class="text-xs font-medium text-on-surface-variant mt-1"
-                            >
-                                {{ auth.user.email }}
-                            </p>
-                        </div>
-                    </div>
-
                     <FlashAlerts />
 
                     <div class="flex-1">

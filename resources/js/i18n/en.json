@@ -9,13 +9,10 @@
         "employees": "Employees",
         "schedules": "Schedules",
         "availability": "Availability",
-        "ai_planner": "AI Planner",
         "conflicts": "Conflicts",
         "my_calendar": "My Calendar",
-        "profile": "Profile",
-        "password": "Password",
-        "logout": "Log out",
-        "primary": "Primary"
+        "settings": "Settings",
+        "logout": "Log out"
     },
     "auth": {
         "login": {
@@ -54,15 +51,15 @@
         }
     },
     "settings": {
+        "title": "Settings",
+        "subtitle": "Manage your account details and security preferences.",
         "profile": {
-            "title": "Profile settings",
-            "submit": "Save profile",
-            "change_password": "Change password"
+            "title": "Profile",
+            "submit": "Save profile"
         },
         "password": {
-            "title": "Password settings",
-            "submit": "Update password",
-            "back_to_profile": "Back to profile"
+            "title": "Password",
+            "submit": "Update password"
         }
     },
     "dashboard": {
@@ -114,7 +111,22 @@
         "no_data": "No data yet.",
         "confirm": "Confirm",
         "confirm_title": "Are you sure?",
-        "actions": "Actions"
+        "actions": "Actions",
+        "today": "Today",
+        "open": "Open",
+        "yes": "Yes",
+        "no": "No",
+        "not_set": "Not set",
+        "closed": "Closed",
+        "weekdays": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+        ]
     },
     "stores": {
         "title_index": "Stores",
@@ -132,7 +144,15 @@
         "view": "View",
         "edit_link": "Edit",
         "business_hours_link": "Business hours",
-        "schedule_link": "Schedule"
+        "schedule_link": "Schedule",
+        "managers": "Managers",
+        "status_active": "Active",
+        "status_inactive": "Inactive",
+        "business_hours_day": "Day",
+        "business_hours_closed": "Closed",
+        "business_hours_opens_at": "Opens at",
+        "business_hours_closes_at": "Closes at",
+        "no_managers": "No managers assigned."
     },
     "employees": {
         "title_index": "Employees",
@@ -142,7 +162,7 @@
         "name": "Name",
         "email": "Email",
         "phone": "Phone",
-        "role_label": "Role label",
+        "role_label": "Role",
         "max_hours_per_week": "Max hours / week",
         "assigned_stores": "Assigned stores",
         "create_cta": "Create employee",
@@ -150,7 +170,13 @@
         "view": "View",
         "edit_link": "Edit",
         "manage_availability": "Manage availability",
-        "view_shifts": "View shifts"
+        "view_shifts": "View shifts",
+        "profile": "Profile",
+        "login": "Login",
+        "unassign": "Unassign",
+        "confirm_unassign": "Unassign from store?",
+        "no_assigned_stores": "No assigned stores.",
+        "no_stores_available": "No stores available"
     },
     "schedules": {
         "title_index": "Schedules",
@@ -160,6 +186,8 @@
         "name": "Name",
         "store": "Store",
         "period": "Period",
+        "month": "Month",
+        "year": "Year",
         "status": "Status",
         "status_draft": "Draft",
         "status_published": "Published",
@@ -180,7 +208,23 @@
         "delete_shift": "Delete shift",
         "no_assignments": "No one assigned yet.",
         "confirm_remove_assignment": "Remove this assignment?",
-        "confirm_delete_shift": "Delete this shift?"
+        "confirm_delete_shift": "Delete this shift?",
+        "required": "Required",
+        "assigned": "Assigned",
+        "role": "Role",
+        "assigned_employees": "Assigned employees",
+        "employees": "Employees",
+        "add_employee": "Add employee",
+        "select_employee": "Select employee",
+        "no_employees_available": "No employees available.",
+        "create_shift_employees_help": "Optional: select employees to assign immediately.",
+        "add": "Add",
+        "start": "Start",
+        "end": "End",
+        "required_count": "Required count",
+        "role_label_optional": "Role label (optional)",
+        "auto_fill": "Auto-fill",
+        "critical_conflicts_warning": "Publishing is blocked due to critical conflicts."
     },
     "availability": {
         "title": "Availability",
@@ -233,11 +277,14 @@
         "mark_resolved": "Mark resolved",
         "resolve": "Resolve",
         "empty": "No conflicts for any of your schedules. Nice work.",
-        "empty_subtitle": "All caught up."
+        "empty_subtitle": "All caught up.",
+        "schedule_filter": "Schedule",
+        "all_schedules": "All schedules"
     },
     "my_calendar": {
         "title": "My calendar",
-        "empty": "You do not have any shifts scheduled for this period."
+        "empty": "You do not have any shifts scheduled for this period.",
+        "no_profile": "No employee profile is assigned to your account yet. Ask a manager to assign one."
     },
     "fields": {
         "email": "Email",

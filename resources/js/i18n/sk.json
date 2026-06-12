@@ -5,17 +5,14 @@
     "nav": {
         "skip_to_main": "Preskočiť na hlavný obsah",
         "dashboard": "Nástenka",
-        "stores": "Predajne",
+        "stores": "Prevádzky",
         "employees": "Zamestnanci",
         "schedules": "Plány",
         "availability": "Dostupnosť",
-        "ai_planner": "AI plánovač",
         "conflicts": "Konflikty",
         "my_calendar": "Môj kalendár",
-        "profile": "Profil",
-        "password": "Heslo",
-        "logout": "Odhlásiť sa",
-        "primary": "Hlavné"
+        "settings": "Nastavenia",
+        "logout": "Odhlásiť sa"
     },
     "auth": {
         "login": {
@@ -26,8 +23,8 @@
             "back_link": "Späť na prihlásenie"
         },
         "register": {
-            "title": "Vytvoriť účet správcu predajne",
-            "subtitle": "Zaregistrujte sa a spravujte svoje predajne, zamestnancov a zmeny. Zamestnancov pozýva ich správca.",
+            "title": "Vytvoriť účet správcu prevádzky",
+            "subtitle": "Zaregistrujte sa a spravujte svoje prevádzky, zamestnancov a zmeny. Zamestnancov pozýva ich správca.",
             "submit": "Registrovať",
             "login_link": "Prihlásiť sa"
         },
@@ -54,15 +51,15 @@
         }
     },
     "settings": {
+        "title": "Nastavenia",
+        "subtitle": "Spravujte svoje údaje a bezpečnostné nastavenia.",
         "profile": {
-            "title": "Nastavenie profilu",
-            "submit": "Uložiť profil",
-            "change_password": "Zmeniť heslo"
+            "title": "Profil",
+            "submit": "Uložiť profil"
         },
         "password": {
-            "title": "Nastavenie hesla",
-            "submit": "Aktualizovať heslo",
-            "back_to_profile": "Späť na profil"
+            "title": "Heslo",
+            "submit": "Aktualizovať heslo"
         }
     },
     "dashboard": {
@@ -88,8 +85,8 @@
         "ai_planner_cta": "Otvoriť AI plánovač",
         "ai_planner_create": "Vytvoriť plán ručne",
         "get_started": "Začnite",
-        "get_started_description": "Vytvorte svoju prvú predajňu a začnite pridávať zamestnancov a zmeny.",
-        "create_store_cta": "Vytvoriť prvú predajňu",
+        "get_started_description": "Vytvorte svoju prvú prevádzku a začnite pridávať zamestnancov a zmeny.",
+        "create_store_cta": "Vytvoriť prvú prevádzku",
         "next_shift": "Vaša ďalšia zmena",
         "next_shift_empty": "Žiadne nadchádzajúce zmeny.",
         "assigned_stores": "Vaše prevádzky",
@@ -101,7 +98,7 @@
         "upcoming_shifts": "Nadchádzajúce zmeny",
         "no_schedules": "Zatiaľ žiadne plány.",
         "no_upcoming": "Žiadne nadchádzajúce zmeny.",
-        "unavailabilities": "Voľno"
+        "unavailabilities": "Vovo"
     },
     "common": {
         "save": "Uložiť",
@@ -114,7 +111,22 @@
         "no_data": "Zatiaľ žiadne dáta.",
         "confirm": "Potvrdiť",
         "confirm_title": "Naozaj?",
-        "actions": "Akcie"
+        "actions": "Akcie",
+        "today": "Dnes",
+        "open": "Otvoriť",
+        "yes": "Áno",
+        "no": "Nie",
+        "not_set": "Nevyplnené",
+        "closed": "Zatvorené",
+        "weekdays": [
+            "Pondelok",
+            "Utorok",
+            "Streda",
+            "Štvrtok",
+            "Piatok",
+            "Sobota",
+            "Nedeľa"
+        ]
     },
     "stores": {
         "title_index": "Prevádzky",
@@ -132,7 +144,15 @@
         "view": "Detail",
         "edit_link": "Upraviť",
         "business_hours_link": "Otváracie hodiny",
-        "schedule_link": "Plán"
+        "schedule_link": "Plán",
+        "managers": "Manažéri",
+        "status_active": "Aktívna",
+        "status_inactive": "Neaktívna",
+        "business_hours_day": "Deň",
+        "business_hours_closed": "Zatvorené",
+        "business_hours_opens_at": "Otvára",
+        "business_hours_closes_at": "Zatvára",
+        "no_managers": "Nie sú priradení žiadni manažéri."
     },
     "employees": {
         "title_index": "Zamestnanci",
@@ -150,7 +170,13 @@
         "view": "Detail",
         "edit_link": "Upraviť",
         "manage_availability": "Spravovať dostupnosť",
-        "view_shifts": "Zobraziť zmeny"
+        "view_shifts": "Zobraziť zmeny",
+        "profile": "Profil",
+        "login": "Prihlásenie",
+        "unassign": "Odobrať",
+        "confirm_unassign": "Odobrať z prevádzky?",
+        "no_assigned_stores": "Žiadne priradené prevádzky.",
+        "no_stores_available": "Žiadne prevádzky k dispozícii"
     },
     "schedules": {
         "title_index": "Plány",
@@ -160,6 +186,8 @@
         "name": "Názov",
         "store": "Prevádzka",
         "period": "Obdobie",
+        "month": "Mesiac",
+        "year": "Rok",
         "status": "Stav",
         "status_draft": "Koncept",
         "status_published": "Publikované",
@@ -180,7 +208,23 @@
         "delete_shift": "Zmazať zmenu",
         "no_assignments": "Zatiaľ nikto nepriradený.",
         "confirm_remove_assignment": "Odobrať toto priradenie?",
-        "confirm_delete_shift": "Zmazať túto zmenu?"
+        "confirm_delete_shift": "Zmazať túto zmenu?",
+        "required": "Vyžadované",
+        "assigned": "Priradené",
+        "role": "Rola",
+        "assigned_employees": "Priradení zamestnanci",
+        "employees": "Zamestnanci",
+        "add_employee": "Pridať zamestnanca",
+        "select_employee": "Vyberte zamestnanca",
+        "no_employees_available": "Žiadni zamestnanci k dispozícii.",
+        "create_shift_employees_help": "Voliteľné: vyberte zamestnancov, ktorých chcete priradiť hneď.",
+        "add": "Pridať",
+        "start": "Začiatok",
+        "end": "Koniec",
+        "required_count": "Vyžadovaný počet",
+        "role_label_optional": "Pozícia (voliteľné)",
+        "auto_fill": "Automaticky obsadiť",
+        "critical_conflicts_warning": "Publikovanie je zablokované kvôli kritickým konfliktom."
     },
     "availability": {
         "title": "Dostupnosť",
@@ -233,11 +277,14 @@
         "mark_resolved": "Označiť ako vyriešené",
         "resolve": "Vyriešiť",
         "empty": "Žiadne konflikty vo vašich plánoch. Skvelá práca.",
-        "empty_subtitle": "Všetko hotové."
+        "empty_subtitle": "Všetko hotové.",
+        "schedule_filter": "Plán",
+        "all_schedules": "Všetky plány"
     },
     "my_calendar": {
         "title": "Môj kalendár",
-        "empty": "V tomto období nemáte naplánované žiadne zmeny."
+        "empty": "V tomto období nemáte naplánované žiadne zmeny.",
+        "no_profile": "K vášmu účtu zatiaľ nie je priradený žiadny profil zamestnanca. Požiadajte manažéra o jeho priradenie."
     },
     "fields": {
         "email": "E-mail",

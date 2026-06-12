@@ -156,6 +156,16 @@ class Schedule extends BaseModel
     }
 
     /**
+     * Shift requirements getter.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int|string, ShiftRequirement>
+     */
+    public function getShiftRequirements(): \Illuminate\Database\Eloquent\Collection
+    {
+        return $this->assertRelationshipCollection('shiftRequirements', ShiftRequirement::class);
+    }
+
+    /**
      * Conflicts relationship.
      *
      * @return HasMany<ScheduleConflict, $this>
@@ -163,6 +173,16 @@ class Schedule extends BaseModel
     public function conflicts(): HasMany
     {
         return $this->hasMany(ScheduleConflict::class);
+    }
+
+    /**
+     * Conflicts getter.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int|string, ScheduleConflict>
+     */
+    public function getConflicts(): \Illuminate\Database\Eloquent\Collection
+    {
+        return $this->assertRelationshipCollection('conflicts', ScheduleConflict::class);
     }
 
     /**

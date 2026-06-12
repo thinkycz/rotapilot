@@ -10,6 +10,7 @@ use App\Models\Store;
 use App\Models\User;
 use App\Support\Authorization;
 use App\Support\ModelFinder;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -26,6 +27,7 @@ class ScheduleEditController
         $user = User::mustAuth();
         $id = (int) $request->query('id', '0');
         $schedule = ModelFinder::findOrAbort(Schedule::class, $id);
+        $periodStart = CarbonImmutable::parse($schedule->getPeriodStart());
 
         $stores = Authorization::managedStores($user);
 
@@ -36,6 +38,8 @@ class ScheduleEditController
                 'store_id' => $schedule->getStoreId(),
                 'period_start' => $schedule->getPeriodStart(),
                 'period_end' => $schedule->getPeriodEnd(),
+                'month' => $periodStart->month,
+                'year' => $periodStart->year,
                 'status' => $schedule->getStatus()->value,
             ],
             'stores' => $stores->map(static fn(Store $s): array => [

@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useBoundLocale } from '@/composables/useBoundLocale';
 import { useSharedProps } from '@/composables/useSharedProps';
+import { formatDateRange } from '@/lib/date';
 
-const { t } = useI18n();
+const { t, tm } = useI18n();
 const { auth } = useSharedProps();
 
 useBoundLocale();
@@ -54,21 +55,15 @@ const props = defineProps<{
     schedules: Schedule[];
 }>();
 
-const dayNames = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday',
-];
+const dayNames = computed(() => tm('common.weekdays') as string[]);
 
-const isAdmin = computed(() => auth.value.user?.role === 'admin');
+const canManageStore = computed(
+    () => auth.value.user?.role === 'store_manager',
+);
 
 function formatHour(h: BusinessHour): string {
-    if (h.is_closed) return 'Closed';
-    if (!h.opens_at || !h.closes_at) return '—';
+    if (h.is_closed) return t('common.closed');
+    if (!h.opens_at || !h.closes_at) return t('common.not_set');
     return `${h.opens_at} – ${h.closes_at}`;
 }
 
@@ -77,34 +72,72 @@ function statusVariant(status: string): string {
     if (status === 'draft') return 'bg-amber-50 text-amber-700';
     return 'bg-zinc-100 text-zinc-700';
 }
+
+function businessHourClass(h: BusinessHour): string {
+    if (h.is_closed) return 'text-on-surface-variant';
+    if (!h.opens_at || !h.closes_at) return 'text-on-surface-variant';
+    return 'font-semibold text-on-surface';
+}
+
+function destroyStore(): void {
+    if (confirm(t('common.confirm_title'))) {
+        router.post(`/stores/destroy?id=${props.store.id}`);
+    }
+}
 </script>
 
 <template>
     <AppLayout :title="store.name">
         <div class="mb-6 flex items-center justify-between">
             <div>
-                <h1 class="font-heading text-2xl font-bold text-on-surface">
-                    {{ store.name }}
-                </h1>
+                <div class="flex flex-wrap items-center gap-2">
+                    <h1 class="font-heading text-2xl font-bold text-on-surface">
+                        {{ store.name }}
+                    </h1>
+                    <span
+                        :class="[
+                            'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                            store.is_active
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : 'bg-rose-50 text-rose-700',
+                        ]"
+                    >
+                        {{
+                            store.is_active
+                                ? t('stores.status_active')
+                                : t('stores.status_inactive')
+                        }}
+                    </span>
+                </div>
                 <p class="mt-1 text-xs text-on-surface-variant">
-                    {{ store.address ?? '—' }} · {{ store.city ?? '—' }} ·
+                    {{ store.address ?? t('common.not_set') }} ·
+                    {{ store.city ?? t('common.not_set') }} ·
                     {{ store.timezone }}
                 </p>
             </div>
             <div class="flex gap-2">
                 <Link
-                    v-if="isAdmin"
+                    v-if="canManageStore"
                     :href="`/stores/edit?id=${store.id}`"
                     class="inline-flex h-9 items-center rounded-xl border border-outline-glass bg-white px-4 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
                 >
                     {{ t('stores.edit_link') }}
                 </Link>
                 <Link
+                    v-if="canManageStore"
                     :href="`/stores/business-hours?id=${store.id}`"
                     class="inline-flex h-9 items-center rounded-xl border border-primary/20 bg-gradient-to-b from-primary-container to-primary px-4 text-xs font-semibold text-white shadow-sm hover:brightness-105"
                 >
                     {{ t('stores.business_hours_link') }}
                 </Link>
+                <button
+                    v-if="canManageStore"
+                    type="button"
+                    @click="destroyStore"
+                    class="inline-flex h-9 cursor-pointer items-center rounded-xl border border-rose-200 bg-rose-50 px-4 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                >
+                    {{ t('common.delete') }}
+                </button>
             </div>
         </div>
 
@@ -118,8 +151,8 @@ function statusVariant(status: string): string {
                 <table class="w-full text-xs">
                     <tbody>
                         <tr
-                            v-for="(h, idx) in business_hours"
-                            :key="idx"
+                            v-for="h in business_hours"
+                            :key="h.day_of_week"
                             class="border-t border-outline-glass/30 first:border-0"
                         >
                             <td
@@ -127,7 +160,7 @@ function statusVariant(status: string): string {
                             >
                                 {{ dayNames[h.day_of_week - 1] }}
                             </td>
-                            <td class="py-1.5 text-on-surface">
+                            <td :class="['py-1.5', businessHourClass(h)]">
                                 {{ formatHour(h) }}
                             </td>
                         </tr>
@@ -139,7 +172,7 @@ function statusVariant(status: string): string {
                 class="rounded-2xl border border-outline-glass bg-surface-container-lowest p-5 shadow-sm"
             >
                 <h2 class="mb-3 font-heading text-sm font-bold text-on-surface">
-                    Managers
+                    {{ t('stores.managers') }}
                 </h2>
                 <ul v-if="managers.length > 0" class="space-y-1.5">
                     <li
@@ -150,12 +183,14 @@ function statusVariant(status: string): string {
                         {{ m.email }}
                     </li>
                 </ul>
-                <p v-else class="text-xs text-on-surface-variant">—</p>
+                <p v-else class="text-xs text-on-surface-variant">
+                    {{ t('stores.no_managers') }}
+                </p>
 
                 <h2
                     class="mb-3 mt-5 font-heading text-sm font-bold text-on-surface"
                 >
-                    Employees ({{ employees.length }})
+                    {{ t('employees.title_index') }} ({{ employees.length }})
                 </h2>
                 <ul v-if="employees.length > 0" class="space-y-1.5">
                     <li
@@ -171,7 +206,9 @@ function statusVariant(status: string): string {
                         >
                     </li>
                 </ul>
-                <p v-else class="text-xs text-on-surface-variant">—</p>
+                <p v-else class="text-xs text-on-surface-variant">
+                    {{ t('employees.empty') }}
+                </p>
             </section>
         </div>
 
@@ -180,13 +217,13 @@ function statusVariant(status: string): string {
         >
             <div class="mb-3 flex items-center justify-between">
                 <h2 class="font-heading text-sm font-bold text-on-surface">
-                    Recent schedules
+                    {{ t('dashboard.recent_schedules') }}
                 </h2>
                 <Link
                     href="/schedules/create"
                     class="inline-flex h-7 items-center rounded-lg border border-primary/20 bg-gradient-to-b from-primary-container to-primary px-3 text-[11px] font-semibold text-white shadow-sm hover:brightness-105"
                 >
-                    New schedule
+                    {{ t('schedules.title_create') }}
                 </Link>
             </div>
             <table v-if="schedules.length > 0" class="w-full text-xs">
@@ -205,7 +242,7 @@ function statusVariant(status: string): string {
                             </Link>
                         </td>
                         <td class="py-2 pr-3 text-on-surface-variant">
-                            {{ s.period_start }} → {{ s.period_end }}
+                            {{ formatDateRange(s.period_start, s.period_end) }}
                         </td>
                         <td class="py-2 text-right">
                             <span
@@ -214,14 +251,14 @@ function statusVariant(status: string): string {
                                     statusVariant(s.status),
                                 ]"
                             >
-                                {{ s.status }}
+                                {{ t('schedules.status_' + s.status) }}
                             </span>
                         </td>
                     </tr>
                 </tbody>
             </table>
             <p v-else class="text-xs text-on-surface-variant">
-                No schedules yet.
+                {{ t('dashboard.no_schedules') }}
             </p>
         </section>
     </AppLayout>

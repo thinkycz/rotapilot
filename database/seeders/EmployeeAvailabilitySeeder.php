@@ -21,11 +21,9 @@ class EmployeeAvailabilitySeeder extends Seeder
             return;
         }
 
-        $adminRow = User::query()->getQuery()->where('email', 'admin@example.com')->first();
-        $admin = $adminRow !== null ? \App\Support\Db::hydrateOne($adminRow, User::class) : null;
-        $actorId = $admin instanceof User ? $admin->getKey() : null;
-        $employeeRows = EmployeeProfile::query()->getQuery()->get();
-        $employees = \App\Support\Db::hydrate($employeeRows, EmployeeProfile::class);
+        $manager = User::query()->where('email', 'manager@example.com')->first();
+        $actorId = $manager instanceof User ? $manager->getKey() : null;
+        $employees = EmployeeProfile::query()->get();
         $start = Carbon::now()->startOfMonth();
         $end = Carbon::now()->endOfMonth();
 
@@ -34,7 +32,7 @@ class EmployeeAvailabilitySeeder extends Seeder
             for ($d = $start->copy(); $d->lte($end); $d->addDay()) {
                 $dayOfWeek = (int) $d->format('N');
                 if ($dayOfWeek === $offDay) {
-                    \App\Models\EmployeeAvailability::query()->getQuery()->updateOrInsert(
+                    \App\Models\EmployeeAvailability::query()->updateOrCreate(
                         [
                             'employee_profile_id' => $employee->getKey(),
                             'date' => $d->format('Y-m-d'),
@@ -46,15 +44,13 @@ class EmployeeAvailabilitySeeder extends Seeder
                             'note' => 'Day off',
                             'source' => 'manager',
                             'created_by' => $actorId,
-                            'updated_at' => \now(),
-                            'created_at' => \now(),
                         ],
                     );
 
                     continue;
                 }
 
-                \App\Models\EmployeeAvailability::query()->getQuery()->updateOrInsert(
+                \App\Models\EmployeeAvailability::query()->updateOrCreate(
                     [
                         'employee_profile_id' => $employee->getKey(),
                         'date' => $d->format('Y-m-d'),
@@ -66,8 +62,6 @@ class EmployeeAvailabilitySeeder extends Seeder
                         'note' => null,
                         'source' => 'manager',
                         'created_by' => $actorId,
-                        'updated_at' => \now(),
-                        'created_at' => \now(),
                     ],
                 );
             }

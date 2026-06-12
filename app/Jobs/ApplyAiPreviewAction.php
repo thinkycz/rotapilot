@@ -58,16 +58,26 @@ class ApplyAiPreviewAction implements ShouldQueue
         }
 
         foreach ($this->shiftRequirements as $row) {
+            if (!\is_array($row)) {
+                continue;
+            }
+            $date = $row['date'] ?? '';
+            $startTime = $row['start_time'] ?? '';
+            $endTime = $row['end_time'] ?? '';
+            $count = $row['required_employee_count'] ?? 1;
+            $roleLabel = $row['role_label'] ?? null;
+            $note = $row['note'] ?? null;
+
             $req = new ShiftRequirement();
             $req->forceFill([
                 'schedule_id' => $schedule->getKey(),
                 'store_id' => $store->getKey(),
-                'date' => (string) ($row['date'] ?? ''),
-                'start_time' => (string) ($row['start_time'] ?? ''),
-                'end_time' => (string) ($row['end_time'] ?? ''),
-                'required_employee_count' => (int) ($row['required_employee_count'] ?? 1),
-                'role_label' => isset($row['role_label']) ? (string) $row['role_label'] : null,
-                'note' => isset($row['note']) ? (string) $row['note'] : null,
+                'date' => \is_string($date) ? $date : '',
+                'start_time' => \is_string($startTime) ? $startTime : '',
+                'end_time' => \is_string($endTime) ? $endTime : '',
+                'required_employee_count' => \is_int($count) ? $count : (\is_string($count) && \ctype_digit($count) ? (int) $count : 1),
+                'role_label' => \is_string($roleLabel) ? $roleLabel : null,
+                'note' => \is_string($note) ? $note : null,
                 'source' => ShiftSourceEnum::Ai->value,
                 'created_by' => $actor->getKey(),
             ])->save();

@@ -10,8 +10,7 @@ use App\Models\Store;
 use App\Models\User;
 use App\Support\Authorization;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class StoreUpdateController
 {
@@ -20,13 +19,9 @@ class StoreUpdateController
     /**
      * Update a store.
      */
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request): SymfonyResponse
     {
         $user = User::mustAuth();
-
-        if (!$user->isAdmin() && !$user->isStoreManager()) {
-            \abort(403);
-        }
 
         $id = (int) $request->query('id', '0');
         $store = Store::query()->find($id);
@@ -57,16 +52,6 @@ class StoreUpdateController
 
         $request->session()->flash('success', \__('Store updated.'));
 
-        return Inertia::render('stores/Edit', [
-            'store' => [
-                'id' => $store->getKey(),
-                'name' => $store->getName(),
-                'address' => $store->getAddress(),
-                'city' => $store->getCity(),
-                'timezone' => $store->getTimezone(),
-                'is_active' => $store->getIsActive(),
-            ],
-            'timezones' => \timezone_identifiers_list(),
-        ]);
+        return \redirect('/stores/show?id=' . $store->getKey());
     }
 }

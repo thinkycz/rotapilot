@@ -11,6 +11,7 @@ use App\Models\EmployeeAvailability;
 use App\Models\EmployeeProfile;
 use App\Models\Store;
 use App\Models\User;
+use App\Support\Authorization;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
@@ -23,27 +24,40 @@ class AvailabilityStoreController
      */
     public function __invoke(Request $request): SymfonyResponse
     {
+        $storeIdRaw = $request->input('store_id');
+        if ($request->has('store_id') && \is_scalar($storeIdRaw) && (int) $storeIdRaw === 0) {
+            $request->request->remove('store_id');
+        }
+
         $validity = EmployeeAvailabilityValidity::inject();
         $validated = $this->validateRequest($request, [
             'employee_profile_id' => 'required|integer|exists:employee_profiles,id',
             'store_id' => 'nullable|integer|exists:stores,id',
-            'date' => 'required|date',
-            'start_time' => 'nullable|date_format:H:i',
-            'end_time' => 'nullable|date_format:H:i',
-            'type' => 'required|in:available,unavailable,preferred',
-            'note' => 'nullable|string|max:2048',
+            'date' => $validity->date()->required()->toArray(),
+            'start_time' => $validity->startTime()->nullable()->toArray(),
+            'end_time' => $validity->endTime()->nullable()->toArray(),
+            'type' => $validity->type()->required()->toArray(),
+            'note' => $validity->note()->nullable()->toArray(),
         ]);
 
-        $employee = EmployeeProfile::query()->find((int) $validated->mixed('employee_profile_id'));
+        $actor = User::mustAuth();
+
+        $employeeId = $validated->assertInt('employee_profile_id');
+        $employee = EmployeeProfile::query()->find($employeeId);
         if (!$employee instanceof EmployeeProfile) {
             \abort(404);
         }
 
-        $storeId = $validated->has('store_id') ? (int) $validated->mixed('store_id') : 0;
+        Authorization::mustViewEmployee($actor, $employee);
+
+        $storeId = $validated->has('store_id') ? $validated->assertInt('store_id') : 0;
         if ($storeId > 0) {
             $store = Store::query()->find($storeId);
             if (!$store instanceof Store) {
                 \abort(404);
+            }
+            if (!Authorization::canManageStore($actor, $store)) {
+                \abort(403);
             }
         }
 
@@ -67,9 +81,7 @@ class AvailabilityStoreController
             }
         }
 
-        $actor = User::mustAuth();
-
-        EmployeeAvailability::query()->getQuery()->insert([
+        EmployeeAvailability::query()->create([
             'employee_profile_id' => $employee->getKey(),
             'store_id' => $storeId > 0 ? $storeId : null,
             'date' => $validated->assertString('date'),
@@ -79,8 +91,6 @@ class AvailabilityStoreController
             'note' => $validated->has('note') ? (\is_string($validated->mixed('note')) ? $validated->mixed('note') : null) : null,
             'source' => AvailabilitySourceEnum::Manager->value,
             'created_by' => $actor->getKey(),
-            'created_at' => \now(),
-            'updated_at' => \now(),
         ]);
 
         $request->session()->flash('success', \__('Availability added.'));

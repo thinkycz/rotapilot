@@ -131,6 +131,14 @@ class ShiftRequirement extends BaseModel
     }
 
     /**
+     * Schedule getter.
+     */
+    public function getSchedule(): Schedule
+    {
+        return $this->assertRelationship('schedule', Schedule::class);
+    }
+
+    /**
      * Store relationship.
      *
      * @return BelongsTo<Store, $this>
@@ -138,6 +146,14 @@ class ShiftRequirement extends BaseModel
     public function store(): BelongsTo
     {
         return $this->belongsTo(Store::class);
+    }
+
+    /**
+     * Store getter.
+     */
+    public function getStore(): Store
+    {
+        return $this->assertRelationship('store', Store::class);
     }
 
     /**

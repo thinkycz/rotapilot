@@ -29,8 +29,7 @@ class EmployeeSeeder extends Seeder
         ];
 
         foreach ($employees as $row) {
-            $userRow = User::query()->getQuery()->where('email', $row['email'])->first();
-            $user = $userRow !== null ? \App\Support\Db::hydrateOne($userRow, User::class) : null;
+            $user = User::query()->where('email', $row['email'])->first();
             if (!$user instanceof User) {
                 $user = new User();
                 $user->forceFill([
@@ -48,7 +47,7 @@ class EmployeeSeeder extends Seeder
                 ])->save();
             }
 
-            EmployeeProfile::query()->getQuery()->updateOrInsert(
+            EmployeeProfile::query()->updateOrCreate(
                 ['user_id' => $user->id],
                 [
                     'name' => $row['name'],
@@ -56,8 +55,6 @@ class EmployeeSeeder extends Seeder
                     'role_label' => $row['role_label'],
                     'max_hours_per_week' => $row['max_hours_per_week'],
                     'is_active' => true,
-                    'updated_at' => \now(),
-                    'created_at' => \now(),
                 ],
             );
         }

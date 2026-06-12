@@ -29,12 +29,14 @@ class ShiftAssignmentStoreController
      */
     public function __invoke(Request $request): SymfonyResponse
     {
-        $reqId = (int) $request->query('shift_requirement_id', '0');
+        $reqIdRaw = $request->input('shift_requirement_id');
+        $reqId = \is_scalar($reqIdRaw) ? (int) $reqIdRaw : 0;
         $req = ModelFinder::findOrAbort(ShiftRequirement::class, $reqId);
 
         $schedule = ModelFinder::findOrAbort(Schedule::class, $req->getScheduleId());
 
-        if (!Authorization::canManageSchedule(User::mustAuth(), $schedule)) {
+        $actor = User::mustAuth();
+        if (!Authorization::canManageSchedule($actor, $schedule)) {
             \abort(403);
         }
 
@@ -42,12 +44,14 @@ class ShiftAssignmentStoreController
             'employee_profile_id' => 'required|integer|exists:employee_profiles,id',
         ]);
 
-        $employee = EmployeeProfile::query()->find((int) $validated->mixed('employee_profile_id'));
+        $employee = EmployeeProfile::query()->find($validated->assertInt('employee_profile_id'));
         if (!$employee instanceof EmployeeProfile) {
             \abort(404);
         }
 
-        $this->assignments->assign($req, $employee, User::mustAuth());
+        Authorization::mustViewEmployee($actor, $employee);
+
+        $this->assignments->assign($req, $employee, $actor);
 
         $request->session()->flash('success', \__('Employee assigned.'));
 

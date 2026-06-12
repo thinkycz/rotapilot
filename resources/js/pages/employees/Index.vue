@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Plus, Eye, Edit, CalendarCheck2 } from '@lucide/vue';
+import { Plus, Eye } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -27,10 +27,8 @@ defineProps<{
     employees: Employee[];
 }>();
 
-const isAdmin = computed(
-    () =>
-        auth.value.user?.role === 'admin' ||
-        auth.value.user?.role === 'store_manager',
+const isStoreManager = computed(
+    () => auth.value.user?.role === 'store_manager',
 );
 </script>
 
@@ -41,7 +39,7 @@ const isAdmin = computed(
                 {{ t('employees.title_index') }}
             </h1>
             <Link
-                v-if="isAdmin"
+                v-if="isStoreManager"
                 href="/employees/create"
                 class="inline-flex h-9 items-center justify-center rounded-xl border border-primary/20 bg-gradient-to-b from-primary-container to-primary px-4 text-xs font-semibold text-white shadow-sm hover:brightness-105"
             >
@@ -76,7 +74,7 @@ const isAdmin = computed(
                         <th class="px-4 py-2">
                             {{ t('employees.max_hours_per_week') }}
                         </th>
-                        <th class="px-4 py-2">Login</th>
+                        <th class="px-4 py-2">{{ t('employees.login') }}</th>
                         <th class="px-4 py-2 text-right">
                             {{ t('common.actions') }}
                         </th>
@@ -109,12 +107,12 @@ const isAdmin = computed(
                             <span
                                 v-if="e.has_login"
                                 class="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700"
-                                >Yes</span
+                                >{{ t('common.yes') }}</span
                             >
                             <span
                                 v-else
                                 class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-bold text-zinc-700"
-                                >No</span
+                                >{{ t('common.no') }}</span
                             >
                         </td>
                         <td class="px-4 py-2 text-right">
@@ -124,19 +122,6 @@ const isAdmin = computed(
                                     class="inline-flex h-7 items-center gap-1 rounded-lg border border-outline-glass bg-white px-2 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
                                 >
                                     <Eye :size="12" />
-                                </Link>
-                                <Link
-                                    v-if="isAdmin"
-                                    :href="`/employees/edit?id=${e.id}`"
-                                    class="inline-flex h-7 items-center gap-1 rounded-lg border border-outline-glass bg-white px-2 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
-                                >
-                                    <Edit :size="12" />
-                                </Link>
-                                <Link
-                                    :href="`/availability?employee_id=${e.id}`"
-                                    class="inline-flex h-7 items-center gap-1 rounded-lg border border-outline-glass bg-white px-2 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
-                                >
-                                    <CalendarCheck2 :size="12" />
                                 </Link>
                             </div>
                         </td>

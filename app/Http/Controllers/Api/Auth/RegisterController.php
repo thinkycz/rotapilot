@@ -8,6 +8,7 @@ use App\Enums\GuardEnum;
 use App\Enums\UserRoleEnum;
 use App\Models\User;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
+use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Thinkycz\LaravelCore\Exceptions\GenericHttpException;
 use Thinkycz\LaravelCore\Http\ApiFormRequest;
 use Thinkycz\LaravelCore\Routing\AutomaticController;
@@ -28,7 +29,8 @@ class RegisterController extends AutomaticController
         $this->hit($this->limit());
 
         if ($validated->assertString('password') !== $request->input('password_confirmation')) {
-            throw new \Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException(\__('auth.password_mismatch'));
+            $msg = \__('auth.password_mismatch');
+            throw new UnprocessableEntityHttpException(\is_string($msg) ? $msg : 'Password mismatch');
         }
 
         $guard = $validated->parseNullableString('guard') ?? $this->getDefaultGuard();

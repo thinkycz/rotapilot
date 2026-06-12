@@ -8,10 +8,10 @@ use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Http\Validation\StoreValidity;
 use App\Models\Store;
 use App\Models\User;
+use App\Support\Authorization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Inertia\Inertia;
-use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class StoreStoreController
 {
@@ -20,13 +20,11 @@ class StoreStoreController
     /**
      * Create a new store and attach the creator as the manager.
      */
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request): SymfonyResponse
     {
         $user = User::mustAuth();
 
-        if (!$user->isAdmin() && !$user->isStoreManager()) {
-            \abort(403);
-        }
+        Authorization::mustCreateStore($user);
 
         $validity = StoreValidity::inject();
         $validated = $this->validateRequest($request, [
@@ -47,7 +45,7 @@ class StoreStoreController
         ])->save();
 
         // Auto-attach the creator as a manager so they can immediately manage
-        // the store (admins also become managers of stores they create).
+        // the store.
         DB::table('store_manager_store')->updateOrInsert(
             ['user_id' => $user->getKey(), 'store_id' => $store->getKey()],
             ['updated_at' => \now(), 'created_at' => \now()],
@@ -55,16 +53,6 @@ class StoreStoreController
 
         $request->session()->flash('success', \__('Store created.'));
 
-        return Inertia::render('stores/Edit', [
-            'store' => [
-                'id' => $store->getKey(),
-                'name' => $store->getName(),
-                'address' => $store->getAddress(),
-                'city' => $store->getCity(),
-                'timezone' => $store->getTimezone(),
-                'is_active' => $store->getIsActive(),
-            ],
-            'timezones' => \timezone_identifiers_list(),
-        ]);
+        return \redirect('/stores/show?id=' . $store->getKey());
     }
 }

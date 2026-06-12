@@ -4,8 +4,9 @@ import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useBoundLocale } from '@/composables/useBoundLocale';
+import { formatDate, formatDateRange, parseIsoDate } from '@/lib/date';
 
-const { t } = useI18n();
+const { t, tm } = useI18n();
 
 useBoundLocale();
 
@@ -36,6 +37,11 @@ const byDay = computed(() => {
     return map;
 });
 
+const weekdays = computed(() => tm('common.weekdays') as string[]);
+const monthRange = computed(() =>
+    formatDateRange(props.days[0], props.days[props.days.length - 1]),
+);
+
 function prevMonth(m: string): string {
     const d = new Date(m + '-01');
     d.setMonth(d.getMonth() - 1);
@@ -49,14 +55,16 @@ function nextMonth(m: string): string {
 }
 
 function weekdayLabel(date: string): string {
-    const d = new Date(date);
-    return ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'][
-        d.getDay() === 0 ? 6 : d.getDay() - 1
-    ];
+    const d = parseIsoDate(date);
+    if (!d) return '';
+
+    return (
+        weekdays.value[d.getDay() === 0 ? 6 : d.getDay() - 1]?.slice(0, 2) ?? ''
+    );
 }
 
 function dayLabel(date: string): string {
-    return new Date(date).getDate().toString();
+    return parseIsoDate(date)?.getDate().toString() ?? '';
 }
 </script>
 
@@ -67,7 +75,9 @@ function dayLabel(date: string): string {
                 <h1 class="font-heading text-2xl font-bold text-on-surface">
                     {{ t('my_calendar.title') }}
                 </h1>
-                <p class="mt-1 text-xs text-on-surface-variant">{{ month }}</p>
+                <p class="mt-1 text-xs text-on-surface-variant">
+                    {{ monthRange }}
+                </p>
             </div>
             <div class="flex items-center gap-1">
                 <a
@@ -94,8 +104,7 @@ function dayLabel(date: string): string {
                 class="mx-auto mb-3 text-on-surface-variant opacity-40"
             />
             <p class="text-sm text-on-surface-variant">
-                No employee profile is linked to your account yet. Ask a manager
-                to assign one.
+                {{ t('my_calendar.no_profile') }}
             </p>
         </div>
 
@@ -173,7 +182,7 @@ function dayLabel(date: string): string {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="font-mono font-bold text-on-surface">
-                                {{ s.date }} · {{ s.start_time }} –
+                                {{ formatDate(s.date) }} · {{ s.start_time }} –
                                 {{ s.end_time }}
                             </p>
                             <p class="mt-0.5 text-on-surface-variant">

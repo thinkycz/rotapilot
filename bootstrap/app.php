@@ -73,13 +73,20 @@ return Application::configure(basePath: \dirname(__DIR__))
                 return null;
             }
 
-            $component = $request->header('X-Inertia-Partial-Component') ?: match ($request->path()) {
-                'verify-email' => 'auth/VerifyEmail',
-                'forgot-password' => 'auth/ForgotPassword',
-                'reset-password' => 'auth/ResetPassword',
-                'register' => 'auth/Register',
-                'settings/profile' => 'settings/Profile',
-                'settings/password' => 'settings/Password',
+            $path = $request->path();
+            $component = $request->header('X-Inertia-Partial-Component') ?: match (true) {
+                $path === 'verify-email' => 'auth/VerifyEmail',
+                $path === 'forgot-password' => 'auth/ForgotPassword',
+                $path === 'reset-password' => 'auth/ResetPassword',
+                $path === 'register' => 'auth/Register',
+                $path === 'settings/profile', $path === 'settings/password' => 'settings/Index',
+                \str_starts_with($path, 'stores/business-hours') => 'stores/BusinessHours',
+                \str_starts_with($path, 'stores') => 'stores/Edit',
+                \str_starts_with($path, 'employees') => 'employees/Edit',
+                \str_starts_with($path, 'availability') => 'availability/Index',
+                \str_starts_with($path, 'shift-requirements'), \str_starts_with($path, 'shift-assignments') => 'schedules/Show',
+                \str_starts_with($path, 'schedules') => 'schedules/Edit',
+                \str_starts_with($path, 'conflicts') => 'conflicts/Index',
                 default => 'auth/Login',
             };
 

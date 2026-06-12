@@ -2,9 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Http\Controllers\Web\Ai\PlannerApplyPreviewController;
-use App\Http\Controllers\Web\Ai\PlannerIndexController;
-use App\Http\Controllers\Web\Ai\PlannerMessageController;
 use App\Http\Controllers\Web\Auth\EmailVerificationConfirmController;
 use App\Http\Controllers\Web\Auth\ForgotPasswordController;
 use App\Http\Controllers\Web\Auth\LoginController;
@@ -14,11 +11,9 @@ use App\Http\Controllers\Web\Auth\ResetPasswordController;
 use App\Http\Controllers\Web\Auth\VerifyEmailController;
 use App\Http\Controllers\Web\Availability\AvailabilityDestroyController;
 use App\Http\Controllers\Web\Availability\AvailabilityIndexController;
-use App\Http\Controllers\Web\Availability\AvailabilityParseAiController;
 use App\Http\Controllers\Web\Availability\AvailabilityStoreController;
 use App\Http\Controllers\Web\Availability\AvailabilityUpdateController;
 use App\Http\Controllers\Web\Calendar\MyCalendarController;
-use App\Http\Controllers\Web\Conflicts\ConflictAskAiController;
 use App\Http\Controllers\Web\Conflicts\ConflictIndexController;
 use App\Http\Controllers\Web\Conflicts\ConflictResolveController;
 use App\Http\Controllers\Web\DashboardController;
@@ -46,8 +41,7 @@ use App\Http\Controllers\Web\Schedules\ShiftAutoFillController;
 use App\Http\Controllers\Web\Schedules\ShiftRequirementDestroyController;
 use App\Http\Controllers\Web\Schedules\ShiftRequirementStoreController;
 use App\Http\Controllers\Web\Schedules\ShiftRequirementUpdateController;
-use App\Http\Controllers\Web\Settings\PasswordController;
-use App\Http\Controllers\Web\Settings\ProfileController;
+use App\Http\Controllers\Web\Settings\SettingsController;
 use App\Http\Controllers\Web\Stores\StoreBusinessHoursEditController;
 use App\Http\Controllers\Web\Stores\StoreBusinessHoursUpdateController;
 use App\Http\Controllers\Web\Stores\StoreCreateController;
@@ -92,10 +86,9 @@ Resolver::resolveRouteRegistrar()
         $router->get('dashboard', DashboardController::class);
         $router->get('verify-email', [VerifyEmailController::class, 'create']);
         $router->post('verify-email', [VerifyEmailController::class, 'store']);
-        $router->get('settings/profile', [ProfileController::class, 'edit']);
-        $router->post('settings/profile', [ProfileController::class, 'update']);
-        $router->get('settings/password', [PasswordController::class, 'edit']);
-        $router->post('settings/password', [PasswordController::class, 'update']);
+        $router->get('settings', [SettingsController::class, 'edit']);
+        $router->post('settings/profile', [SettingsController::class, 'updateProfile']);
+        $router->post('settings/password', [SettingsController::class, 'updatePassword']);
 
         // Stores
         $router->get('stores/index', StoreIndexController::class);
@@ -124,7 +117,6 @@ Resolver::resolveRouteRegistrar()
         $router->post('availability/store', AvailabilityStoreController::class);
         $router->post('availability/update', AvailabilityUpdateController::class);
         $router->post('availability/destroy', AvailabilityDestroyController::class);
-        $router->post('availability/parse-ai', AvailabilityParseAiController::class);
 
         // Schedules
         $router->get('schedules/index', ScheduleIndexController::class);
@@ -146,13 +138,7 @@ Resolver::resolveRouteRegistrar()
         // My calendar (employee self-service)
         $router->get('my-calendar', MyCalendarController::class);
 
-        // AI planner
-        $router->get('ai-planner', PlannerIndexController::class);
-        $router->post('ai-planner/message', PlannerMessageController::class);
-        $router->post('ai-planner/apply-preview', PlannerApplyPreviewController::class);
-
         // Conflicts
         $router->get('conflicts', ConflictIndexController::class);
         $router->post('conflicts/resolve', ConflictResolveController::class);
-        $router->post('conflicts/ask-ai', ConflictAskAiController::class);
     });

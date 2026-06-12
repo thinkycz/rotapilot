@@ -52,7 +52,7 @@ class EmployeeProfile extends BaseModel
     {
         $builder->getQuery()->whereIn(
             $builder->qualifyColumn('id'),
-            static fn($sub) => $sub
+            static fn(\Illuminate\Database\Query\Builder $sub): \Illuminate\Database\Query\Builder => $sub
                 ->select('employee_profile_id')
                 ->from('employee_store')
                 ->where('store_id', $storeId),
@@ -156,6 +156,16 @@ class EmployeeProfile extends BaseModel
     }
 
     /**
+     * Stores getter.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int|string, Store>
+     */
+    public function getStores(): \Illuminate\Database\Eloquent\Collection
+    {
+        return $this->assertRelationshipCollection('stores', Store::class);
+    }
+
+    /**
      * Availabilities relationship.
      *
      * @return HasMany<EmployeeAvailability, $this>
@@ -166,6 +176,16 @@ class EmployeeProfile extends BaseModel
     }
 
     /**
+     * Availabilities getter.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int|string, EmployeeAvailability>
+     */
+    public function getAvailabilities(): \Illuminate\Database\Eloquent\Collection
+    {
+        return $this->assertRelationshipCollection('availabilities', EmployeeAvailability::class);
+    }
+
+    /**
      * Shift assignments relationship.
      *
      * @return HasMany<ShiftAssignment, $this>
@@ -173,6 +193,16 @@ class EmployeeProfile extends BaseModel
     public function shiftAssignments(): HasMany
     {
         return $this->hasMany(ShiftAssignment::class);
+    }
+
+    /**
+     * Shift assignments getter.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int|string, ShiftAssignment>
+     */
+    public function getShiftAssignments(): \Illuminate\Database\Eloquent\Collection
+    {
+        return $this->assertRelationshipCollection('shiftAssignments', ShiftAssignment::class);
     }
 
     /**

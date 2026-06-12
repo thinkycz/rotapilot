@@ -5,17 +5,14 @@
     "nav": {
         "skip_to_main": "Přeskočit na hlavní obsah",
         "dashboard": "Nástěnka",
-        "stores": "Prodejny",
+        "stores": "Provozovny",
         "employees": "Zaměstnanci",
         "schedules": "Rozvrhy",
-        "availability": "Dostupnost",
-        "ai_planner": "AI plánovač",
+        "availability": "Požadavky",
         "conflicts": "Konflikty",
         "my_calendar": "Můj kalendář",
-        "profile": "Profil",
-        "password": "Heslo",
-        "logout": "Odhlásit se",
-        "primary": "Hlavní"
+        "settings": "Nastavení",
+        "logout": "Odhlásit se"
     },
     "auth": {
         "login": {
@@ -26,8 +23,8 @@
             "back_link": "Zpět na přihlášení"
         },
         "register": {
-            "title": "Vytvořit účet správce prodejny",
-            "subtitle": "Zaregistrujte se a spravujte své prodejny, zaměstnance a směny. Zaměstnance zve jejich správce.",
+            "title": "Vytvořit účet správce provozovny",
+            "subtitle": "Zaregistrujte se a spravujte své provozovny, zaměstnance a směny. Zaměstnance zve jejich správce.",
             "submit": "Registrovat",
             "login_link": "Přihlásit se"
         },
@@ -54,15 +51,15 @@
         }
     },
     "settings": {
+        "title": "Nastavení",
+        "subtitle": "Spravujte své údaje a bezpečnostní nastavení.",
         "profile": {
-            "title": "Nastavení profilu",
-            "submit": "Uložit profil",
-            "change_password": "Změnit heslo"
+            "title": "Profil",
+            "submit": "Uložit profil"
         },
         "password": {
-            "title": "Nastavení hesla",
-            "submit": "Aktualizovat heslo",
-            "back_to_profile": "Zpět na profil"
+            "title": "Heslo",
+            "submit": "Aktualizovat heslo"
         }
     },
     "dashboard": {
@@ -79,17 +76,17 @@
         "stat_conflicts": "Otevřené konflikty",
         "open_stores": "Otevřít provozovny",
         "open_employees": "Otevřít zaměstnance",
-        "open_schedules": "Otevřít plány",
+        "open_schedules": "Otevřít rozvrhy",
         "open_conflicts": "Zkontrolovat konflikty",
         "ai_planner_label": "AI plánovač",
-        "ai_planner_title": "Řekněte RotaPilotu, jaký plán potřebujete",
-        "ai_planner_description": "Popište směnový vzor a omezení přirozenou řečí. RotaPilot připraví plán, který můžete zkontrolovat a použít.",
+        "ai_planner_title": "Řekněte RotaPilotu, jaký rozvrh potřebujete",
+        "ai_planner_description": "Popište směnový vzor a omezení přirozenou řečí. RotaPilot připraví rozvrh, který můžete zkontrolovat a použít.",
         "ai_planner_placeholder": "Příklad: Vytvoř směny pro příští týden pro Teacha Prague. Pracovní dny 1 osoba 10:00–18:00. Sobota a neděle 2 osoby 11:00–20:00. Anna preferuje ranní a Petr nemůže ve středu.",
         "ai_planner_cta": "Otevřít AI plánovač",
-        "ai_planner_create": "Vytvořit plán ručně",
+        "ai_planner_create": "Vytvořit rozvrh ručně",
         "get_started": "Začněte",
-        "get_started_description": "Vytvořte svou první prodejnu a začněte přidávat zaměstnance a směny.",
-        "create_store_cta": "Vytvořit první prodejnu",
+        "get_started_description": "Vytvořte svou první provozovnu a začněte přidávat zaměstnance a směny.",
+        "create_store_cta": "Vytvořit první provozovnu",
         "next_shift": "Vaše další směna",
         "next_shift_empty": "Žádné nadcházející směny.",
         "assigned_stores": "Vaše provozovny",
@@ -97,11 +94,6 @@
         "this_week": "Tento týden",
         "this_week_empty": "Tento týden nic.",
         "open_my_calendar": "Otevřít můj kalendář",
-        "recent_schedules": "Nedávné rozvrhy",
-        "upcoming_shifts": "Nadcházející směny",
-        "no_schedules": "Zatím žádné rozvrhy.",
-        "no_upcoming": "Žádné nadcházející směny.",
-        "unavailabilities": "Neplánovat",
         "recent_schedules": "Nedávné rozvrhy",
         "upcoming_shifts": "Nadcházející směny",
         "no_schedules": "Zatím žádné rozvrhy.",
@@ -119,7 +111,22 @@
         "no_data": "Zatím žádná data.",
         "confirm": "Potvrdit",
         "confirm_title": "Opravdu?",
-        "actions": "Akce"
+        "actions": "Akce",
+        "today": "Dnes",
+        "open": "Otevřít",
+        "yes": "Ano",
+        "no": "Ne",
+        "not_set": "Nevyplněno",
+        "closed": "Zavřeno",
+        "weekdays": [
+            "Pondělí",
+            "Úterý",
+            "Středa",
+            "Čtvrtek",
+            "Pátek",
+            "Sobota",
+            "Neděle"
+        ]
     },
     "stores": {
         "title_index": "Provozovny",
@@ -137,7 +144,15 @@
         "view": "Detail",
         "edit_link": "Upravit",
         "business_hours_link": "Otevírací doba",
-        "schedule_link": "Plán"
+        "schedule_link": "Rozvrh",
+        "managers": "Manažeři",
+        "status_active": "Aktivní",
+        "status_inactive": "Neaktivní",
+        "business_hours_day": "Den",
+        "business_hours_closed": "Zavřeno",
+        "business_hours_opens_at": "Otevírá",
+        "business_hours_closes_at": "Zavírá",
+        "no_managers": "Nejsou přiřazeni žádní manažeři."
     },
     "employees": {
         "title_index": "Zaměstnanci",
@@ -154,17 +169,25 @@
         "empty": "Zatím žádní zaměstnanci.",
         "view": "Detail",
         "edit_link": "Upravit",
-        "manage_availability": "Spravovat dostupnost",
-        "view_shifts": "Zobrazit směny"
+        "manage_availability": "Spravovat požadavky",
+        "view_shifts": "Zobrazit směny",
+        "profile": "Profil",
+        "login": "Přihlášení",
+        "unassign": "Odebrat",
+        "confirm_unassign": "Odebrat z provozovny?",
+        "no_assigned_stores": "Žádné přiřazené provozovny.",
+        "no_stores_available": "Žádné provozovny k dispozici"
     },
     "schedules": {
-        "title_index": "Plány",
-        "title_show": "Plán",
-        "title_create": "Vytvořit plán",
-        "title_edit": "Upravit plán",
+        "title_index": "Rozvrhy",
+        "title_show": "Rozvrh",
+        "title_create": "Vytvořit rozvrh",
+        "title_edit": "Upravit rozvrh",
         "name": "Název",
         "store": "Provozovna",
         "period": "Období",
+        "month": "Měsíc",
+        "year": "Rok",
         "status": "Stav",
         "status_draft": "Koncept",
         "status_published": "Publikováno",
@@ -172,8 +195,8 @@
         "shift_count": "Směny",
         "assignment_count": "Přiřazení",
         "conflict_count": "Konflikty",
-        "create_cta": "Vytvořit plán",
-        "empty": "Zatím žádné plány.",
+        "create_cta": "Vytvořit rozvrh",
+        "empty": "Zatím žádné rozvrhy.",
         "publish_cta": "Publikovat",
         "archive_cta": "Archivovat",
         "view": "Detail",
@@ -185,10 +208,26 @@
         "delete_shift": "Smazat směnu",
         "no_assignments": "Zatím nikdo nepřiřazen.",
         "confirm_remove_assignment": "Odebrat toto přiřazení?",
-        "confirm_delete_shift": "Smazat tuto směnu?"
+        "confirm_delete_shift": "Smazat tuto směnu?",
+        "required": "Vyžadováno",
+        "assigned": "Přiřazeno",
+        "role": "Pozice",
+        "assigned_employees": "Přiřazení zaměstnanci",
+        "employees": "Zaměstnanci",
+        "add_employee": "Přidat zaměstnance",
+        "select_employee": "Vyberte zaměstnance",
+        "no_employees_available": "Žádní zaměstnanci k dispozici.",
+        "create_shift_employees_help": "Volitelné: vyberte zaměstnance, které chcete přiřadit hned.",
+        "add": "Přidat",
+        "start": "Začátek",
+        "end": "Konec",
+        "required_count": "Vyžadovaný počet",
+        "role_label_optional": "Pozice (volitelné)",
+        "auto_fill": "Automaticky obsadit",
+        "critical_conflicts_warning": "Publikování je zablokováno kvůli kritickým konfliktům."
     },
     "availability": {
-        "title": "Dostupnost",
+        "title": "Požadavky",
         "month": "Měsíc",
         "store": "Provozovna",
         "employee": "Zaměstnanec",
@@ -203,11 +242,11 @@
         "repeat": "Opakování",
         "repeat_none": "Bez opakování",
         "repeat_weekly": "Každý týden v tento den",
-        "repeat_until_date": "Každý den do",
-        "parse_ai_label": "Popište dostupnost",
+        "repeat_until_date": "Každý rozsah do",
+        "parse_ai_label": "Popište požadavky",
         "parse_ai_placeholder": "Příklad: Anna může pracovat v pondělí a středu od 10 do 16, preferuje pátky a nemůže 12.–15. července.",
-        "parse_ai_cta": "Parsovat dostupnost",
-        "create_cta": "Přidat dostupnost"
+        "parse_ai_cta": "Zpracovat požadavky",
+        "create_cta": "Přidat požadavek"
     },
     "ai": {
         "title": "AI plánovač",
@@ -216,19 +255,19 @@
         "understanding": "Pochopil jsem",
         "warnings": "Varování",
         "shift_requirements": "Navržené směny",
-        "no_preview": "Odešlete zadání pro vygenerování náhledu plánu.",
+        "no_preview": "Odešlete zadání pro vygenerování náhledu rozvrhu.",
         "prompt_label": "Zadání",
         "prompt_placeholder": "Popište, jaké směny potřebujete…"
     },
     "conflicts": {
         "title": "Konflikty",
-        "subtitle": "Otevřené konflikty ve vašich plánech.",
+        "subtitle": "Otevřené konflikty ve vašich rozvrzích.",
         "type_understaffed": "Nedostatečné obsazení",
         "type_unavailable_employee": "Zaměstnanec nedostupný",
         "type_overlapping_shift": "Překrývající se směny",
         "type_outside_business_hours": "Mimo otevírací dobu",
         "type_max_hours_exceeded": "Překročení max. hodin",
-        "type_missing_availability": "Chybějící dostupnost",
+        "type_missing_availability": "Chybějící požadavky",
         "severity_info": "Info",
         "severity_warning": "Upozornění",
         "severity_critical": "Kritické",
@@ -237,12 +276,15 @@
         "ask_ai": "Zeptat se AI",
         "mark_resolved": "Označit jako vyřešené",
         "resolve": "Vyřešit",
-        "empty": "Žádné konflikty ve vašich plánech. Skvělá práce.",
-        "empty_subtitle": "Vše hotovo."
+        "empty": "Žádné konflikty ve vašich rozvrzích. Skvělá práce.",
+        "empty_subtitle": "Vše hotovo.",
+        "schedule_filter": "Rozvrh",
+        "all_schedules": "Všechny rozvrhy"
     },
     "my_calendar": {
         "title": "Můj kalendář",
-        "empty": "V tomto období nemáte naplánované žádné směny."
+        "empty": "V tomto období nemáte naplánované žádné směny.",
+        "no_profile": "K vašemu účtu zatím není přiřazen žádný profil zaměstnance. Požádejte manažera o jeho přiřazení."
     },
     "fields": {
         "email": "E-mail",

@@ -23,10 +23,6 @@ class StoreEditController
     {
         $user = User::mustAuth();
 
-        if (!$user->isAdmin() && !$user->isStoreManager()) {
-            \abort(403);
-        }
-
         $id = (int) $request->query('id', '0');
         $store = Store::query()->find($id);
 

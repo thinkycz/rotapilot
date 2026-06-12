@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { router, useForm } from '@inertiajs/vue3';
-import { Plus, X, Sparkles } from '@lucide/vue';
+import { Plus, ChevronLeft, ChevronRight } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import ModalOverlay from '@/components/ui/ModalOverlay.vue';
 import { useBoundLocale } from '@/composables/useBoundLocale';
+import { formatDateRange, parseIsoDate } from '@/lib/date';
 
-const { t } = useI18n();
+const { t, tm } = useI18n();
 
 useBoundLocale();
 
@@ -15,6 +17,7 @@ interface DayEntry {
     type: string;
     start_time: string | null;
     end_time: string | null;
+    note: string | null;
 }
 
 interface EmployeeRow {
@@ -48,68 +51,73 @@ const form = useForm({
 });
 
 const showAdd = ref<string | null>(null);
-
-const aiRows = ref<
-    | {
-          date: string;
-          type: string;
-          start_time: string | null;
-          end_time: string | null;
-          note: string | null;
-      }[]
-    | null
->(null);
+const editingId = ref<number | null>(null);
+const weekdays = computed(() => tm('common.weekdays') as string[]);
+const monthRange = computed(() =>
+    formatDateRange(props.days[0], props.days[props.days.length - 1]),
+);
 
 function openAdd(employeeId: number, date: string): void {
+    editingId.value = null;
     showAdd.value = `${employeeId}-${date}`;
     form.employee_profile_id = employeeId;
+    form.store_id = props.filter_store_id || 0;
     form.date = date;
+    form.type = 'available';
+    form.start_time = '09:00';
+    form.end_time = '17:00';
+    form.note = '';
+    form.clearErrors();
+}
+
+function openEdit(entry: DayEntry, employeeId: number, date: string): void {
+    editingId.value = entry.id;
+    showAdd.value = `${employeeId}-${date}`;
+    form.employee_profile_id = employeeId;
+    form.store_id = props.filter_store_id || 0;
+    form.date = date;
+    form.type = entry.type;
+    form.start_time = entry.start_time ? entry.start_time.substring(0, 5) : '';
+    form.end_time = entry.end_time ? entry.end_time.substring(0, 5) : '';
+    form.note = entry.note || '';
+    form.clearErrors();
 }
 
 function closeAdd(): void {
     showAdd.value = null;
+    editingId.value = null;
 }
 
 function submitAdd(): void {
-    form.post('/availability/store');
-}
-
-function destroy(id: number): void {
-    if (confirm('Remove availability?')) {
-        router.post('/availability/destroy', { id });
+    if (editingId.value !== null) {
+        form.post(`/availability/update?id=${editingId.value}`, {
+            onSuccess: () => {
+                closeAdd();
+                form.reset('note', 'type', 'start_time', 'end_time');
+            },
+        });
+    } else {
+        form.post('/availability/store', {
+            onSuccess: () => {
+                closeAdd();
+                form.reset('note', 'type', 'start_time', 'end_time');
+            },
+        });
     }
 }
 
-const parseForm = useForm({
-    employee_profile_id: props.employees[0]?.employee.id || 0,
-    text: '',
-});
-
-async function parseAi(): Promise<void> {
-    parseForm.post('/availability/parse-ai', {
-        onSuccess: (page) => {
-            const data = page.props as Record<string, unknown>;
-            if (data.availability && Array.isArray(data.availability)) {
-                aiRows.value = data.availability as typeof aiRows.value;
-            }
-        },
-    });
-}
-
-function saveParsed(row: {
-    date: string;
-    type: string;
-    start_time: string | null;
-    end_time: string | null;
-    note: string | null;
-}): void {
-    form.employee_profile_id = parseForm.employee_profile_id;
-    form.date = row.date;
-    form.start_time = row.start_time ?? '';
-    form.end_time = row.end_time ?? '';
-    form.type = row.type;
-    form.note = row.note ?? '';
-    form.post('/availability/store');
+function destroy(id: number): void {
+    if (confirm(t('common.confirm_title'))) {
+        router.post(
+            `/availability/destroy?id=${id}`,
+            {},
+            {
+                onSuccess: () => {
+                    closeAdd();
+                },
+            },
+        );
+    }
 }
 
 const typeColor: Record<string, string> = {
@@ -118,16 +126,43 @@ const typeColor: Record<string, string> = {
     preferred: 'bg-blue-100 text-blue-700',
 };
 
+function formatTimeRange(start: string | null, end: string | null): string {
+    if (!start || !end) return '—';
+    const fmt = (t: string) => {
+        const parts = t.split(':');
+        if (parts.length < 2) return t;
+        const h = parts[0];
+        const m = parts[1];
+        return m === '00'
+            ? parseInt(h, 10).toString()
+            : `${parseInt(h, 10)}:${m}`;
+    };
+    return `${fmt(start)}-${fmt(end)}`;
+}
+
+const prevMonth = computed(() => {
+    const [y, m] = props.month.split('-').map(Number);
+    const d = new Date(y, m - 2, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+});
+
+const nextMonth = computed(() => {
+    const [y, m] = props.month.split('-').map(Number);
+    const d = new Date(y, m, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+});
+
 function dayLabel(date: string): string {
-    const d = new Date(date);
-    return d.getDate().toString();
+    return parseIsoDate(date)?.getDate().toString() ?? '';
 }
 
 function weekdayLabel(date: string): string {
-    const d = new Date(date);
-    return ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'][
-        d.getDay() === 0 ? 6 : d.getDay() - 1
-    ];
+    const d = parseIsoDate(date);
+    if (!d) return '';
+
+    return (
+        weekdays.value[d.getDay() === 0 ? 6 : d.getDay() - 1]?.slice(0, 2) ?? ''
+    );
 }
 </script>
 
@@ -139,91 +174,30 @@ function weekdayLabel(date: string): string {
                     {{ t('availability.title') }}
                 </h1>
                 <p class="mt-1 text-xs text-on-surface-variant">
-                    {{ month }}
+                    {{ monthRange }}
                 </p>
             </div>
             <div class="flex gap-2">
                 <a
-                    :href="`/availability?month=${month}`"
+                    :href="`/availability?month=${prevMonth}`"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-outline-glass bg-white text-on-surface hover:bg-surface-container-low"
+                >
+                    <ChevronLeft :size="16" />
+                </a>
+                <a
+                    href="/availability"
                     class="inline-flex h-9 items-center rounded-xl border border-outline-glass bg-white px-4 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
                 >
-                    Today
+                    {{ t('common.today') }}
+                </a>
+                <a
+                    :href="`/availability?month=${nextMonth}`"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-outline-glass bg-white text-on-surface hover:bg-surface-container-low"
+                >
+                    <ChevronRight :size="16" />
                 </a>
             </div>
         </div>
-
-        <section
-            class="mb-6 rounded-2xl border border-outline-glass bg-gradient-to-br from-primary-container/10 via-surface-container-lowest to-secondary-cyan/5 p-4 shadow-sm"
-        >
-            <div class="mb-2 flex items-center gap-2">
-                <Sparkles :size="14" class="text-primary" />
-                <span
-                    class="font-mono text-[10px] font-extrabold tracking-wider text-primary uppercase"
-                >
-                    AI parser
-                </span>
-            </div>
-            <div class="grid gap-2 md:grid-cols-3">
-                <select
-                    v-model.number="parseForm.employee_profile_id"
-                    class="rounded-lg border border-outline-glass bg-white px-2 py-1.5 text-xs text-on-surface"
-                >
-                    <option
-                        v-for="e in employees"
-                        :key="e.employee.id"
-                        :value="e.employee.id"
-                    >
-                        {{ e.employee.name }}
-                    </option>
-                </select>
-                <input
-                    v-model="parseForm.text"
-                    type="text"
-                    :placeholder="t('availability.parse_ai_placeholder')"
-                    class="md:col-span-2 rounded-lg border border-outline-glass bg-white px-3 py-1.5 text-xs text-on-surface"
-                />
-            </div>
-            <button
-                type="button"
-                @click="parseAi"
-                class="mt-2 inline-flex h-7 cursor-pointer items-center rounded-lg border border-primary/20 bg-gradient-to-b from-primary-container to-primary px-3 text-[11px] font-semibold text-white shadow-sm hover:brightness-105"
-            >
-                {{ t('availability.parse_ai_cta') }}
-            </button>
-            <div v-if="aiRows" class="mt-3 space-y-1">
-                <p class="text-xs text-on-surface">
-                    Parsed {{ aiRows.length }} entries.
-                </p>
-                <ul class="space-y-1">
-                    <li
-                        v-for="(row, idx) in aiRows"
-                        :key="idx"
-                        class="flex items-center justify-between rounded-lg border border-outline-glass/40 bg-white px-3 py-1.5 text-xs"
-                    >
-                        <span>
-                            <span
-                                :class="[
-                                    'rounded px-1.5 py-0.5 text-[10px] font-bold uppercase',
-                                    typeColor[row.type] ?? '',
-                                ]"
-                            >
-                                {{ row.type }}
-                            </span>
-                            <span class="ml-2 font-mono">{{ row.date }}</span>
-                            <span v-if="row.start_time" class="ml-2"
-                                >{{ row.start_time }} – {{ row.end_time }}</span
-                            >
-                        </span>
-                        <button
-                            @click="saveParsed(row)"
-                            class="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700"
-                        >
-                            Save
-                        </button>
-                    </li>
-                </ul>
-            </div>
-        </section>
 
         <div
             class="overflow-x-auto rounded-2xl border border-outline-glass bg-surface-container-lowest shadow-sm"
@@ -234,7 +208,7 @@ function weekdayLabel(date: string): string {
                         <th
                             class="sticky left-0 z-10 bg-surface-container-low px-3 py-2 text-left font-mono text-[10px] font-extrabold tracking-wider text-on-surface-variant uppercase"
                         >
-                            Employee
+                            {{ t('availability.employee') }}
                         </th>
                         <th
                             v-for="d in days"
@@ -264,21 +238,30 @@ function weekdayLabel(date: string): string {
                         >
                             <div
                                 v-if="row.days[d]"
-                                class="flex items-center justify-center gap-0.5"
+                                class="flex items-center justify-center"
                             >
-                                <span
+                                <button
+                                    type="button"
+                                    @click="
+                                        openEdit(
+                                            row.days[d]!,
+                                            row.employee.id,
+                                            d,
+                                        )
+                                    "
                                     :class="[
-                                        'rounded px-1.5 py-0.5 text-[10px] font-bold uppercase',
+                                        'rounded px-1.5 py-0.5 text-[10px] font-bold uppercase w-full text-center hover:opacity-85 cursor-pointer',
                                         typeColor[row.days[d]!.type] ?? '',
                                     ]"
                                 >
-                                    {{ row.days[d]!.type.slice(0, 3) }}
-                                </span>
-                                <button
-                                    @click="destroy(row.days[d]!.id)"
-                                    class="rounded p-0.5 text-rose-500 hover:bg-rose-50"
-                                >
-                                    <X :size="10" />
+                                    {{
+                                        row.days[d]!.type === 'unavailable'
+                                            ? 'UNA'
+                                            : formatTimeRange(
+                                                  row.days[d]!.start_time,
+                                                  row.days[d]!.end_time,
+                                              )
+                                    }}
                                 </button>
                             </div>
                             <button
@@ -294,17 +277,16 @@ function weekdayLabel(date: string): string {
             </table>
         </div>
 
-        <div
-            v-if="showAdd"
-            class="fixed inset-0 z-30 flex items-center justify-center bg-black/30 p-4"
-            @click.self="closeAdd"
-        >
-            <form
-                @submit.prevent="submitAdd"
-                class="w-full max-w-md space-y-3 rounded-2xl border border-outline-glass bg-white p-5 shadow-lg"
-            >
+        <ModalOverlay :open="showAdd !== null" @close="closeAdd">
+            <form @submit.prevent="submitAdd" class="space-y-3">
                 <h3 class="font-heading text-sm font-bold text-on-surface">
-                    {{ t('availability.create_cta') }}
+                    {{
+                        editingId
+                            ? t('common.edit') +
+                              ' ' +
+                              t('availability.title').toLowerCase()
+                            : t('availability.create_cta')
+                    }}
                 </h3>
                 <div>
                     <label
@@ -356,23 +338,45 @@ function weekdayLabel(date: string): string {
                         />
                     </div>
                 </div>
-                <div class="flex items-center gap-2 pt-2">
-                    <button
-                        type="submit"
-                        :disabled="form.processing"
-                        class="inline-flex h-8 cursor-pointer items-center rounded-lg border border-primary/20 bg-gradient-to-b from-primary-container to-primary px-3 text-xs font-semibold text-white shadow-sm hover:brightness-105 disabled:opacity-50"
+                <div>
+                    <label
+                        class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-on-surface-variant"
                     >
-                        {{ t('common.save') }}
-                    </button>
+                        {{ t('availability.note') }}
+                    </label>
+                    <input
+                        v-model="form.note"
+                        type="text"
+                        class="w-full rounded-lg border border-outline-glass bg-white px-2 py-1.5 text-xs text-on-surface"
+                    />
+                </div>
+                <div class="flex items-center justify-between pt-2">
+                    <div class="flex items-center gap-2">
+                        <button
+                            type="submit"
+                            :disabled="form.processing"
+                            class="inline-flex h-8 cursor-pointer items-center rounded-lg border border-primary/20 bg-gradient-to-b from-primary-container to-primary px-3 text-xs font-semibold text-white shadow-sm hover:brightness-105 disabled:opacity-50"
+                        >
+                            {{ t('common.save') }}
+                        </button>
+                        <button
+                            type="button"
+                            @click="closeAdd"
+                            class="inline-flex h-8 items-center rounded-lg border border-outline-glass bg-white px-3 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
+                        >
+                            {{ t('common.cancel') }}
+                        </button>
+                    </div>
                     <button
+                        v-if="editingId"
                         type="button"
-                        @click="closeAdd"
-                        class="inline-flex h-8 items-center rounded-lg border border-outline-glass bg-white px-3 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
+                        @click="destroy(editingId)"
+                        class="inline-flex h-8 items-center rounded-lg border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-600 hover:bg-rose-100"
                     >
-                        {{ t('common.cancel') }}
+                        {{ t('common.delete') }}
                     </button>
                 </div>
             </form>
-        </div>
+        </ModalOverlay>
     </AppLayout>
 </template>

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { useForm } from '@inertiajs/vue3';
+import { Link, useForm } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
+import { computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useBoundLocale } from '@/composables/useBoundLocale';
 
-const { t } = useI18n();
+const { t, tm } = useI18n();
 
 useBoundLocale();
 
@@ -26,15 +27,7 @@ const props = defineProps<{
     hours: Hour[];
 }>();
 
-const dayNames = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday',
-];
+const dayNames = computed(() => tm('common.weekdays') as string[]);
 
 const form = useForm({
     hours: props.hours.map((h) => ({ ...h })),
@@ -75,10 +68,18 @@ function submit(): void {
                     <tr
                         class="text-left font-mono text-[10px] font-extrabold tracking-wider text-on-surface-variant uppercase"
                     >
-                        <th class="px-4 py-2">Day</th>
-                        <th class="px-4 py-2">Closed</th>
-                        <th class="px-4 py-2">Opens at</th>
-                        <th class="px-4 py-2">Closes at</th>
+                        <th class="px-4 py-2">
+                            {{ t('stores.business_hours_day') }}
+                        </th>
+                        <th class="px-4 py-2">
+                            {{ t('stores.business_hours_closed') }}
+                        </th>
+                        <th class="px-4 py-2">
+                            {{ t('stores.business_hours_opens_at') }}
+                        </th>
+                        <th class="px-4 py-2">
+                            {{ t('stores.business_hours_closes_at') }}
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -128,12 +129,12 @@ function submit(): void {
                 >
                     {{ t('common.save') }}
                 </button>
-                <a
+                <Link
                     :href="`/stores/show?id=${store.id}`"
                     class="inline-flex h-9 items-center rounded-xl border border-outline-glass bg-white px-4 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
                 >
                     {{ t('common.cancel') }}
-                </a>
+                </Link>
             </div>
         </form>
     </AppLayout>

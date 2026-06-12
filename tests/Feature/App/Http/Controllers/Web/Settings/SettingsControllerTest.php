@@ -7,13 +7,30 @@ use Database\Factories\UserFactory;
 use Thinkycz\LaravelCore\Support\Resolver;
 use Thinkycz\LaravelCore\Support\Typer;
 
-\test('authenticated user can view password settings', function (): void {
+\test('authenticated user can view settings', function (): void {
     $user = Typer::assertInstance(UserFactory::new()->createOne(), User::class);
 
-    $response = $this->be($user, 'users')->get('/settings/password', $this->inertiaHeaders());
+    $response = $this->be($user, 'users')->get('/settings', $this->inertiaHeaders());
 
     $response->assertOk();
-    $response->assertJsonPath('component', 'settings/Password');
+    $response->assertJsonPath('component', 'settings/Index');
+});
+
+\test('authenticated user can update profile settings', function (): void {
+    $user = Typer::assertInstance(UserFactory::new()->createOne(), User::class);
+
+    $response = $this->be($user, 'users')->post('/settings/profile', [
+        'email' => 'updated@example.com',
+        'locale' => 'cs',
+    ], $this->inertiaHeaders());
+
+    $response->assertOk();
+    $response->assertJsonPath('component', 'settings/Index');
+    $this->assertDatabaseHas('users', [
+        'id' => $user->getKey(),
+        'email' => 'updated@example.com',
+        'locale' => 'cs',
+    ]);
 });
 
 \test('authenticated user can update password', function (): void {
@@ -26,7 +43,7 @@ use Thinkycz\LaravelCore\Support\Typer;
     ], $this->inertiaHeaders());
 
     $response->assertOk();
-    $response->assertJsonPath('component', 'settings/Password');
+    $response->assertJsonPath('component', 'settings/Index');
 
     $user->refresh();
 
@@ -52,7 +69,7 @@ use Thinkycz\LaravelCore\Support\Typer;
 \test('wrong current password is rejected', function (): void {
     $user = Typer::assertInstance(UserFactory::new()->createOne(), User::class);
 
-    $response = $this->be($user, 'users')->from('/settings/password')->post('/settings/password', [
+    $response = $this->be($user, 'users')->from('/settings')->post('/settings/password', [
         'password' => 'wrong-password',
         'new_password' => 'new-password',
         'new_password_confirmation' => 'new-password',
@@ -65,7 +82,7 @@ use Thinkycz\LaravelCore\Support\Typer;
 \test('mismatched new password confirmation is rejected', function (): void {
     $user = Typer::assertInstance(UserFactory::new()->createOne(), User::class);
 
-    $response = $this->be($user, 'users')->from('/settings/password')->post('/settings/password', [
+    $response = $this->be($user, 'users')->from('/settings')->post('/settings/password', [
         'password' => UserFactory::$password,
         'new_password' => 'new-password',
         'new_password_confirmation' => 'different-password',
@@ -73,4 +90,14 @@ use Thinkycz\LaravelCore\Support\Typer;
 
     $response->assertStatus(422);
     $response->assertJsonPath('props.errors.new_password_confirmation.0', \__('auth.password_mismatch'));
+});
+
+\test('unauthenticated user cannot update password', function (): void {
+    $response = $this->post('/settings/password', [
+        'password' => UserFactory::$password,
+        'new_password' => 'new-password',
+        'new_password_confirmation' => 'new-password',
+    ], $this->inertiaHeaders());
+
+    $response->assertRedirect('/login');
 });

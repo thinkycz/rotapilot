@@ -28,7 +28,8 @@ class ShiftAutoFillController
      */
     public function __invoke(Request $request): SymfonyResponse
     {
-        $id = (int) $request->query('shift_requirement_id', '0');
+        $idRaw = $request->input('shift_requirement_id');
+        $id = \is_scalar($idRaw) ? (int) $idRaw : 0;
         $req = ModelFinder::findOrAbort(ShiftRequirement::class, $id);
 
         $schedule = ModelFinder::findOrAbort(Schedule::class, $req->getScheduleId());

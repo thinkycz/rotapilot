@@ -71,7 +71,7 @@ class EmployeeAvailabilityValidity
      */
     public function date(): Validity
     {
-        return $this->baseValidity->make()->date();
+        return $this->baseValidity->make()->string(null)->date();
     }
 
     /**
@@ -95,7 +95,7 @@ class EmployeeAvailabilityValidity
      */
     public function startTime(): Validity
     {
-        return $this->baseValidity->make()->dateFormat('H:i');
+        return $this->baseValidity->make()->string(null)->dateFormat('H:i');
     }
 
     /**
@@ -103,7 +103,7 @@ class EmployeeAvailabilityValidity
      */
     public function endTime(): Validity
     {
-        return $this->baseValidity->make()->dateFormat('H:i');
+        return $this->baseValidity->make()->string(null)->dateFormat('H:i');
     }
 
     /**

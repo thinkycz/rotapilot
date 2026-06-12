@@ -52,29 +52,27 @@ class DashboardController
         $activeEmployees = EmployeeProfile::query()
             ->tap(static fn(Builder $query) => EmployeeProfile::scopeActive($query))
             ->whereHas('stores', static function ($q) use ($storeIds): void {
-                $q->whereIn('stores.id', $storeIds ?: [0]);
+                $q->whereIn('stores.id', \count($storeIds) === 0 ? [0] : $storeIds);
             })
             ->count();
 
         $shiftsThisMonth = ShiftRequirement::query()
-            ->whereIn('store_id', $storeIds ?: [0])
+            ->whereIn('store_id', \count($storeIds) === 0 ? [0] : $storeIds)
             ->whereBetween('date', [$startOfMonth, $endOfMonth])
             ->count();
 
         $openConflicts = ScheduleConflict::query()
             ->tap(static fn(Builder $query) => ScheduleConflict::scopeUnresolved($query))
-            ->whereIn('schedule_id', function ($sub) use ($storeIds): void {
-                $sub->select('id')->from('schedules')->whereIn('store_id', $storeIds ?: [0]);
+            ->whereIn('schedule_id', function (\Illuminate\Database\Query\Builder $sub) use ($storeIds): void {
+                $sub->select('id')->from('schedules')->whereIn('store_id', \count($storeIds) === 0 ? [0] : $storeIds);
             })
             ->count();
 
-        $recentSchedules = Schedule::query()
-            ->getQuery()
-            ->whereIn('store_id', $storeIds ?: [0])
+        $recentScheduleRows = Schedule::query()
+            ->whereIn('store_id', \count($storeIds) === 0 ? [0] : $storeIds)
             ->orderBy('period_start', 'desc')
             ->limit(5)
-            ->get();
-        $recentScheduleRows = \App\Support\Db::hydrate($recentSchedules, Schedule::class)
+            ->get()
             ->map(static fn(Schedule $s): array => [
                 'id' => $s->getKey(),
                 'name' => $s->getName(),
@@ -83,15 +81,13 @@ class DashboardController
                 'period_end' => $s->getPeriodEnd(),
             ])->values()->all();
 
-        $upcomingShifts = ShiftRequirement::query()
-            ->getQuery()
-            ->whereIn('store_id', $storeIds ?: [0])
+        $upcomingShiftRows = ShiftRequirement::query()
+            ->whereIn('store_id', \count($storeIds) === 0 ? [0] : $storeIds)
             ->where('date', '>=', $today)
             ->orderBy('date')
             ->orderBy('start_time')
             ->limit(5)
-            ->get();
-        $upcomingShiftRows = \App\Support\Db::hydrate($upcomingShifts, ShiftRequirement::class)
+            ->get()
             ->map(static fn(ShiftRequirement $s): array => [
                 'id' => $s->getKey(),
                 'date' => $s->getDate(),
@@ -130,49 +126,48 @@ class DashboardController
         $user->loadMissing('employeeProfile');
         $profile = $user->employeeProfile;
 
-        $upcomingAssignments = \collect();
+        $assignments = [];
+        $stores = [];
         if ($profile instanceof EmployeeProfile) {
-            $upcomingAssignments = ShiftAssignment::query()
-                ->getQuery()
+            $stores = $profile->stores()
+                ->orderBy('name')
+                ->get()
+                ->map(static fn(Store $store): array => [
+                    'id' => $store->getKey(),
+                    'name' => $store->getName(),
+                ])
+                ->values()
+                ->all();
+
+            $assignments = ShiftAssignment::query()
+                ->with('shiftRequirement')
                 ->where('employee_profile_id', $profile->getKey())
-                ->whereIn('shift_requirement_id', function ($sub) use ($today, $endOfWeek): void {
-                    $sub->select('id')->from('shift_requirements')
-                        ->whereBetween('date', [$today, $endOfWeek]);
+                ->whereHas('shiftRequirement', function ($sub) use ($today, $endOfWeek): void {
+                    $sub->whereBetween('date', [$today, $endOfWeek]);
                 })
-                ->get();
+                ->get()
+                ->map(static function (ShiftAssignment $a): array {
+                    $req = $a->getShiftRequirement();
+
+                    return [
+                        'id' => $a->getKey(),
+                        'date' => $req->getDate(),
+                        'start_time' => $req->getStartTime(),
+                        'end_time' => $req->getEndTime(),
+                        'store_id' => $req->getStoreId(),
+                    ];
+                })->values()->all();
         }
 
-        $assignments = \App\Support\Db::hydrate($upcomingAssignments, ShiftAssignment::class)
-            ->map(static function (ShiftAssignment $a): array {
-                $reqRow = ShiftRequirement::query()->getQuery()->where('id', $a->getShiftRequirementId())->first();
-                if ($reqRow === null) {
-                    return [];
-                }
-                $req = \App\Support\Db::hydrateOne($reqRow, ShiftRequirement::class);
-                if (!$req instanceof ShiftRequirement) {
-                    return [];
-                }
-
-                return [
-                    'id' => $a->getKey(),
-                    'date' => $req->getDate(),
-                    'start_time' => $req->getStartTime(),
-                    'end_time' => $req->getEndTime(),
-                    'store_id' => $req->getStoreId(),
-                ];
-            })->filter()->values()->all();
-
-        $unavailabilities = \collect();
+        $unavailabilities = [];
         if ($profile instanceof EmployeeProfile) {
-            $rows = EmployeeAvailability::query()
-                ->getQuery()
+            $unavailabilities = EmployeeAvailability::query()
                 ->where('employee_profile_id', $profile->getKey())
                 ->where('date', '>=', $today)
                 ->where('type', 'unavailable')
                 ->orderBy('date')
                 ->limit(5)
-                ->get();
-            $unavailabilities = \App\Support\Db::hydrate($rows, EmployeeAvailability::class)
+                ->get()
                 ->map(static fn(EmployeeAvailability $a): array => [
                     'id' => $a->getKey(),
                     'date' => $a->getDate(),
@@ -186,6 +181,7 @@ class DashboardController
             ],
             'upcoming_shifts' => $assignments,
             'unavailabilities' => $unavailabilities,
+            'assigned_stores' => $stores,
         ];
     }
 }

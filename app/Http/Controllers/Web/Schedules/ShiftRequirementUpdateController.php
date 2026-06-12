@@ -52,7 +52,7 @@ class ShiftRequirementUpdateController
             'date' => $validated->assertString('date'),
             'start_time' => $validated->assertString('start_time'),
             'end_time' => $validated->assertString('end_time'),
-            'required_employee_count' => (int) $validated->mixed('required_employee_count'),
+            'required_employee_count' => $validated->assertInt('required_employee_count'),
             'role_label' => $validated->assertNullableString('role_label'),
             'note' => $validated->assertNullableString('note'),
         ])->save();

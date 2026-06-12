@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { useForm, router } from '@inertiajs/vue3';
-import { Sparkles, X, Check } from '@lucide/vue';
+import { X, Check } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
-import { ref } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useBoundLocale } from '@/composables/useBoundLocale';
 
@@ -31,44 +30,6 @@ defineProps<{
     schedule_id: number;
 }>();
 
-const explaining = ref<number | null>(null);
-const explanations = ref<
-    Record<
-        number,
-        { explanation: string; suggested_fix: string; severity: string }
-    >
->({});
-
-async function askAi(id: number): Promise<void> {
-    explaining.value = id;
-    await fetch('/conflicts/ask-ai?id=' + id, {
-        method: 'POST',
-        headers: {
-            Accept: 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN':
-                (
-                    document.querySelector(
-                        'meta[name="csrf-token"]',
-                    ) as HTMLMetaElement | null
-                )?.content ?? '',
-        },
-    })
-        .then((r) => r.json())
-        .then(
-            (data: {
-                explanation: string;
-                suggested_fix: string;
-                severity: string;
-            }) => {
-                explanations.value = { ...explanations.value, [id]: data };
-            },
-        )
-        .finally(() => {
-            explaining.value = null;
-        });
-}
-
 const resolveForm = useForm({});
 function resolve(id: number): void {
     resolveForm.post('/conflicts/resolve?id=' + id);
@@ -89,15 +50,7 @@ function severityClass(severity: string): string {
 }
 
 function typeLabel(type: string): string {
-    const map: Record<string, string> = {
-        overlap: 'Overlap',
-        understaffed: 'Understaffed',
-        outside_business_hours: 'Outside hours',
-        outside_availability: 'Outside availability',
-        weekly_hours_exceeded: 'Hours exceeded',
-        unavailable_day: 'Unavailable day',
-    };
-    return map[type] ?? type;
+    return t('conflicts.type_' + type);
 }
 </script>
 
@@ -116,14 +69,16 @@ function typeLabel(type: string): string {
             <div>
                 <label
                     class="mr-2 text-xs font-semibold text-on-surface-variant"
-                    >Schedule</label
+                    >{{ t('conflicts.schedule_filter') }}</label
                 >
                 <select
                     :value="schedule_id.toString()"
                     @change="changeSchedule"
                     class="rounded-xl border border-outline-glass bg-white px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none"
                 >
-                    <option value="0">All schedules</option>
+                    <option value="0">
+                        {{ t('conflicts.all_schedules') }}
+                    </option>
                     <option
                         v-for="s in schedules"
                         :key="s.id"
@@ -173,15 +128,6 @@ function typeLabel(type: string): string {
                     <div class="flex shrink-0 gap-1.5">
                         <button
                             type="button"
-                            @click="askAi(c.id)"
-                            :disabled="explaining === c.id"
-                            class="inline-flex h-8 items-center gap-1 rounded-lg border border-current/30 bg-white/60 px-2.5 text-xs font-semibold hover:bg-white/80 disabled:opacity-50"
-                        >
-                            <Sparkles :size="12" />
-                            {{ explaining === c.id ? '…' : 'Ask AI' }}
-                        </button>
-                        <button
-                            type="button"
                             @click="resolve(c.id)"
                             class="inline-flex h-8 items-center gap-1 rounded-lg border border-current/30 bg-white/60 px-2.5 text-xs font-semibold hover:bg-white/80"
                         >
@@ -189,17 +135,6 @@ function typeLabel(type: string): string {
                             {{ t('conflicts.resolve') }}
                         </button>
                     </div>
-                </div>
-                <div
-                    v-if="explanations[c.id]"
-                    class="rounded-xl border border-current/20 bg-white/60 p-3"
-                >
-                    <p
-                        class="mb-1 font-mono text-[10px] font-bold uppercase tracking-wider opacity-80"
-                    >
-                        AI explanation
-                    </p>
-                    <p class="text-xs">{{ explanations[c.id]?.explanation }}</p>
                 </div>
             </div>
         </div>

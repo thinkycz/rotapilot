@@ -22,15 +22,6 @@ use Thinkycz\LaravelCore\Support\Typer;
     $response->assertJsonPath('props.auth.user.email', $user->getEmail());
 });
 
-\test('admin sees manager dashboard', function (): void {
-    $user = Typer::assertInstance(UserFactory::new()->createOne(['role' => 'admin']), User::class);
-
-    $response = $this->be($user, 'users')->get('/dashboard', $this->inertiaHeaders());
-
-    $response->assertOk();
-    $response->assertJsonPath('component', 'dashboard/Manager');
-});
-
 \test('store manager sees manager dashboard', function (): void {
     $user = Typer::assertInstance(UserFactory::new()->createOne(['role' => 'store_manager']), User::class);
 

@@ -8,7 +8,7 @@ use App\Models\EmployeeProfile;
 use App\Models\Store;
 use App\Models\User;
 use App\Support\Authorization;
-use App\Support\Db;
+use App\Support\ModelFinder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -22,14 +22,9 @@ class EmployeeEditController
     {
         $user = User::mustAuth();
         $id = (int) $request->query('id', '0');
-        $row = EmployeeProfile::query()->getQuery()->where('id', $id)->first();
-        if ($row === null) {
-            \abort(404);
-        }
-        $employee = Db::hydrateOne($row, EmployeeProfile::class);
-        if ($employee === null) {
-            \abort(404);
-        }
+        $employee = ModelFinder::findOrAbort(EmployeeProfile::class, $id);
+
+        Authorization::mustViewEmployee($user, $employee);
 
         $stores = Authorization::managedStores($user);
 
@@ -42,6 +37,7 @@ class EmployeeEditController
                 'role_label' => $employee->getRoleLabel(),
                 'max_hours_per_week' => $employee->getMaxHoursPerWeek(),
                 'is_active' => $employee->getIsActive(),
+                'store_ids' => $employee->stores()->pluck('stores.id')->all(),
             ],
             'stores' => $stores->map(static fn(Store $s): array => [
                 'id' => $s->getKey(),

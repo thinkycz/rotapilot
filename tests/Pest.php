@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\UserRoleEnum;
 use App\Models\Store;
 use App\Models\User;
+use Database\Factories\StoreFactory;
 use Database\Factories\UserFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
@@ -28,7 +29,7 @@ function createIsolatedUserWithStore(): array
         'is_active' => true,
     ]), User::class);
 
-    $store = Store::factory()->create();
+    $store = Typer::assertInstance(StoreFactory::new()->createOne(), Store::class);
 
     return [$user, $store];
 }

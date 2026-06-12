@@ -7,6 +7,7 @@ test.describe('Locale switcher', () => {
         await page.goto('/register');
         await page.getByLabel('Email', { exact: true }).fill(email);
         await page.getByLabel('Password', { exact: true }).fill('password1');
+        await page.getByLabel('Confirm password').fill('password1');
         await page.getByLabel('Locale').selectOption('en');
         await page.getByRole('button', { name: 'Register' }).click();
         await page.waitForURL(/\/dashboard/);
@@ -36,7 +37,7 @@ test.describe('Locale switcher', () => {
 
         await switcher.selectOption('sk');
         await expect(
-            page.getByRole('heading', { name: 'Nastavenia profilu' }),
+            page.getByRole('heading', { name: 'Nastavenie profilu' }),
         ).toBeVisible();
         await expect(
             page.getByRole('button', { name: 'Odhlásiť sa' }),

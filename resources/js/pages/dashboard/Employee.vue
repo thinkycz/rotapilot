@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useBoundLocale } from '@/composables/useBoundLocale';
 import { useSharedProps } from '@/composables/useSharedProps';
+import { formatDate } from '@/lib/date';
 
 const { t } = useI18n();
 const { auth } = useSharedProps();
@@ -26,11 +27,16 @@ interface Unavailability {
     date: string;
     note: string | null;
 }
+interface StoreRef {
+    id: number;
+    name: string;
+}
 
 defineProps<{
     stats?: Stat;
     upcoming_shifts?: ShiftRef[];
     unavailabilities?: Unavailability[];
+    assigned_stores?: StoreRef[];
 }>();
 </script>
 
@@ -74,7 +80,7 @@ defineProps<{
                     class="mt-2 space-y-1"
                 >
                     <p class="font-mono text-xs font-bold text-on-surface">
-                        {{ upcoming_shifts[0]?.date }}
+                        {{ formatDate(upcoming_shifts[0]?.date) }}
                     </p>
                     <p class="text-xs text-on-surface">
                         {{ upcoming_shifts[0]?.start_time }} –
@@ -107,7 +113,20 @@ defineProps<{
                 <h3 class="font-heading text-sm font-bold text-on-surface">
                     {{ t('dashboard.assigned_stores') }}
                 </h3>
+                <ul
+                    v-if="assigned_stores && assigned_stores.length > 0"
+                    class="mt-2 space-y-1"
+                >
+                    <li
+                        v-for="store in assigned_stores"
+                        :key="store.id"
+                        class="text-xs font-semibold text-on-surface"
+                    >
+                        {{ store.name }}
+                    </li>
+                </ul>
                 <p
+                    v-else
                     class="mt-2 text-xs leading-normal text-on-surface-variant font-medium"
                 >
                     {{ t('dashboard.assigned_stores_empty') }}
@@ -154,7 +173,7 @@ defineProps<{
                     class="rounded-xl border border-outline-glass/40 bg-white px-3 py-2 text-xs"
                 >
                     <p class="font-mono font-bold text-on-surface">
-                        {{ u.date }}
+                        {{ formatDate(u.date) }}
                     </p>
                     <p v-if="u.note" class="text-on-surface-variant">
                         {{ u.note }}

@@ -40,8 +40,8 @@ class ScheduleValidity
     {
         return [
             'name' => [$this->name()],
-            'period_start' => [$this->periodStart()],
-            'period_end' => [$this->periodEnd()],
+            'month' => [$this->month()],
+            'year' => [$this->year()],
             'status' => [$this->status()],
         ];
     }
@@ -55,8 +55,8 @@ class ScheduleValidity
     {
         return [
             'name' => [$this->name()],
-            'period_start' => [$this->periodStart()],
-            'period_end' => [$this->periodEnd()],
+            'month' => [$this->month()],
+            'year' => [$this->year()],
             'status' => [$this->status()],
         ];
     }
@@ -70,11 +70,27 @@ class ScheduleValidity
     }
 
     /**
+     * Month validation.
+     */
+    public function month(): Validity
+    {
+        return $this->baseValidity->make()->integer(12, 1);
+    }
+
+    /**
+     * Year validation.
+     */
+    public function year(): Validity
+    {
+        return $this->baseValidity->make()->integer(2100, 2000);
+    }
+
+    /**
      * Period start validation.
      */
     public function periodStart(): Validity
     {
-        return $this->baseValidity->make()->date();
+        return $this->baseValidity->make()->string(null)->date();
     }
 
     /**
@@ -82,7 +98,7 @@ class ScheduleValidity
      */
     public function periodEnd(): Validity
     {
-        return $this->baseValidity->make()->date();
+        return $this->baseValidity->make()->string(null)->date();
     }
 
     /**

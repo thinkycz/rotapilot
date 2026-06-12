@@ -5,12 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Web\Stores;
 
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
-use App\Models\EmployeeProfile;
-use App\Models\Schedule;
 use App\Models\Store;
 use App\Models\User;
 use App\Support\Authorization;
-use App\Support\Db;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -36,16 +33,9 @@ class StoreShowController
             \abort(403);
         }
 
-        $businessHours = $store->getBusinessHours();
-
-        $managerRows = $store->managers()->getQuery()->orderBy('email')->get();
-        $managers = Db::hydrate($managerRows, User::class);
-
-        $employeeRows = $store->employees()->getQuery()->orderBy('name')->get();
-        $employees = Db::hydrate($employeeRows, EmployeeProfile::class);
-
-        $scheduleRows = $store->schedules()->getQuery()->orderBy('period_start', 'desc')->limit(10)->get();
-        $schedules = Db::hydrate($scheduleRows, Schedule::class);
+        $managers = $store->managers()->orderBy('email')->get();
+        $employees = $store->employees()->orderBy('name')->get();
+        $schedules = $store->schedules()->orderBy('period_start', 'desc')->limit(10)->get();
 
         return Inertia::render('stores/Show', [
             'store' => [
@@ -56,12 +46,7 @@ class StoreShowController
                 'timezone' => $store->getTimezone(),
                 'is_active' => $store->getIsActive(),
             ],
-            'business_hours' => $businessHours->map(static fn($h): array => [
-                'day_of_week' => $h->getDayOfWeek(),
-                'opens_at' => $h->getOpensAt(),
-                'closes_at' => $h->getClosesAt(),
-                'is_closed' => $h->getIsClosed(),
-            ])->values()->all(),
+            'business_hours' => self::businessHoursRows($store),
             'managers' => $managers->map(static fn($m): array => [
                 'id' => $m->getKey(),
                 'email' => $m->getEmail(),
@@ -79,5 +64,35 @@ class StoreShowController
                 'period_end' => $s->getPeriodEnd(),
             ])->values()->all(),
         ]);
+    }
+
+    /**
+     * Get a complete Monday-first business-hours payload.
+     *
+     * @return list<array{day_of_week: int, opens_at: string|null, closes_at: string|null, is_closed: bool}>
+     */
+    private static function businessHoursRows(Store $store): array
+    {
+        $byDay = [];
+        foreach ($store->getBusinessHours() as $hour) {
+            $byDay[$hour->getDayOfWeek()] = [
+                'day_of_week' => $hour->getDayOfWeek(),
+                'opens_at' => $hour->getOpensAt(),
+                'closes_at' => $hour->getClosesAt(),
+                'is_closed' => $hour->getIsClosed(),
+            ];
+        }
+
+        $rows = [];
+        for ($day = 1; $day <= 7; ++$day) {
+            $rows[] = $byDay[$day] ?? [
+                'day_of_week' => $day,
+                'opens_at' => null,
+                'closes_at' => null,
+                'is_closed' => false,
+            ];
+        }
+
+        return $rows;
     }
 }

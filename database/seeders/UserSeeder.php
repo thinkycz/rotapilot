@@ -41,14 +41,13 @@ class UserSeeder extends Seeder
                 ]);
         };
 
-        $seed('admin@example.com', 'admin');
         $seed('manager@example.com', 'store_manager');
         $seed('anna@example.com', 'employee');
 
         // Touch the password to ensure consistency in case the factory changes.
         User::query()
             ->getQuery()
-            ->whereIn('email', ['admin@example.com', 'manager@example.com', 'anna@example.com'])
+            ->whereIn('email', ['manager@example.com', 'anna@example.com'])
             ->update(['password' => Hash::make('password')]);
     }
 }

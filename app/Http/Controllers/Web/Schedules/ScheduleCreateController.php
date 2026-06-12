@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Web\Schedules;
 use App\Models\Store;
 use App\Models\User;
 use App\Support\Authorization;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,6 +22,7 @@ class ScheduleCreateController
         $user = User::mustAuth();
         $stores = Authorization::managedStores($user);
         $defaultStore = $stores->first();
+        $defaultMonth = CarbonImmutable::now()->addMonthNoOverflow();
 
         return Inertia::render('schedules/Edit', [
             'schedule' => null,
@@ -29,6 +31,8 @@ class ScheduleCreateController
                 'name' => $s->getName(),
             ])->values()->all(),
             'default_store_id' => $defaultStore?->getKey() ?? 0,
+            'default_month' => $defaultMonth->month,
+            'default_year' => $defaultMonth->year,
         ]);
     }
 }

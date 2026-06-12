@@ -73,16 +73,27 @@ class AssignmentService
      */
     public function assign(ShiftRequirement $requirement, EmployeeProfile $employee, User $actor): ShiftAssignment
     {
+        $assignment = $this->assignWithoutRecompute($requirement, $employee, $actor);
+
+        $this->recomputeForRequirement($requirement);
+
+        return $assignment;
+    }
+
+    /**
+     * Manually assign a single employee without recomputing conflicts.
+     */
+    public function assignWithoutRecompute(
+        ShiftRequirement $requirement,
+        EmployeeProfile $employee,
+        User $actor,
+    ): ShiftAssignment {
         $existing = $this->findAssignment($requirement->getKey(), $employee->getKey());
         if ($existing instanceof ShiftAssignment) {
             return $existing;
         }
 
-        $assignment = $this->createDraftAssignment($requirement, $employee, $actor, 'manual');
-
-        $this->recomputeForRequirement($requirement);
-
-        return $assignment;
+        return $this->createDraftAssignment($requirement, $employee, $actor, 'manual');
     }
 
     /**

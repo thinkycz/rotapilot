@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { useForm } from '@inertiajs/vue3';
+import { Link, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useBoundLocale } from '@/composables/useBoundLocale';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 useBoundLocale();
 
@@ -14,6 +15,8 @@ interface Schedule {
     store_id: number;
     period_start: string;
     period_end: string;
+    month: number;
+    year: number;
     status: string;
 }
 
@@ -21,15 +24,31 @@ const props = defineProps<{
     schedule: Schedule | null;
     stores: { id: number; name: string }[];
     default_store_id?: number;
+    default_month?: number;
+    default_year?: number;
 }>();
 
 const isEdit = !!props.schedule;
 
+const monthOptions = computed(() =>
+    Array.from({ length: 12 }, (_, index) => {
+        const month = index + 1;
+
+        return {
+            value: month,
+            label: new Intl.DateTimeFormat(locale.value, {
+                month: 'long',
+            }).format(new Date(2026, index, 1)),
+        };
+    }),
+);
+
 const form = useForm({
     name: props.schedule?.name ?? '',
     store_id: props.schedule?.store_id ?? props.default_store_id ?? 0,
-    period_start: props.schedule?.period_start ?? '',
-    period_end: props.schedule?.period_end ?? '',
+    month: props.schedule?.month ?? props.default_month ?? 1,
+    year:
+        props.schedule?.year ?? props.default_year ?? new Date().getFullYear(),
 });
 
 function submit(): void {
@@ -89,29 +108,38 @@ function submit(): void {
                 </select>
             </div>
 
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <div>
                     <label
                         class="mb-1 block text-xs font-semibold text-on-surface-variant"
                     >
-                        {{ t('schedules.period') }} start
+                        {{ t('schedules.month') }}
                     </label>
-                    <input
-                        v-model="form.period_start"
-                        type="date"
+                    <select
+                        v-model.number="form.month"
                         required
                         class="w-full rounded-xl border border-outline-glass bg-white px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none"
-                    />
+                    >
+                        <option
+                            v-for="month in monthOptions"
+                            :key="month.value"
+                            :value="month.value"
+                        >
+                            {{ month.label }}
+                        </option>
+                    </select>
                 </div>
                 <div>
                     <label
                         class="mb-1 block text-xs font-semibold text-on-surface-variant"
                     >
-                        {{ t('schedules.period') }} end
+                        {{ t('schedules.year') }}
                     </label>
                     <input
-                        v-model="form.period_end"
-                        type="date"
+                        v-model.number="form.year"
+                        type="number"
+                        min="2000"
+                        max="2100"
                         required
                         class="w-full rounded-xl border border-outline-glass bg-white px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none"
                     />
@@ -126,12 +154,12 @@ function submit(): void {
                 >
                     {{ t('common.save') }}
                 </button>
-                <a
+                <Link
                     href="/schedules/index"
                     class="inline-flex h-9 items-center rounded-xl border border-outline-glass bg-white px-4 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
                 >
                     {{ t('common.cancel') }}
-                </a>
+                </Link>
             </div>
         </form>
     </AppLayout>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Link, router } from '@inertiajs/vue3';
-import { Plus, Eye, Edit, Clock, MapPin, Coffee } from '@lucide/vue';
+import { Link } from '@inertiajs/vue3';
+import { Plus, Eye, Clock, MapPin, Coffee } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -25,13 +25,10 @@ defineProps<{
     stores: StoreRow[];
 }>();
 
-const isAdmin = computed(() => auth.value.user?.role === 'admin');
-
-function destroy(id: number): void {
-    if (confirm(t('common.confirm'))) {
-        router.post('/stores/destroy', { id });
-    }
-}
+const isStoreManager = computed(
+    () => auth.value.user?.role === 'store_manager',
+);
+const canCreateStore = computed(() => isStoreManager.value);
 </script>
 
 <template>
@@ -43,7 +40,7 @@ function destroy(id: number): void {
                 </h1>
             </div>
             <Link
-                v-if="isAdmin"
+                v-if="canCreateStore"
                 href="/stores/create"
                 class="inline-flex h-9 items-center justify-center rounded-xl border border-primary/20 bg-gradient-to-b from-primary-container to-primary px-4 text-xs font-semibold text-white shadow-sm hover:brightness-105"
             >
@@ -74,7 +71,7 @@ function destroy(id: number): void {
                 <div class="mb-3 flex items-start justify-between">
                     <div class="min-w-0 flex-1">
                         <h3
-                            class="font-heading text-base font-bold text-on-surface truncate"
+                            class="truncate font-heading text-base font-bold text-on-surface"
                         >
                             {{ s.name }}
                         </h3>
@@ -96,7 +93,11 @@ function destroy(id: number): void {
                                 : 'bg-rose-50 text-rose-700',
                         ]"
                     >
-                        {{ s.is_active ? 'Active' : 'Inactive' }}
+                        {{
+                            s.is_active
+                                ? t('stores.status_active')
+                                : t('stores.status_inactive')
+                        }}
                     </span>
                 </div>
 
@@ -115,28 +116,6 @@ function destroy(id: number): void {
                         <Eye :size="12" />
                         {{ t('stores.view') }}
                     </Link>
-                    <Link
-                        v-if="isAdmin"
-                        :href="`/stores/edit?id=${s.id}`"
-                        class="inline-flex h-7 items-center gap-1 rounded-lg border border-outline-glass bg-white px-2 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
-                    >
-                        <Edit :size="12" />
-                        {{ t('stores.edit_link') }}
-                    </Link>
-                    <Link
-                        :href="`/stores/business-hours?id=${s.id}`"
-                        class="inline-flex h-7 items-center gap-1 rounded-lg border border-outline-glass bg-white px-2 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
-                    >
-                        <Clock :size="12" />
-                        {{ t('stores.business_hours_link') }}
-                    </Link>
-                    <button
-                        v-if="isAdmin"
-                        @click="destroy(s.id)"
-                        class="inline-flex h-7 cursor-pointer items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 text-xs font-semibold text-rose-700 hover:bg-rose-100"
-                    >
-                        {{ t('common.delete') }}
-                    </button>
                 </div>
             </div>
         </div>

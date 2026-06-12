@@ -48,8 +48,9 @@ class ConflictDetectionService
      */
     public function recompute(Schedule $schedule): void
     {
-        $store = $schedule->store;
-        $requirements = $schedule->shiftRequirements;
+        $schedule->loadMissing(['store', 'shiftRequirements']);
+        $store = $schedule->getStore();
+        $requirements = $schedule->getShiftRequirements();
         $employeeIds = $this->collectEmployeeIds($requirements);
 
         $availabilities = EmployeeAvailability::query()
@@ -71,7 +72,7 @@ class ConflictDetectionService
     /**
      * Collect the unique employee ids assigned to the given requirements.
      *
-     * @param iterable<int, ShiftRequirement> $requirements
+     * @param iterable<int|string, ShiftRequirement> $requirements
      *
      * @return array<int, int>
      */
@@ -80,11 +81,10 @@ class ConflictDetectionService
         $ids = [];
         foreach ($requirements as $r) {
             $rows = $r->assignments()
-                ->getQuery()
                 ->where('status', '!=', ShiftAssignmentStatusEnum::Cancelled->value)
                 ->get();
             foreach ($rows as $a) {
-                $ids[(int) $a->employee_profile_id] = true;
+                $ids[$a->getEmployeeProfileId()] = true;
             }
         }
 
@@ -94,7 +94,7 @@ class ConflictDetectionService
     /**
      * Detect understaffed shifts.
      *
-     * @param iterable<int, ShiftRequirement> $requirements
+     * @param iterable<int|string, ShiftRequirement> $requirements
      */
     private function detectUnderstaffed(Schedule $schedule, iterable $requirements): void
     {
@@ -118,7 +118,7 @@ class ConflictDetectionService
     /**
      * Detect shifts outside the store's business hours.
      *
-     * @param iterable<int, ShiftRequirement> $requirements
+     * @param iterable<int|string, ShiftRequirement> $requirements
      */
     private function detectOutsideBusinessHours(Schedule $schedule, Store|null $store, iterable $requirements): void
     {
@@ -144,19 +144,18 @@ class ConflictDetectionService
     /**
      * Detect per-employee issues (unavailable / missing availability).
      *
-     * @param iterable<int, ShiftRequirement> $requirements
+     * @param iterable<int|string, ShiftRequirement> $requirements
      * @param array<int|string, \Illuminate\Support\Collection<int, stdClass>> $availabilities
      */
     private function detectEmployeeIssues(Schedule $schedule, iterable $requirements, array $availabilities): void
     {
         foreach ($requirements as $r) {
             $rows = $r->assignments()
-                ->getQuery()
                 ->where('status', '!=', ShiftAssignmentStatusEnum::Cancelled->value)
                 ->get();
 
             foreach ($rows as $row) {
-                $employeeId = (int) $row->employee_profile_id;
+                $employeeId = $row->getEmployeeProfileId();
                 $bucket = $availabilities[$employeeId] ?? null;
                 $models = [];
                 if ($bucket instanceof \Illuminate\Support\Collection) {
@@ -197,18 +196,17 @@ class ConflictDetectionService
     /**
      * Detect overlapping shifts per employee.
      *
-     * @param iterable<int, ShiftRequirement> $requirements
+     * @param iterable<int|string, ShiftRequirement> $requirements
      */
     private function detectOverlaps(Schedule $schedule, iterable $requirements): void
     {
         $byEmployee = [];
         foreach ($requirements as $r) {
             $rows = $r->assignments()
-                ->getQuery()
                 ->where('status', '!=', ShiftAssignmentStatusEnum::Cancelled->value)
                 ->get();
             foreach ($rows as $a) {
-                $byEmployee[(int) $a->employee_profile_id][] = $r;
+                $byEmployee[$a->getEmployeeProfileId()][] = $r;
             }
         }
 
@@ -251,18 +249,17 @@ class ConflictDetectionService
     /**
      * Detect per-employee weekly max-hours violations.
      *
-     * @param iterable<int, ShiftRequirement> $requirements
+     * @param iterable<int|string, ShiftRequirement> $requirements
      */
     private function detectMaxHours(Schedule $schedule, iterable $requirements): void
     {
         $employeeIds = [];
         foreach ($requirements as $r) {
             $rows = $r->assignments()
-                ->getQuery()
                 ->where('status', '!=', ShiftAssignmentStatusEnum::Cancelled->value)
                 ->get();
             foreach ($rows as $a) {
-                $employeeIds[(int) $a->employee_profile_id] = true;
+                $employeeIds[$a->getEmployeeProfileId()] = true;
             }
         }
 
@@ -271,14 +268,8 @@ class ConflictDetectionService
         }
 
         $byEmployee = [];
-        foreach (\array_keys($employeeIds) as $id) {
-            $row = EmployeeProfile::query()->getQuery()->where('id', $id)->first();
-            if ($row === null) {
-                continue;
-            }
-            /** @var array<string, mixed> $attrs */
-            $attrs = (array) $row;
-            $employee = (new EmployeeProfile())->newFromBuilder($attrs);
+        $profiles = EmployeeProfile::query()->whereIn('id', \array_keys($employeeIds))->get();
+        foreach ($profiles as $employee) {
             $byEmployee[$employee->getKey()] = $employee;
         }
 
@@ -287,17 +278,16 @@ class ConflictDetectionService
         foreach ($requirements as $r) {
             $duration = $this->durationHours($r->getStartTime(), $r->getEndTime());
             $rows = $r->assignments()
-                ->getQuery()
                 ->where('status', '!=', ShiftAssignmentStatusEnum::Cancelled->value)
                 ->get();
             foreach ($rows as $row) {
-                $employeeId = (int) $row->employee_profile_id;
+                $employeeId = $row->getEmployeeProfileId();
                 $employee = $byEmployee[$employeeId] ?? null;
                 if ($employee === null) {
                     continue;
                 }
 
-                $max = $employee->max_hours_per_week ?? null;
+                $max = $employee->getMaxHoursPerWeek();
                 if ($max === null) {
                     continue;
                 }
@@ -310,7 +300,10 @@ class ConflictDetectionService
         foreach ($weeklyHours as $employeeId => $weeks) {
             foreach ($weeks as $hours) {
                 $employee = $byEmployee[$employeeId] ?? null;
-                $max = $employee->max_hours_per_week ?? null;
+                if ($employee === null) {
+                    continue;
+                }
+                $max = $employee->getMaxHoursPerWeek();
                 if ($max === null || $hours <= $max) {
                     continue;
                 }
@@ -348,19 +341,15 @@ class ConflictDetectionService
      */
     private function parseTime(string $value): Carbon
     {
-        $parsed = Carbon::createFromFormat('H:i', $value);
-
-        if ($parsed instanceof Carbon) {
-            return $parsed;
+        if (\preg_match('/^(?<hour>\\d{1,2}):(?<minute>\\d{2})(?::(?<second>\\d{2}))?$/', $value, $matches) === 1) {
+            return Carbon::createFromTime(
+                (int) $matches['hour'],
+                (int) $matches['minute'],
+                isset($matches['second']) ? (int) $matches['second'] : 0,
+            );
         }
 
-        $parsed = Carbon::createFromFormat('H:i:s', $value);
-
-        if ($parsed instanceof Carbon) {
-            return $parsed;
-        }
-
-        return Carbon::createFromTime((int) \mb_substr($value, 0, 2), (int) \mb_substr($value, 3, 2));
+        return Carbon::parse($value);
     }
 
     /**

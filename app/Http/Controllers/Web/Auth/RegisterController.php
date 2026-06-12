@@ -36,8 +36,7 @@ class RegisterController
 
     /**
      * Register a new store manager. Public registration is restricted to the
-     * store_manager role. Employees are created by managers; admins are
-     * provisioned by seeders or tinker.
+     * store_manager role. Employees are created by managers.
      */
     public function store(Request $request): SymfonyResponse
     {

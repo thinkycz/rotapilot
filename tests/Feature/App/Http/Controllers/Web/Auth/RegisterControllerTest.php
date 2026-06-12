@@ -35,15 +35,14 @@ use Thinkycz\LaravelCore\Support\Resolver;
 
 \test('public registration only creates store managers', function (): void {
     $this->post('/register', [
-        'email' => 'admin-attempt@example.com',
+        'email' => 'manager-attempt@example.com',
         'password' => 'password',
         'password_confirmation' => 'password',
         'locale' => 'en',
     ]);
 
-    $user = User::query()->where('email', 'admin-attempt@example.com')->firstOrFail();
+    $user = User::query()->where('email', 'manager-attempt@example.com')->firstOrFail();
     \expect($user->getRole())->toBe(UserRoleEnum::StoreManager);
-    \expect($user->isAdmin())->toBeFalse();
     \expect($user->isEmployee())->toBeFalse();
 });
 

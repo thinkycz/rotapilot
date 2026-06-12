@@ -26,11 +26,13 @@ final class ModelFinder
      * @template TModel of Model
      *
      * @param class-string<TModel> $modelClass
+     *
+     * @return TModel
      */
     public static function findOrAbort(string $modelClass, int $id): Model
     {
         $model = $modelClass::query()->find($id);
-        if (!$model instanceof Model) {
+        if (!$model instanceof $modelClass) {
             \abort(404);
         }
 

@@ -7,7 +7,6 @@ namespace Database\Seeders;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use Thinkycz\LaravelCore\Support\Config;
 
 class StoreManagerStoreSeeder extends Seeder
@@ -21,19 +20,13 @@ class StoreManagerStoreSeeder extends Seeder
             return;
         }
 
-        $managerRow = User::query()->getQuery()->where('email', 'manager@example.com')->first();
-        $manager = $managerRow !== null ? \App\Support\Db::hydrateOne($managerRow, User::class) : null;
+        $manager = User::query()->where('email', 'manager@example.com')->first();
         if (!$manager instanceof User) {
             return;
         }
 
-        $stores = Store::query()->getQuery()->get();
+        $stores = Store::query()->get();
 
-        foreach ($stores as $store) {
-            DB::table('store_manager_store')->updateOrInsert(
-                ['user_id' => $manager->getKey(), 'store_id' => $store->id],
-                ['updated_at' => \now(), 'created_at' => \now()],
-            );
-        }
+        $manager->managedStores()->syncWithoutDetaching($stores->pluck('id')->all());
     }
 }

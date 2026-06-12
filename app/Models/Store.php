@@ -126,6 +126,16 @@ class Store extends BaseModel
     }
 
     /**
+     * Managers getter.
+     *
+     * @return Collection<int|string, User>
+     */
+    public function getManagers(): Collection
+    {
+        return $this->assertRelationshipCollection('managers', User::class);
+    }
+
+    /**
      * Employees relationship.
      *
      * @return BelongsToMany<EmployeeProfile, $this>
@@ -136,6 +146,16 @@ class Store extends BaseModel
     }
 
     /**
+     * Employees getter.
+     *
+     * @return Collection<int|string, EmployeeProfile>
+     */
+    public function getEmployees(): Collection
+    {
+        return $this->assertRelationshipCollection('employees', EmployeeProfile::class);
+    }
+
+    /**
      * Schedules relationship.
      *
      * @return HasMany<Schedule, $this>
@@ -143,6 +163,16 @@ class Store extends BaseModel
     public function schedules(): HasMany
     {
         return $this->hasMany(Schedule::class);
+    }
+
+    /**
+     * Schedules getter.
+     *
+     * @return Collection<int|string, Schedule>
+     */
+    public function getSchedules(): Collection
+    {
+        return $this->assertRelationshipCollection('schedules', Schedule::class);
     }
 
     /**

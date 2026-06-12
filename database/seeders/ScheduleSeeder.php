@@ -12,7 +12,6 @@ use App\Models\Store;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use Thinkycz\LaravelCore\Support\Config;
 
 class ScheduleSeeder extends Seeder
@@ -26,52 +25,38 @@ class ScheduleSeeder extends Seeder
             return;
         }
 
-        $adminRow = User::query()->getQuery()->where('email', 'admin@example.com')->first();
-        $admin = $adminRow !== null ? \App\Support\Db::hydrateOne($adminRow, User::class) : null;
-        $actorId = $admin instanceof User ? $admin->getKey() : null;
+        $manager = User::query()->where('email', 'manager@example.com')->first();
+        $actorId = $manager instanceof User ? $manager->getKey() : null;
         if ($actorId === null) {
             return;
         }
 
-        $storeRow = Store::query()->getQuery()->first();
-        $store = $storeRow !== null ? \App\Support\Db::hydrateOne($storeRow, Store::class) : null;
+        $store = Store::query()->first();
         if (!$store instanceof Store) {
             return;
         }
         $storeId = $store->getKey();
 
-        $employeeRows = EmployeeProfile::query()->getQuery()->get();
-        $employees = \App\Support\Db::hydrate($employeeRows, EmployeeProfile::class);
+        $employees = EmployeeProfile::query()->get();
         if ($employees->count() < 4) {
             return;
         }
         $employeeIds = [];
         foreach ($employees as $emp) {
-            $employeeIds[] = (int) $emp->id;
+            $employeeIds[] = $emp->getKey();
         }
 
         $start = Carbon::now()->startOfWeek();
         $end = Carbon::now()->endOfWeek();
 
-        DB::table('schedules')->updateOrInsert(
+        $schedule = Schedule::query()->updateOrCreate(
             ['store_id' => $storeId, 'period_start' => $start->format('Y-m-d'), 'period_end' => $end->format('Y-m-d')],
             [
                 'name' => 'Week of ' . $start->format('Y-m-d'),
                 'status' => 'draft',
                 'created_by' => $actorId,
-                'updated_at' => \now(),
-                'created_at' => \now(),
             ],
         );
-
-        $scheduleRow = Schedule::query()->getQuery()->where('store_id', $storeId)
-            ->where('period_start', $start->format('Y-m-d'))
-            ->where('period_end', $end->format('Y-m-d'))
-            ->first();
-        $schedule = $scheduleRow !== null ? \App\Support\Db::hydrateOne($scheduleRow, Schedule::class) : null;
-        if (!$schedule instanceof Schedule) {
-            return;
-        }
         $scheduleId = $schedule->getKey();
 
         $rows = [
@@ -85,40 +70,36 @@ class ScheduleSeeder extends Seeder
         ];
 
         foreach ($rows as $row) {
-            DB::table('shift_requirements')->updateOrInsert(
+            ShiftRequirement::query()->updateOrCreate(
                 ['schedule_id' => $scheduleId, 'date' => $row['date'], 'start_time' => $row['start_time']],
                 $row + [
                     'store_id' => $storeId,
                     'end_time' => $row['end_time'],
                     'source' => ShiftSourceEnum::Manual->value,
                     'created_by' => $actorId,
-                    'updated_at' => \now(),
-                    'created_at' => \now(),
                 ],
             );
         }
 
-        $shiftRows = ShiftRequirement::query()->getQuery()
+        $shiftRows = ShiftRequirement::query()
             ->where('schedule_id', $scheduleId)
             ->orderBy('id')
             ->limit(4)
             ->get();
 
         foreach ($shiftRows as $idx => $shiftRow) {
-            DB::table('shift_assignments')->updateOrInsert(
+            \App\Models\ShiftAssignment::query()->updateOrCreate(
                 [
-                    'shift_requirement_id' => (int) $shiftRow->id,
+                    'shift_requirement_id' => $shiftRow->getKey(),
                     'employee_profile_id' => $employeeIds[$idx % \count($employeeIds)],
                 ],
                 [
                     'assigned_by' => $actorId,
                     'status' => 'assigned',
-                    'updated_at' => \now(),
-                    'created_at' => \now(),
                 ],
             );
         }
 
-        DB::table('schedule_conflicts')->where('schedule_id', $scheduleId)->delete();
+        \App\Models\ScheduleConflict::query()->where('schedule_id', $scheduleId)->delete();
     }
 }

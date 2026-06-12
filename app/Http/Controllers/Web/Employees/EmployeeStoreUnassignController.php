@@ -6,11 +6,10 @@ namespace App\Http\Controllers\Web\Employees;
 
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Models\EmployeeProfile;
-use App\Models\EmployeeStore;
 use App\Models\Store;
 use App\Models\User;
 use App\Support\Authorization;
-use App\Support\Db;
+use App\Support\ModelFinder;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
@@ -27,29 +26,14 @@ class EmployeeStoreUnassignController
         $employeeId = (int) $request->query('employee_id', '0');
         $storeId = (int) $request->query('store_id', '0');
 
-        $employeeRow = EmployeeProfile::query()->getQuery()->where('id', $employeeId)->first();
-        if ($employeeRow === null) {
-            \abort(404);
-        }
-        $employee = Db::hydrateOne($employeeRow, EmployeeProfile::class);
-        if ($employee === null) {
-            \abort(404);
-        }
-
-        $store = Store::query()->find($storeId);
-        if (!$store instanceof Store) {
-            \abort(404);
-        }
+        $employee = ModelFinder::findOrAbort(EmployeeProfile::class, $employeeId);
+        $store = ModelFinder::findOrAbort(Store::class, $storeId);
 
         if (!Authorization::canManageStore($actor, $store)) {
             \abort(403);
         }
 
-        EmployeeStore::query()
-            ->getQuery()
-            ->where('employee_profile_id', $employee->getKey())
-            ->where('store_id', $store->getKey())
-            ->delete();
+        $employee->stores()->detach($store->getKey());
 
         $request->session()->flash('success', \__('Employee unassigned from store.'));
 

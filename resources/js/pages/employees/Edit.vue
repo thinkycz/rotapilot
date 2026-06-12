@@ -2,6 +2,7 @@
 import { useForm } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AppLayout from '@/layouts/AppLayout.vue';
+import FieldError from '@/components/ui/FieldError.vue';
 import { useBoundLocale } from '@/composables/useBoundLocale';
 
 const { t } = useI18n();
@@ -16,6 +17,7 @@ interface Employee {
     role_label: string | null;
     max_hours_per_week: number | null;
     is_active: boolean;
+    store_ids?: number[];
 }
 
 const props = defineProps<{
@@ -33,6 +35,7 @@ const form = useForm({
     max_hours_per_week:
         props.employee?.max_hours_per_week ?? (null as number | null),
     is_active: props.employee?.is_active ?? true,
+    store_ids: props.employee?.store_ids ?? ([] as number[]),
 });
 
 function submit(): void {
@@ -128,6 +131,44 @@ function submit(): void {
                 />
             </div>
 
+            <div>
+                <label
+                    class="mb-1 block text-xs font-semibold text-on-surface-variant"
+                >
+                    {{ t('employees.assigned_stores') }}
+                </label>
+                <div
+                    class="space-y-2 rounded-xl border border-outline-glass bg-white p-3"
+                >
+                    <div
+                        v-for="s in stores"
+                        :key="s.id"
+                        class="flex items-center gap-2"
+                    >
+                        <input
+                            :id="`store_${s.id}`"
+                            type="checkbox"
+                            :value="s.id"
+                            v-model="form.store_ids"
+                            class="h-4 w-4 rounded border-outline-glass"
+                        />
+                        <label
+                            :for="`store_${s.id}`"
+                            class="text-xs font-semibold text-on-surface"
+                        >
+                            {{ s.name }}
+                        </label>
+                    </div>
+                    <p
+                        v-if="stores.length === 0"
+                        class="text-xs text-on-surface-variant italic"
+                    >
+                        {{ t('employees.no_stores_available') }}
+                    </p>
+                </div>
+                <FieldError :message="form.errors.store_ids" class="mt-1" />
+            </div>
+
             <div class="flex items-center gap-2">
                 <input
                     id="is_active"
@@ -139,7 +180,7 @@ function submit(): void {
                     for="is_active"
                     class="text-xs font-semibold text-on-surface-variant"
                 >
-                    Active
+                    {{ t('stores.is_active') }}
                 </label>
             </div>
 

@@ -10,6 +10,7 @@ use App\Models\Schedule;
 use App\Models\Store;
 use App\Models\User;
 use App\Support\Authorization;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
@@ -28,11 +29,11 @@ class ScheduleStoreController
         $validated = $this->validateRequest($request, [
             'name' => $validity->name()->required()->toArray(),
             'store_id' => 'required|integer|exists:stores,id',
-            'period_start' => $validity->periodStart()->required()->toArray(),
-            'period_end' => $validity->periodEnd()->required()->toArray(),
+            'month' => $validity->month()->required()->toArray(),
+            'year' => $validity->year()->required()->toArray(),
         ]);
 
-        $store = Store::query()->find((int) $validated->mixed('store_id'));
+        $store = Store::query()->find($validated->assertInt('store_id'));
         if (!$store instanceof Store) {
             \abort(404);
         }
@@ -41,12 +42,21 @@ class ScheduleStoreController
             \abort(403);
         }
 
+        $periodStart = CarbonImmutable::create(
+            $validated->assertInt('year'),
+            $validated->assertInt('month'),
+            1,
+        );
+        if (!$periodStart instanceof CarbonImmutable) {
+            \abort(422);
+        }
+
         $schedule = new Schedule();
         $schedule->forceFill([
             'name' => $validated->assertString('name'),
             'store_id' => $store->getKey(),
-            'period_start' => $validated->assertString('period_start'),
-            'period_end' => $validated->assertString('period_end'),
+            'period_start' => $periodStart->startOfMonth()->format('Y-m-d'),
+            'period_end' => $periodStart->endOfMonth()->format('Y-m-d'),
             'status' => 'draft',
             'created_by' => $actor->getKey(),
         ])->save();

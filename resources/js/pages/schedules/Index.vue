@@ -6,6 +6,7 @@ import { computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useBoundLocale } from '@/composables/useBoundLocale';
 import { useSharedProps } from '@/composables/useSharedProps';
+import { formatDateRange } from '@/lib/date';
 
 const { t } = useI18n();
 const { auth } = useSharedProps();
@@ -27,20 +28,15 @@ interface StoreOption {
     name: string;
 }
 
-defineProps<{
+const props = defineProps<{
     schedules: ScheduleRow[];
     stores: StoreOption[];
 }>();
 
-const isManager = computed(
-    () =>
-        auth.value.user?.role === 'admin' ||
-        auth.value.user?.role === 'store_manager',
-);
+const isManager = computed(() => auth.value.user?.role === 'store_manager');
 
 const storeName = (id: number): string => {
-    const s = (defineProps as unknown as { stores: StoreOption[] }).stores;
-    return s.find((x) => x.id === id)?.name ?? '—';
+    return props.stores.find((x) => x.id === id)?.name ?? '—';
 };
 
 const statusVariant = (s: string): string => {
@@ -118,7 +114,7 @@ const statusVariant = (s: string): string => {
                             {{ storeName(s.store_id) }}
                         </td>
                         <td class="px-4 py-2 text-on-surface-variant">
-                            {{ s.period_start }} → {{ s.period_end }}
+                            {{ formatDateRange(s.period_start, s.period_end) }}
                         </td>
                         <td class="px-4 py-2 text-on-surface-variant">
                             {{ s.shift_count }}
@@ -130,7 +126,7 @@ const statusVariant = (s: string): string => {
                                     statusVariant(s.status),
                                 ]"
                             >
-                                {{ s.status }}
+                                {{ t('schedules.status_' + s.status) }}
                             </span>
                         </td>
                         <td class="px-4 py-2 text-right">
