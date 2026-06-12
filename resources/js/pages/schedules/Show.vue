@@ -93,15 +93,19 @@ const calendarWeeks = computed(() => {
     const start = parseLocalDate(startStr);
     const end = parseLocalDate(endStr);
 
-    const startDay = start.getDay();
+    // Align to the first day of the starting month
+    const firstDay = new Date(start.getFullYear(), start.getMonth(), 1);
+    const startDay = firstDay.getDay();
     const startOffset = startDay === 0 ? -6 : 1 - startDay;
-    const gridStart = new Date(start);
-    gridStart.setDate(start.getDate() + startOffset);
+    const gridStart = new Date(firstDay);
+    gridStart.setDate(firstDay.getDate() + startOffset);
 
-    const endDay = end.getDay();
+    // Align to the last day of the ending month
+    const lastDay = new Date(end.getFullYear(), end.getMonth() + 1, 0);
+    const endDay = lastDay.getDay();
     const endOffset = endDay === 0 ? 0 : 7 - endDay;
-    const gridEnd = new Date(end);
-    gridEnd.setDate(end.getDate() + endOffset);
+    const gridEnd = new Date(lastDay);
+    gridEnd.setDate(lastDay.getDate() + endOffset);
 
     const weeks: CalendarDay[][] = [];
     let currentWeek: CalendarDay[] = [];
