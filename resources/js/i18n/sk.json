@@ -183,6 +183,8 @@
         "title_show": "Plán",
         "title_create": "Vytvoriť plán",
         "title_edit": "Upraviť plán",
+        "list_view": "Zoznam",
+        "calendar_view": "Kalendár",
         "name": "Názov",
         "store": "Prevádzka",
         "period": "Obdobie",

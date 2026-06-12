@@ -183,6 +183,8 @@
         "title_show": "Rozvrh",
         "title_create": "Vytvořit rozvrh",
         "title_edit": "Upravit rozvrh",
+        "list_view": "Seznam",
+        "calendar_view": "Kalendář",
         "name": "Název",
         "store": "Provozovna",
         "period": "Období",

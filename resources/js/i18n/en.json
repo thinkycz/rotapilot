@@ -183,6 +183,8 @@
         "title_show": "Schedule",
         "title_create": "Create schedule",
         "title_edit": "Edit schedule",
+        "list_view": "List",
+        "calendar_view": "Calendar",
         "name": "Name",
         "store": "Store",
         "period": "Period",

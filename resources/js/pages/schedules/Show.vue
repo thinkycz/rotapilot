@@ -71,6 +71,69 @@ const criticalConflicts = computed(() =>
 
 const dayKeys = computed(() => Object.keys(props.days).sort());
 
+const currentView = ref<'calendar' | 'list'>('calendar');
+
+interface CalendarDay {
+    date: string;
+    dayOfMonth: string;
+    inPeriod: boolean;
+    shifts: Shift[];
+}
+
+const calendarWeeks = computed(() => {
+    const startStr = props.schedule.period_start;
+    const endStr = props.schedule.period_end;
+    if (!startStr || !endStr) return [];
+
+    const parseLocalDate = (dateStr: string): Date => {
+        const [y, m, d] = dateStr.split('-').map(Number);
+        return new Date(y, m - 1, d);
+    };
+
+    const start = parseLocalDate(startStr);
+    const end = parseLocalDate(endStr);
+
+    const startDay = start.getDay();
+    const startOffset = startDay === 0 ? -6 : 1 - startDay;
+    const gridStart = new Date(start);
+    gridStart.setDate(start.getDate() + startOffset);
+
+    const endDay = end.getDay();
+    const endOffset = endDay === 0 ? 0 : 7 - endDay;
+    const gridEnd = new Date(end);
+    gridEnd.setDate(end.getDate() + endOffset);
+
+    const weeks: CalendarDay[][] = [];
+    let currentWeek: CalendarDay[] = [];
+
+    const iter = new Date(gridStart);
+    while (iter <= gridEnd) {
+        const y = iter.getFullYear();
+        const m = String(iter.getMonth() + 1).padStart(2, '0');
+        const d = String(iter.getDate()).padStart(2, '0');
+        const dateStr = `${y}-${m}-${d}`;
+
+        const inPeriod = dateStr >= startStr && dateStr <= endStr;
+        const shifts = props.days[dateStr]?.shifts || [];
+
+        currentWeek.push({
+            date: dateStr,
+            dayOfMonth: iter.getDate().toString(),
+            inPeriod,
+            shifts,
+        });
+
+        if (currentWeek.length === 7) {
+            weeks.push(currentWeek);
+            currentWeek = [];
+        }
+
+        iter.setDate(iter.getDate() + 1);
+    }
+
+    return weeks;
+});
+
 const selectedShift = ref<Shift | null>(null);
 const showShiftPanel = ref(false);
 const showCreateShift = ref<string | null>(null);
@@ -212,7 +275,37 @@ function dateLabel(d: string): string {
                     }}
                 </p>
             </div>
-            <div class="flex gap-2">
+            <div class="flex gap-2 items-center">
+                <!-- View Toggle -->
+                <div
+                    class="flex rounded-xl bg-surface-container-low p-0.5 border border-outline-glass mr-2"
+                >
+                    <button
+                        type="button"
+                        @click="currentView = 'calendar'"
+                        :class="[
+                            'px-3 py-1.5 text-xs font-semibold rounded-lg cursor-pointer transition-colors',
+                            currentView === 'calendar'
+                                ? 'bg-white text-primary shadow-sm'
+                                : 'text-on-surface-variant hover:text-on-surface',
+                        ]"
+                    >
+                        {{ t('schedules.calendar_view') }}
+                    </button>
+                    <button
+                        type="button"
+                        @click="currentView = 'list'"
+                        :class="[
+                            'px-3 py-1.5 text-xs font-semibold rounded-lg cursor-pointer transition-colors',
+                            currentView === 'list'
+                                ? 'bg-white text-primary shadow-sm'
+                                : 'text-on-surface-variant hover:text-on-surface',
+                        ]"
+                    >
+                        {{ t('schedules.list_view') }}
+                    </button>
+                </div>
+
                 <Link
                     v-if="isManager"
                     :href="`/schedules/edit?id=${schedule.id}`"
@@ -272,7 +365,7 @@ function dateLabel(d: string): string {
             </ul>
         </div>
 
-        <div class="space-y-3">
+        <div v-if="currentView === 'list'" class="space-y-3">
             <div
                 v-for="date in dayKeys"
                 :key="date"
@@ -380,6 +473,126 @@ function dateLabel(d: string): string {
                                     class="shrink-0 mt-0.5 text-rose-500"
                                 />
                                 <span>{{ c.message }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div
+            v-else-if="currentView === 'calendar'"
+            class="overflow-x-auto rounded-2xl border border-outline-glass bg-surface-container-lowest shadow-sm"
+        >
+            <div class="min-w-[768px]">
+                <!-- Grid Weekdays Header -->
+                <div
+                    class="grid grid-cols-7 bg-surface-container-low border-b border-outline-glass"
+                >
+                    <div
+                        v-for="dayName in t('common.weekdays')"
+                        :key="dayName"
+                        class="py-2.5 text-center font-mono text-[10px] font-extrabold tracking-wider text-on-surface-variant uppercase"
+                    >
+                        {{ dayName }}
+                    </div>
+                </div>
+
+                <!-- Grid Cells -->
+                <div class="divide-y divide-outline-glass/30">
+                    <div
+                        v-for="(week, weekIdx) in calendarWeeks"
+                        :key="weekIdx"
+                        class="grid grid-cols-7 divide-x divide-outline-glass/30 min-h-[120px]"
+                    >
+                        <div
+                            v-for="day in week"
+                            :key="day.date"
+                            :class="[
+                                'p-2 flex flex-col justify-between transition-colors relative group',
+                                day.inPeriod
+                                    ? 'bg-surface-container-lowest hover:bg-surface-container-lowest/80'
+                                    : 'bg-surface-container-low/40 text-on-surface-variant/40 select-none',
+                            ]"
+                        >
+                            <!-- Cell Header -->
+                            <div class="flex items-center justify-between">
+                                <span
+                                    :class="[
+                                        'text-xs font-bold font-mono',
+                                        day.inPeriod
+                                            ? 'text-on-surface'
+                                            : 'text-on-surface-variant/30',
+                                    ]"
+                                >
+                                    {{ day.dayOfMonth }}
+                                </span>
+                                <!-- Add Shift Button on Hover -->
+                                <button
+                                    v-if="day.inPeriod && isManager"
+                                    type="button"
+                                    @click="openCreate(day.date)"
+                                    class="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-surface-container-low text-primary transition-opacity cursor-pointer"
+                                    title="Add shift"
+                                >
+                                    <Plus :size="12" />
+                                </button>
+                            </div>
+
+                            <!-- Shifts inside Cell -->
+                            <div
+                                class="mt-2 flex-1 space-y-1.5 overflow-y-auto"
+                            >
+                                <button
+                                    v-for="s in day.shifts"
+                                    :key="s.id"
+                                    type="button"
+                                    @click="openShift(s)"
+                                    :class="[
+                                        'w-full text-left rounded-lg border p-1.5 transition-all hover:brightness-95 cursor-pointer flex flex-col justify-between',
+                                        statusColor(
+                                            s.required_employee_count,
+                                            s.required_employee_count,
+                                            s.assignments.length,
+                                        ),
+                                    ]"
+                                >
+                                    <div
+                                        class="flex items-center justify-between w-full"
+                                    >
+                                        <span
+                                            class="font-mono text-[10px] font-bold"
+                                        >
+                                            {{
+                                                s.start_time.substring(0, 5)
+                                            }}–{{ s.end_time.substring(0, 5) }}
+                                        </span>
+                                        <!-- Conflict Indicator -->
+                                        <AlertTriangle
+                                            v-if="
+                                                getShiftConflicts(s.id).length >
+                                                0
+                                            "
+                                            :size="10"
+                                            class="text-rose-500 animate-pulse"
+                                        />
+                                    </div>
+                                    <div
+                                        class="mt-0.5 flex items-center justify-between text-[9px] font-medium opacity-85"
+                                    >
+                                        <span>
+                                            {{ s.assignments.length }}/{{
+                                                s.required_employee_count
+                                            }}
+                                        </span>
+                                        <span
+                                            v-if="s.role_label"
+                                            class="truncate max-w-[50px]"
+                                        >
+                                            {{ s.role_label }}
+                                        </span>
+                                    </div>
+                                </button>
                             </div>
                         </div>
                     </div>
