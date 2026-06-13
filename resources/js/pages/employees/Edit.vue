@@ -16,6 +16,7 @@ interface Employee {
     phone: string | null;
     role_label: string | null;
     max_hours_per_week: number | null;
+    hourly_rate: number | null;
     is_active: boolean;
     store_ids?: number[];
 }
@@ -34,6 +35,7 @@ const form = useForm({
     role_label: props.employee?.role_label ?? '',
     max_hours_per_week:
         props.employee?.max_hours_per_week ?? (null as number | null),
+    hourly_rate: props.employee?.hourly_rate ?? (null as number | null),
     is_active: props.employee?.is_active ?? true,
     store_ids: props.employee?.store_ids ?? ([] as number[]),
 });
@@ -129,6 +131,21 @@ function submit(): void {
                     max="168"
                     class="w-full rounded-xl border border-outline-glass bg-white px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none"
                 />
+            </div>
+
+            <div>
+                <label
+                    class="mb-1 block text-xs font-semibold text-on-surface-variant"
+                >
+                    {{ t('employees.hourly_rate') }}
+                </label>
+                <input
+                    v-model.number="form.hourly_rate"
+                    type="number"
+                    min="0"
+                    class="w-full rounded-xl border border-outline-glass bg-white px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none"
+                />
+                <FieldError :message="form.errors.hourly_rate" class="mt-1" />
             </div>
 
             <div>

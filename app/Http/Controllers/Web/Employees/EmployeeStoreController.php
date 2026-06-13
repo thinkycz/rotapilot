@@ -33,6 +33,7 @@ class EmployeeStoreController
             'phone' => $validity->phone()->nullable()->toArray(),
             'role_label' => $validity->roleLabel()->nullable()->toArray(),
             'max_hours_per_week' => $validity->maxHoursPerWeek()->nullable()->toArray(),
+            'hourly_rate' => $validity->hourlyRate()->nullable()->toArray(),
             'is_active' => $validity->isActive()->nullable()->toArray(),
             'store_ids' => [
                 'required',
@@ -76,6 +77,14 @@ class EmployeeStoreController
         $isActiveRaw = $validated->mixed('is_active');
         $isActive = \is_bool($isActiveRaw) ? $isActiveRaw : true;
 
+        $hourlyRateRaw = $validated->mixed('hourly_rate');
+        $hourlyRate = null;
+        if (\is_int($hourlyRateRaw)) {
+            $hourlyRate = $hourlyRateRaw;
+        } elseif (\is_string($hourlyRateRaw) && \ctype_digit($hourlyRateRaw)) {
+            $hourlyRate = (int) $hourlyRateRaw;
+        }
+
         $employee = new EmployeeProfile();
         $employee->forceFill([
             'name' => $validated->assertString('name'),
@@ -83,6 +92,7 @@ class EmployeeStoreController
             'phone' => $validated->assertNullableString('phone'),
             'role_label' => $validated->assertNullableString('role_label'),
             'max_hours_per_week' => $maxHours,
+            'hourly_rate' => $hourlyRate,
             'is_active' => $isActive,
         ])->save();
         $employee->refresh();

@@ -38,6 +38,7 @@ class EmployeeShowController
                 'phone' => $employee->getPhone(),
                 'role_label' => $employee->getRoleLabel(),
                 'max_hours_per_week' => $employee->getMaxHoursPerWeek(),
+                'hourly_rate' => $employee->getHourlyRate(),
                 'is_active' => $employee->getIsActive(),
                 'has_login' => $employee->hasLoginAccount(),
                 'login' => $login instanceof User ? [

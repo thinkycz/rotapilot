@@ -19,6 +19,7 @@ interface Employee {
     phone: string | null;
     role_label: string | null;
     max_hours_per_week: number | null;
+    hourly_rate: number | null;
     is_active: boolean;
     has_login: boolean;
 }
@@ -74,6 +75,9 @@ const isStoreManager = computed(
                         <th class="px-4 py-2">
                             {{ t('employees.max_hours_per_week') }}
                         </th>
+                        <th class="px-4 py-2">
+                            {{ t('employees.hourly_rate') }}
+                        </th>
                         <th class="px-4 py-2">{{ t('employees.login') }}</th>
                         <th class="px-4 py-2 text-right">
                             {{ t('common.actions') }}
@@ -102,6 +106,12 @@ const isStoreManager = computed(
                         </td>
                         <td class="px-4 py-2 text-on-surface-variant">
                             {{ e.max_hours_per_week ?? '—' }}
+                        </td>
+                        <td class="px-4 py-2 text-on-surface-variant font-mono">
+                            <span v-if="e.hourly_rate !== null">
+                                {{ e.hourly_rate }} CZK/h
+                            </span>
+                            <span v-else>—</span>
                         </td>
                         <td class="px-4 py-2">
                             <span

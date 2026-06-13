@@ -98,6 +98,10 @@
         "open_my_calendar": "Open my calendar",
         "recent_schedules": "Recent schedules",
         "upcoming_shifts": "Upcoming shifts",
+        "upcoming_shifts_date_time": "Date & Time",
+        "upcoming_shifts_store": "Store",
+        "upcoming_shifts_role": "Role",
+        "upcoming_shifts_employees": "Employees",
         "no_schedules": "No schedules yet.",
         "no_upcoming": "No upcoming shifts.",
         "unavailabilities": "Time off"
@@ -121,6 +125,7 @@
         "no": "No",
         "not_set": "Not set",
         "closed": "Closed",
+        "unassigned": "Unassigned",
         "weekdays": [
             "Monday",
             "Tuesday",
@@ -189,7 +194,8 @@
         "generate_password": "Generate random password",
         "generated_password": "Generated password. Copy it now; it will not be shown again.",
         "delete_login": "Delete login",
-        "confirm_delete_login": "Delete this employee login account?"
+        "confirm_delete_login": "Delete this employee login account?",
+        "hourly_rate": "Hourly rate"
     },
     "schedules": {
         "title_index": "Schedules",
@@ -239,7 +245,11 @@
         "required_count": "Required count",
         "role_label_optional": "Role label (optional)",
         "auto_fill": "Auto-fill",
-        "critical_conflicts_warning": "Warning: There are unresolved critical conflicts in this schedule."
+        "critical_conflicts_warning": "Warning: There are unresolved critical conflicts in this schedule.",
+        "employee_statistics_title": "Employee Statistics",
+        "assigned_shifts": "Shifts",
+        "assigned_hours": "Hours",
+        "total_wage": "Total wage"
     },
     "public_schedules": {
         "title": "Employee schedules",

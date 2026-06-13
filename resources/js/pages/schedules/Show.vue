@@ -70,7 +70,12 @@ const props = defineProps<{
     schedule: Schedule;
     days: Record<string, { shifts: Shift[] }>;
     conflicts: Conflict[];
-    employees: { id: number; name: string }[];
+    employees: {
+        id: number;
+        name: string;
+        role_label: string | null;
+        hourly_rate: number | null;
+    }[];
 }>();
 
 const isPublished = computed(() => props.schedule.status === 'published');
@@ -83,6 +88,66 @@ const criticalConflicts = computed(() =>
 
 const dayKeys = computed(() => Object.keys(props.days).sort());
 const weekdays = computed(() => tm('common.weekdays') as string[]);
+
+const employeeStats = computed(() => {
+    const statsMap: Record<
+        number,
+        {
+            id: number;
+            name: string;
+            role_label: string | null;
+            hourly_rate: number | null;
+            shifts_count: number;
+            total_hours: number;
+        }
+    > = {};
+
+    props.employees.forEach((e) => {
+        statsMap[e.id] = {
+            id: e.id,
+            name: e.name,
+            role_label: e.role_label,
+            hourly_rate: e.hourly_rate,
+            shifts_count: 0,
+            total_hours: 0,
+        };
+    });
+
+    const parseTimeToMinutes = (timeStr: string): number => {
+        const parts = timeStr.split(':');
+        if (parts.length < 2) return 0;
+        const h = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        return h * 60 + m;
+    };
+
+    const getDurationHours = (start: string, end: string): number => {
+        const startMins = parseTimeToMinutes(start);
+        const endMins = parseTimeToMinutes(end);
+        const diff = endMins - startMins;
+        return diff > 0 ? diff / 60 : 0;
+    };
+
+    Object.values(props.days).forEach((day) => {
+        day.shifts.forEach((shift) => {
+            shift.assignments.forEach((assignment) => {
+                if (
+                    assignment.status !== 'cancelled' &&
+                    statsMap[assignment.employee_profile_id]
+                ) {
+                    statsMap[assignment.employee_profile_id].shifts_count += 1;
+                    statsMap[assignment.employee_profile_id].total_hours +=
+                        getDurationHours(
+                            assignment.start_time,
+                            assignment.end_time,
+                        );
+                }
+            });
+        });
+    });
+
+    return Object.values(statsMap).sort((a, b) => a.name.localeCompare(b.name));
+});
 
 const currentView = ref<'calendar' | 'list'>('calendar');
 
@@ -438,6 +503,86 @@ function dateLabel(d: string): string {
                 </li>
             </ul>
         </div>
+
+        <!-- Employee Statistics section -->
+        <section
+            class="mb-6 rounded-2xl border border-outline-glass bg-surface-container-lowest p-6 shadow-sm"
+        >
+            <h2 class="mb-4 font-heading text-sm font-bold text-on-surface">
+                {{ t('schedules.employee_statistics_title') }}
+            </h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead>
+                        <tr
+                            class="border-b border-outline-glass/30 font-mono text-[10px] font-extrabold tracking-wider text-on-surface-variant uppercase"
+                        >
+                            <th class="pb-2 pr-3 font-semibold">
+                                {{ t('employees.name') }}
+                            </th>
+                            <th class="pb-2 px-3 font-semibold">
+                                {{ t('employees.role_label') }}
+                            </th>
+                            <th class="pb-2 px-3 font-semibold">
+                                {{ t('employees.hourly_rate') }}
+                            </th>
+                            <th class="pb-2 px-3 font-semibold">
+                                {{ t('schedules.assigned_shifts') }}
+                            </th>
+                            <th class="pb-2 px-3 font-semibold">
+                                {{ t('schedules.assigned_hours') }}
+                            </th>
+                            <th class="pb-2 pl-3 font-semibold text-right">
+                                {{ t('schedules.total_wage') }}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="e in employeeStats"
+                            :key="e.id"
+                            class="border-b border-outline-glass/20 last:border-0 hover:bg-surface-container-low/40"
+                        >
+                            <td class="py-3 pr-3 font-semibold text-on-surface">
+                                {{ e.name }}
+                            </td>
+                            <td class="py-3 px-3 text-on-surface-variant">
+                                {{ e.role_label ?? '—' }}
+                            </td>
+                            <td class="py-3 px-3 font-mono text-on-surface">
+                                <span v-if="e.hourly_rate !== null">
+                                    {{ e.hourly_rate }} CZK/h
+                                </span>
+                                <span v-else class="text-on-surface-variant/50"
+                                    >—</span
+                                >
+                            </td>
+                            <td class="py-3 px-3 font-mono text-on-surface">
+                                {{ e.shifts_count }}
+                            </td>
+                            <td class="py-3 px-3 font-mono text-on-surface">
+                                {{ e.total_hours.toFixed(1) }} h
+                            </td>
+                            <td
+                                class="py-3 pl-3 font-mono font-bold text-on-surface text-right"
+                            >
+                                <span v-if="e.hourly_rate !== null">
+                                    {{
+                                        (
+                                            e.total_hours * e.hourly_rate
+                                        ).toLocaleString()
+                                    }}
+                                    CZK
+                                </span>
+                                <span v-else class="text-on-surface-variant/50"
+                                    >—</span
+                                >
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
         <div v-if="currentView === 'list'" class="space-y-4">
             <div
@@ -867,8 +1012,8 @@ function dateLabel(d: string): string {
                     <h3
                         class="font-heading text-base font-bold text-on-surface"
                     >
-                        {{ selectedShift.start_time }} –
-                        {{ selectedShift.end_time }}
+                        {{ selectedShift.start_time.substring(0, 5) }} –
+                        {{ selectedShift.end_time.substring(0, 5) }}
                     </h3>
                     <button
                         @click="closeShiftPanel"

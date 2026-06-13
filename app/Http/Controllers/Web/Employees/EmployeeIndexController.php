@@ -40,6 +40,7 @@ class EmployeeIndexController
                 'phone' => $e->getPhone(),
                 'role_label' => $e->getRoleLabel(),
                 'max_hours_per_week' => $e->getMaxHoursPerWeek(),
+                'hourly_rate' => $e->getHourlyRate(),
                 'is_active' => $e->getIsActive(),
                 'has_login' => $e->hasLoginAccount(),
             ])->values()->all(),

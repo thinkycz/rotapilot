@@ -98,6 +98,10 @@
         "open_my_calendar": "Otvoriť môj kalendár",
         "recent_schedules": "Nedávne plány",
         "upcoming_shifts": "Nadchádzajúce zmeny",
+        "upcoming_shifts_date_time": "Dátum a čas",
+        "upcoming_shifts_store": "Prevádzka",
+        "upcoming_shifts_role": "Pozícia",
+        "upcoming_shifts_employees": "Zamestnanci",
         "no_schedules": "Zatiaľ žiadne plány.",
         "no_upcoming": "Žiadne nadchádzajúce zmeny.",
         "unavailabilities": "Vovo"
@@ -121,6 +125,7 @@
         "no": "Nie",
         "not_set": "Nevyplnené",
         "closed": "Zatvorené",
+        "unassigned": "Neobsadené",
         "weekdays": [
             "Pondelok",
             "Utorok",
@@ -189,7 +194,8 @@
         "generate_password": "Vygenerovať náhodné heslo",
         "generated_password": "Vygenerované heslo. Skopírujte ho teraz, znova sa nezobrazí.",
         "delete_login": "Zmazať prihlásenie",
-        "confirm_delete_login": "Zmazať prihlasovací účet zamestnanca?"
+        "confirm_delete_login": "Zmazať prihlasovací účet zamestnanca?",
+        "hourly_rate": "Hodinová sadzba"
     },
     "schedules": {
         "title_index": "Plány",
@@ -239,7 +245,11 @@
         "required_count": "Vyžadovaný počet",
         "role_label_optional": "Pozícia (voliteľné)",
         "auto_fill": "Automaticky obsadiť",
-        "critical_conflicts_warning": "Upozornenie: V tomto rozvrhu sú nevyriešené kritické konflikty."
+        "critical_conflicts_warning": "Upozornenie: V tomto rozvrhu sú nevyriešené kritické konflikty.",
+        "employee_statistics_title": "Štatistika zamestnancov",
+        "assigned_shifts": "Počet zmien",
+        "assigned_hours": "Hodiny",
+        "total_wage": "Celková mzda"
     },
     "public_schedules": {
         "title": "Plány zamestnanca",

@@ -105,6 +105,8 @@ class ScheduleShowController
             'employees' => $employees->map(static fn(EmployeeProfile $e): array => [
                 'id' => $e->getKey(),
                 'name' => $e->getName(),
+                'role_label' => $e->getRoleLabel(),
+                'hourly_rate' => $e->getHourlyRate(),
             ])->values()->all(),
         ]);
     }

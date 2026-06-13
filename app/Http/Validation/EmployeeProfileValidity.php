@@ -44,6 +44,7 @@ class EmployeeProfileValidity
             'phone' => [$this->phone()],
             'role_label' => [$this->roleLabel()],
             'max_hours_per_week' => [$this->maxHoursPerWeek()],
+            'hourly_rate' => [$this->hourlyRate()],
             'is_active' => [$this->isActive()],
         ];
     }
@@ -62,6 +63,7 @@ class EmployeeProfileValidity
             'phone' => [$this->phone()],
             'role_label' => [$this->roleLabel()],
             'max_hours_per_week' => [$this->maxHoursPerWeek()],
+            'hourly_rate' => [$this->hourlyRate()],
             'is_active' => [$this->isActive()],
         ];
     }
@@ -120,5 +122,13 @@ class EmployeeProfileValidity
     public function isActive(): Validity
     {
         return $this->baseValidity->make()->boolean();
+    }
+
+    /**
+     * Hourly rate validation.
+     */
+    public function hourlyRate(): Validity
+    {
+        return $this->baseValidity->make()->integer(999999, 0);
     }
 }

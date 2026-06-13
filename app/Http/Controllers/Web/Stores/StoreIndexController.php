@@ -64,6 +64,6 @@ class StoreIndexController
             return '—';
         }
 
-        return $opens . ' – ' . $closes;
+        return \mb_substr($opens, 0, 5) . ' – ' . \mb_substr($closes, 0, 5);
     }
 }

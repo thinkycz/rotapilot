@@ -109,6 +109,14 @@ class EmployeeProfile extends BaseModel
     }
 
     /**
+     * Hourly rate getter (CZK).
+     */
+    public function getHourlyRate(): int|null
+    {
+        return $this->assertNullableInt('hourly_rate');
+    }
+
+    /**
      * Is active getter.
      */
     public function getIsActive(): bool

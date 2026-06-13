@@ -64,7 +64,7 @@ const canManageStore = computed(
 function formatHour(h: BusinessHour): string {
     if (h.is_closed) return t('common.closed');
     if (!h.opens_at || !h.closes_at) return t('common.not_set');
-    return `${h.opens_at} – ${h.closes_at}`;
+    return `${h.opens_at.substring(0, 5)} – ${h.closes_at.substring(0, 5)}`;
 }
 
 function statusVariant(status: string): string {

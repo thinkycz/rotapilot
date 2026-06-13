@@ -98,9 +98,13 @@
         "open_my_calendar": "Otevřít můj kalendář",
         "recent_schedules": "Nedávné rozvrhy",
         "upcoming_shifts": "Nadcházející směny",
+        "upcoming_shifts_date_time": "Datum a čas",
+        "upcoming_shifts_store": "Provozovna",
+        "upcoming_shifts_role": "Pozice",
+        "upcoming_shifts_employees": "Zaměstnanci",
         "no_schedules": "Zatím žádné rozvrhy.",
         "no_upcoming": "Žádné nadcházející směny.",
-        "unavailabilities": "Neplánovat"
+        "unavailabilities": "Volno"
     },
     "common": {
         "save": "Uložit",
@@ -121,6 +125,7 @@
         "no": "Ne",
         "not_set": "Nevyplněno",
         "closed": "Zavřeno",
+        "unassigned": "Neobsazeno",
         "weekdays": [
             "Pondělí",
             "Úterý",
@@ -188,6 +193,7 @@
         "set_password": "Nastavit heslo",
         "generate_password": "Vygenerovat náhodné heslo",
         "generated_password": "Vygenerované heslo. Zkopírujte ho teď, znovu se nezobrazí.",
+        "hourly_rate": "Hodinová sazba",
         "delete_login": "Smazat přihlášení",
         "confirm_delete_login": "Smazat přihlašovací účet zaměstnance?"
     },
@@ -239,7 +245,11 @@
         "required_count": "Vyžadovaný počet",
         "role_label_optional": "Pozice (volitelné)",
         "auto_fill": "Automaticky obsadit",
-        "critical_conflicts_warning": "Upozornění: V tomto rozvrhu jsou nevyřešené kritické konflikty."
+        "critical_conflicts_warning": "Upozornění: V tomto rozvrhu jsou nevyřešené kritické konflikty.",
+        "employee_statistics_title": "Statistika zaměstnanců",
+        "assigned_shifts": "Počet směn",
+        "assigned_hours": "Hodiny",
+        "total_wage": "Celková mzda"
     },
     "public_schedules": {
         "title": "Rozvrhy zaměstnance",

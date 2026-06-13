@@ -27,6 +27,7 @@ interface Employee {
     phone: string | null;
     role_label: string | null;
     max_hours_per_week: number | null;
+    hourly_rate: number | null;
     is_active: boolean;
     has_login: boolean;
     login: LoginAccount | null;
@@ -206,6 +207,17 @@ function destroyLogin(): void {
                                 employee.max_hours_per_week ??
                                 t('common.not_set')
                             }}
+                        </dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-on-surface-variant">
+                            {{ t('employees.hourly_rate') }}
+                        </dt>
+                        <dd class="text-on-surface">
+                            <span v-if="employee.hourly_rate !== null">
+                                {{ employee.hourly_rate }} CZK/h
+                            </span>
+                            <span v-else>{{ t('common.not_set') }}</span>
                         </dd>
                     </div>
                     <div class="flex justify-between">

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
+use App\Enums\ShiftAssignmentStatusEnum;
 use App\Models\EmployeeAvailability;
 use App\Models\EmployeeProfile;
 use App\Models\Schedule;
@@ -14,6 +15,7 @@ use App\Models\User;
 use App\Support\Authorization;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -74,6 +76,10 @@ class DashboardController
             ])->values()->all();
 
         $upcomingShiftRows = ShiftRequirement::query()
+            ->with(['store', 'assignments' => static function (Relation $query): void {
+                $query->where('status', '!=', ShiftAssignmentStatusEnum::Cancelled->value)
+                    ->with('employeeProfile');
+            }])
             ->whereIn('store_id', \count($storeIds) === 0 ? [0] : $storeIds)
             ->where('date', '>=', $today)
             ->orderBy('date')
@@ -86,6 +92,12 @@ class DashboardController
                 'start_time' => $s->getStartTime(),
                 'end_time' => $s->getEndTime(),
                 'store_id' => $s->getStoreId(),
+                'store_name' => $s->getStore()->getName(),
+                'role_label' => $s->getRoleLabel(),
+                'employees' => $s->assignments->map(static fn(ShiftAssignment $a): array => [
+                    'id' => $a->getEmployeeProfile()->getKey(),
+                    'name' => $a->getEmployeeProfile()->getName(),
+                ])->values()->all(),
             ])->values()->all();
 
         return [

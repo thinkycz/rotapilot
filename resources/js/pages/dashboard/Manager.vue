@@ -34,6 +34,9 @@ interface ShiftRef {
     start_time: string;
     end_time: string;
     store_id: number;
+    store_name: string;
+    role_label: string | null;
+    employees: Array<{ id: number; name: string }>;
 }
 
 defineProps<{
@@ -175,6 +178,105 @@ defineProps<{
                 class="rounded-2xl border border-outline-glass bg-surface-container-lowest p-6 shadow-sm lg:col-span-2"
             >
                 <h2 class="mb-3 font-heading text-sm font-bold text-on-surface">
+                    {{ t('dashboard.upcoming_shifts') }}
+                </h2>
+                <div
+                    v-if="!upcoming_shifts || upcoming_shifts.length === 0"
+                    class="rounded-xl border border-dashed border-outline-glass bg-white/40 p-6 text-center text-xs text-on-surface-variant italic"
+                >
+                    {{ t('dashboard.no_upcoming') }}
+                </div>
+                <div v-else class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr
+                                class="border-b border-outline-glass/30 font-mono text-[10px] font-extrabold tracking-wider text-on-surface-variant uppercase"
+                            >
+                                <th class="pb-2 pr-3 font-semibold">
+                                    {{
+                                        t('dashboard.upcoming_shifts_date_time')
+                                    }}
+                                </th>
+                                <th class="pb-2 px-3 font-semibold">
+                                    {{ t('dashboard.upcoming_shifts_store') }}
+                                </th>
+                                <th class="pb-2 px-3 font-semibold">
+                                    {{ t('dashboard.upcoming_shifts_role') }}
+                                </th>
+                                <th class="pb-2 pl-3 font-semibold">
+                                    {{
+                                        t('dashboard.upcoming_shifts_employees')
+                                    }}
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="s in upcoming_shifts"
+                                :key="s.id"
+                                class="border-b border-outline-glass/20 last:border-0 hover:bg-surface-container-low/40"
+                            >
+                                <td
+                                    class="py-3 pr-3 font-semibold text-on-surface"
+                                >
+                                    <div
+                                        class="font-mono font-bold text-on-surface"
+                                    >
+                                        {{ formatDate(s.date) }}
+                                    </div>
+                                    <div
+                                        class="font-mono text-[10px] text-on-surface-variant"
+                                    >
+                                        {{ s.start_time.substring(0, 5) }} –
+                                        {{ s.end_time.substring(0, 5) }}
+                                    </div>
+                                </td>
+                                <td class="py-3 px-3 text-on-surface">
+                                    {{ s.store_name }}
+                                </td>
+                                <td class="py-3 px-3">
+                                    <span
+                                        v-if="s.role_label"
+                                        class="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700"
+                                    >
+                                        {{ s.role_label }}
+                                    </span>
+                                    <span
+                                        v-else
+                                        class="text-on-surface-variant/50"
+                                        >—</span
+                                    >
+                                </td>
+                                <td class="py-3 pl-3">
+                                    <div
+                                        v-if="s.employees.length > 0"
+                                        class="flex flex-wrap gap-1"
+                                    >
+                                        <span
+                                            v-for="e in s.employees"
+                                            :key="e.id"
+                                            class="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700"
+                                        >
+                                            {{ e.name }}
+                                        </span>
+                                    </div>
+                                    <span
+                                        v-else
+                                        class="rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-600"
+                                    >
+                                        {{ t('common.unassigned') }}
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section
+                class="rounded-2xl border border-outline-glass bg-surface-container-lowest p-6 shadow-sm"
+            >
+                <h2 class="mb-3 font-heading text-sm font-bold text-on-surface">
                     {{ t('dashboard.recent_schedules') }}
                 </h2>
                 <div
@@ -211,34 +313,6 @@ defineProps<{
                         >
                             {{ s.status }}
                         </span>
-                    </li>
-                </ul>
-            </section>
-
-            <section
-                class="rounded-2xl border border-outline-glass bg-surface-container-lowest p-6 shadow-sm"
-            >
-                <h2 class="mb-3 font-heading text-sm font-bold text-on-surface">
-                    {{ t('dashboard.upcoming_shifts') }}
-                </h2>
-                <div
-                    v-if="!upcoming_shifts || upcoming_shifts.length === 0"
-                    class="rounded-xl border border-dashed border-outline-glass bg-white/40 p-6 text-center text-xs text-on-surface-variant italic"
-                >
-                    {{ t('dashboard.no_upcoming') }}
-                </div>
-                <ul v-else class="space-y-2">
-                    <li
-                        v-for="s in upcoming_shifts"
-                        :key="s.id"
-                        class="rounded-xl border border-outline-glass/40 bg-white px-3 py-2 text-xs"
-                    >
-                        <p class="font-mono font-bold text-on-surface">
-                            {{ formatDate(s.date) }}
-                        </p>
-                        <p class="text-on-surface">
-                            {{ s.start_time }} – {{ s.end_time }}
-                        </p>
                     </li>
                 </ul>
             </section>
