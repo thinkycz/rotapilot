@@ -301,7 +301,10 @@
         "proposal_status_applied": "Použito",
         "proposal_status_rejected": "Odmítnuto",
         "proposal_status_failed": "Selhalo",
-        "proposal_conflicts": "Použito s {count} upozorněními na konflikty."
+        "proposal_conflicts": "Použito s {count} upozorněními na konflikty.",
+        "recommended": "Doporučeno",
+        "tool_call_executed": "Spuštěn nástroj: {name}",
+        "clarification_hint": "Kliknutím na možnost výše odpovíte, nebo napište vlastní odpověď níže."
     },
     "conflicts": {
         "title": "Konflikty",

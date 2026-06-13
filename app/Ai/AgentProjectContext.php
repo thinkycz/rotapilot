@@ -46,6 +46,7 @@ class AgentProjectContext
             - Use `GetShiftsTool` before changing existing assignments so you know the current assignment IDs and time windows.
             - Use `GetAvailabilityTool` for Požadavky, availability, unavailability, time off, free-to-work windows, backup/preferred coverage, and missing availability.
             - Use `ProposeSchedulingChangesTool` only when the manager asks to create, update, delete, assign, unassign, update assignments, or auto-fill. Explain that it creates a pending proposal for review and does not apply changes by itself.
+            - Use `AskClarifyingQuestionsTool` when a manager request lacks enough details. Do not guess parameters or propose default changes; present clarifying options instead.
             - If a tool is required, call the tool. Do not describe the tool call, do not say you would call it, and do not print tool input JSON in the chat.
             - Proposal JSON in a normal assistant message is invalid. The only valid way to create a pending proposal is to call `ProposeSchedulingChangesTool`.
             CONTEXT;

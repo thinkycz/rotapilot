@@ -14,6 +14,15 @@ interface MessagePayload {
     role: 'user' | 'assistant';
     content: string;
     created_at?: string;
+    meta?: {
+        clarification?: {
+            question: string;
+            options: string[];
+            recommended_option: string | null;
+        } | null;
+    } | null;
+    tool_calls?: any[] | null;
+    tool_results?: any[] | null;
 }
 
 const props = defineProps<{
@@ -103,7 +112,7 @@ function actionDiffClass(
 ): string {
     const type = action.type;
     const base =
-        'rounded-lg border-l-2 px-3 py-2 text-[11px] flex items-center justify-between gap-3 transition-all duration-150 ';
+        'rounded-lg border-l-2 px-3 py-2 text-[11px] flex items-center justify-between gap-3 transition-all duration-150 text-on-surface ';
 
     if (isPending) {
         const opacity = !isSelectedOrApplied ? 'opacity-40 ' : '';
@@ -111,7 +120,7 @@ function actionDiffClass(
             return (
                 base +
                 opacity +
-                'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300'
+                'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20'
             );
         } else if (type.endsWith('.delete') || type === 'shift.unassign') {
             const lineThrough = isSelectedOrApplied ? 'line-through ' : '';
@@ -119,19 +128,19 @@ function actionDiffClass(
                 base +
                 opacity +
                 lineThrough +
-                'border-rose-500 bg-rose-50/50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-300'
+                'border-rose-500 bg-rose-50/50 dark:bg-rose-950/20'
             );
         } else if (type.endsWith('.update')) {
             return (
                 base +
                 opacity +
-                'border-amber-500 bg-amber-50/50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300'
+                'border-amber-500 bg-amber-50/50 dark:bg-amber-950/20'
             );
         } else {
             return (
                 base +
                 opacity +
-                'border-sky-500 bg-sky-50/50 dark:bg-sky-950/20 text-sky-800 dark:text-sky-300'
+                'border-sky-500 bg-sky-50/50 dark:bg-sky-950/20'
             );
         }
     } else if (isApplied) {
@@ -143,25 +152,13 @@ function actionDiffClass(
         }
 
         if (type.endsWith('.create') || type === 'shift.assign') {
-            return (
-                base +
-                'border-emerald-500 bg-emerald-500/5 text-emerald-800 dark:text-emerald-300'
-            );
+            return base + 'border-emerald-500 bg-emerald-500/5';
         } else if (type.endsWith('.delete') || type === 'shift.unassign') {
-            return (
-                base +
-                'line-through border-rose-500 bg-rose-500/5 text-rose-800 dark:text-rose-300'
-            );
+            return base + 'line-through border-rose-500 bg-rose-500/5';
         } else if (type.endsWith('.update')) {
-            return (
-                base +
-                'border-amber-500 bg-amber-500/5 text-amber-800 dark:text-amber-300'
-            );
+            return base + 'border-amber-500 bg-amber-500/5';
         } else {
-            return (
-                base +
-                'border-sky-500 bg-sky-500/5 text-sky-800 dark:text-sky-300'
-            );
+            return base + 'border-sky-500 bg-sky-500/5';
         }
     } else {
         return (
@@ -197,10 +194,53 @@ const suggestions = computed(() => [
     t('agent.suggestion_availability'),
 ]);
 
+const lastAssistantMessageId = computed<string | null>(() => {
+    for (let i = localMessages.value.length - 1; i >= 0; i--) {
+        if (localMessages.value[i].role === 'assistant') {
+            return localMessages.value[i].id;
+        }
+    }
+    return null;
+});
+
 function useSuggestion(text: string): void {
     promptInput.value = text;
     resizePromptTextarea();
     sendMessage();
+}
+
+function isRecommendedOption(
+    option: string,
+    idx: number,
+    clarification: { recommended_option: string | null } | null | undefined,
+): boolean {
+    if (!clarification) return false;
+    const rec = clarification.recommended_option;
+    if (!rec) return false;
+
+    const cleanRec = rec.trim().toUpperCase();
+    const letter = String.fromCharCode(65 + idx); // "A", "B", "C", "D"
+
+    // 1. Exact match
+    if (option === rec) return true;
+
+    // 2. Exact match of clean option vs clean recommended
+    const cleanOpt = option.replace(/^[A-Z][:.)\-]\s*/i, '').trim();
+    const cleanRecText = rec.replace(/^[A-Z][:.)\-]\s*/i, '').trim();
+    if (cleanOpt === cleanRecText) return true;
+
+    // 3. Match of letter prefix (e.g. "A" or "A:" or "A)")
+    if (
+        cleanRec === letter ||
+        cleanRec.startsWith(letter + ':') ||
+        cleanRec.startsWith(letter + ')') ||
+        cleanRec.startsWith(letter + '.') ||
+        cleanRec.startsWith(letter + '-')
+    ) {
+        return true;
+    }
+
+    return false;
 }
 
 function resizePromptTextarea(): void {
@@ -287,6 +327,18 @@ function renderedMessageContent(message: MessagePayload): string {
     return message.role === 'assistant'
         ? renderMarkdown(message.content)
         : renderPlainText(message.content);
+}
+
+function getToolCallsNames(message: MessagePayload): string[] {
+    if (!message.tool_calls || !Array.isArray(message.tool_calls)) {
+        return [];
+    }
+    return message.tool_calls.map((tc: any) => {
+        if (tc.function && tc.function.name) {
+            return tc.function.name;
+        }
+        return tc.name || 'UnknownTool';
+    });
 }
 
 const streamingStatusLabel = computed(() => {
@@ -551,277 +603,502 @@ onMounted(() => {
                     <!-- Messages list: shown when there are messages OR a conversation is selected -->
                     <div v-else class="space-y-6 max-w-3xl mx-auto">
                         <template v-for="msg in localMessages" :key="msg.id">
+                            <!-- User Message Turn -->
                             <div
-                                class="flex w-full"
-                                :class="[
-                                    msg.role === 'user'
-                                        ? 'justify-end'
-                                        : 'justify-start',
-                                ]"
+                                v-if="msg.role === 'user'"
+                                class="flex justify-end"
                             >
-                                <div class="flex items-start gap-3 max-w-[85%]">
-                                    <!-- Bot avatar for assistant -->
-                                    <div
-                                        v-if="msg.role === 'assistant'"
-                                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-outline-glass bg-surface-container-low text-primary"
-                                    >
-                                        <Bot :size="16" />
-                                    </div>
-
-                                    <!-- Text bubble (hidden when assistant has no text but has a tool result attached) -->
-                                    <div
-                                        v-if="
-                                            msg.role === 'user' ||
-                                            msg.content ||
-                                            (msg.role === 'assistant' &&
-                                                proposalsForMessage(msg.id)
-                                                    .length === 0)
-                                        "
-                                        class="rounded-2xl px-4 py-3 text-xs leading-relaxed shadow-sm transition-all"
-                                        :class="[
-                                            msg.role === 'user'
-                                                ? 'bg-gradient-to-r from-primary to-primary/80 text-white font-medium rounded-tr-none'
-                                                : 'bg-surface-container-low/60 border border-outline-glass text-on-surface-variant rounded-tl-none',
-                                        ]"
-                                    >
-                                        <!-- Message body -->
-                                        <div
-                                            class="max-w-none break-words text-inherit leading-relaxed"
-                                            :class="[
-                                                msg.role === 'assistant'
-                                                    ? 'markdown-message'
-                                                    : 'whitespace-pre-wrap',
-                                            ]"
-                                            v-html="renderedMessageContent(msg)"
-                                        ></div>
-
-                                        <!-- Streaming typing indicator inside the last empty message -->
-                                        <div
-                                            v-if="
-                                                msg.role === 'assistant' &&
-                                                !msg.content &&
-                                                isStreaming
-                                            "
-                                            class="flex items-center gap-1.5 py-1"
-                                        >
-                                            <Loader2
-                                                class="h-3.5 w-3.5 animate-spin text-primary"
-                                            />
-                                            <span
-                                                class="text-[10px] text-on-surface-variant italic"
-                                                >{{
-                                                    streamingStatusLabel
-                                                }}</span
-                                            >
-                                        </div>
-                                    </div>
-                                </div>
+                                <div
+                                    class="rounded-2xl px-4 py-3 text-xs leading-relaxed shadow-sm transition-all bg-gradient-to-r from-primary to-primary/80 text-white font-medium rounded-tr-none whitespace-pre-wrap"
+                                    v-html="renderedMessageContent(msg)"
+                                ></div>
                             </div>
 
-                            <!-- Tool-result bubbles (proposals) attached to this assistant turn -->
+                            <!-- Assistant Message Turn -->
                             <div
-                                v-if="
-                                    msg.role === 'assistant' &&
+                                v-else-if="
+                                    (msg.content &&
+                                        msg.content.trim() !== '') ||
+                                    (isStreaming &&
+                                        msg.id === lastAssistantMessageId) ||
+                                    msg.meta?.clarification ||
+                                    getToolCallsNames(msg).length > 0 ||
                                     proposalsForMessage(msg.id).length > 0
                                 "
-                                class="flex w-full justify-start"
+                                class="flex justify-start"
                             >
-                                <div class="flex items-start gap-3 max-w-[85%]">
-                                    <div
-                                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-outline-glass bg-surface-container-low text-primary"
-                                    >
-                                        <Bot :size="16" />
+                                <div
+                                    class="flex items-start gap-3 max-w-[85%] min-w-0"
+                                >
+                                    <!-- Bot avatar for assistant -->
+                                    <div class="relative shrink-0">
+                                        <div
+                                            v-if="
+                                                isStreaming &&
+                                                msg.id ===
+                                                    lastAssistantMessageId
+                                            "
+                                            class="absolute -inset-0.5 rounded-xl bg-primary/20 blur animate-pulse"
+                                        ></div>
+                                        <div
+                                            class="relative flex h-8 w-8 items-center justify-center rounded-xl border border-outline-glass bg-surface-container-low text-primary transition-all duration-300"
+                                            :class="{
+                                                'border-primary/30 ring-2 ring-primary/5':
+                                                    isStreaming &&
+                                                    msg.id ===
+                                                        lastAssistantMessageId,
+                                            }"
+                                        >
+                                            <Bot :size="16" />
+                                        </div>
                                     </div>
 
+                                    <!-- Right side: Text bubble and/or proposals -->
                                     <div
-                                        class="flex min-w-0 flex-1 flex-col gap-3"
+                                        class="flex-1 min-w-0 flex flex-col gap-3"
                                     >
-                                        <article
-                                            v-for="proposal in proposalsForMessage(
-                                                msg.id,
-                                            )"
-                                            :key="proposal.id"
-                                            class="rounded-2xl border border-dashed border-primary/30 bg-primary/5 px-4 py-3 text-xs leading-relaxed shadow-sm transition-all"
+                                        <!-- Text bubble -->
+                                        <div
+                                            class="rounded-2xl px-4 py-3 text-xs leading-relaxed shadow-sm transition-all bg-surface-container-low/60 border border-outline-glass text-on-surface-variant rounded-tl-none"
+                                            :class="{
+                                                'streaming-bubble border-primary/20':
+                                                    isStreaming &&
+                                                    msg.id ===
+                                                        lastAssistantMessageId,
+                                            }"
                                         >
-                                            <div
-                                                class="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-primary"
-                                            >
-                                                <Sparkles :size="13" />
-                                                <span>{{
-                                                    t('agent.proposal_title')
-                                                }}</span>
-                                                <span
-                                                    class="rounded-full bg-surface-container px-2 py-0.5 text-[9px] font-semibold normal-case tracking-normal text-on-surface-variant"
-                                                >
-                                                    {{
-                                                        proposalStatusLabel(
-                                                            proposal.status,
-                                                        )
-                                                    }}
-                                                </span>
-                                            </div>
-
-                                            <h2
-                                                class="text-sm font-semibold text-on-surface"
-                                            >
-                                                {{ proposal.summary }}
-                                            </h2>
-
-                                            <ul class="mt-3 space-y-2">
-                                                <li
-                                                    v-for="(
-                                                        action, idx
-                                                    ) in proposal.actions"
-                                                    :key="`${proposal.id}-${idx}`"
-                                                    :class="
-                                                        actionDiffClass(
-                                                            action,
-                                                            proposal.status ===
-                                                                'pending'
-                                                                ? isActionSelected(
-                                                                      proposal.id,
-                                                                      idx,
-                                                                  )
-                                                                : isActionApplied(
-                                                                      proposal,
-                                                                      idx,
-                                                                  ),
-                                                            proposal.status ===
-                                                                'pending',
-                                                            proposal.status ===
-                                                                'applied',
+                                            <!-- Message body -->
+                                            <div class="inline min-w-0">
+                                                <div
+                                                    v-if="
+                                                        msg.content &&
+                                                        msg.content.trim() !==
+                                                            ''
+                                                    "
+                                                    class="max-w-none break-words text-inherit leading-relaxed markdown-message inline"
+                                                    v-html="
+                                                        renderedMessageContent(
+                                                            msg,
                                                         )
                                                     "
+                                                ></div>
+                                                <span
+                                                    v-if="
+                                                        isStreaming &&
+                                                        msg.id ===
+                                                            lastAssistantMessageId &&
+                                                        msg.content &&
+                                                        msg.content.trim() !==
+                                                            ''
+                                                    "
+                                                    class="inline-block w-1.5 h-3.5 ml-1 bg-primary/80 rounded-full animate-pulse align-middle"
+                                                ></span>
+                                                <div
+                                                    v-if="
+                                                        isStreaming &&
+                                                        msg.id ===
+                                                            lastAssistantMessageId &&
+                                                        (!msg.content ||
+                                                            msg.content.trim() ===
+                                                                '')
+                                                    "
+                                                    class="flex items-center gap-1 py-1.5"
                                                 >
-                                                    <div
-                                                        class="flex items-center gap-2.5 min-w-0 flex-1"
-                                                    >
-                                                        <input
-                                                            type="checkbox"
-                                                            v-if="
-                                                                proposal.status ===
-                                                                'pending'
-                                                            "
-                                                            :checked="
-                                                                isActionSelected(
-                                                                    proposal.id,
-                                                                    idx,
-                                                                )
-                                                            "
-                                                            @change="
-                                                                toggleActionSelection(
-                                                                    proposal.id,
-                                                                    idx,
-                                                                )
-                                                            "
-                                                            class="h-4 w-4 shrink-0 rounded border-outline-glass bg-surface-container-low text-primary focus:ring-primary/20 accent-primary cursor-pointer"
-                                                        />
-                                                        <span
-                                                            class="truncate font-medium leading-5"
-                                                        >
-                                                            {{ action.label }}
-                                                        </span>
-                                                    </div>
                                                     <span
-                                                        class="shrink-0 text-[9px] font-bold uppercase tracking-wider opacity-60"
+                                                        class="w-1.5 h-1.5 rounded-full bg-primary/75 animate-bounce"
+                                                        style="
+                                                            animation-delay: 0ms;
+                                                        "
+                                                    ></span>
+                                                    <span
+                                                        class="w-1.5 h-1.5 rounded-full bg-primary/75 animate-bounce"
+                                                        style="
+                                                            animation-delay: 150ms;
+                                                        "
+                                                    ></span>
+                                                    <span
+                                                        class="w-1.5 h-1.5 rounded-full bg-primary/75 animate-bounce"
+                                                        style="
+                                                            animation-delay: 300ms;
+                                                        "
+                                                    ></span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Tool execution indicator -->
+                                            <div
+                                                v-if="
+                                                    !(
+                                                        msg.content &&
+                                                        msg.content.trim()
+                                                    ) &&
+                                                    (getToolCallsNames(msg)
+                                                        .length > 0 ||
+                                                        proposalsForMessage(
+                                                            msg.id,
+                                                        ).length > 0)
+                                                "
+                                                class="flex flex-col gap-1.5 py-1 text-on-surface-variant/80 font-medium"
+                                            >
+                                                <div
+                                                    v-for="(
+                                                        toolName, tcIdx
+                                                    ) in getToolCallsNames(msg)
+                                                        .length > 0
+                                                        ? getToolCallsNames(msg)
+                                                        : [
+                                                              'ProposeSchedulingChangesTool',
+                                                          ]"
+                                                    :key="tcIdx"
+                                                    class="flex items-center gap-2"
+                                                >
+                                                    <span
+                                                        class="inline-flex h-4 w-4 items-center justify-center rounded bg-primary/10 text-primary"
                                                     >
+                                                        <Sparkles :size="10" />
+                                                    </span>
+                                                    <span>
                                                         {{
-                                                            getActionTypeName(
-                                                                action.type,
+                                                            t(
+                                                                'agent.tool_call_executed',
+                                                                {
+                                                                    name: toolName,
+                                                                },
                                                             )
                                                         }}
                                                     </span>
-                                                </li>
-                                            </ul>
-
-                                            <p
-                                                v-if="
-                                                    proposalConflictCount(
-                                                        proposal,
-                                                    ) > 0
-                                                "
-                                                class="mt-3 text-[11px] font-medium text-amber-700"
-                                            >
-                                                {{
-                                                    t(
-                                                        'agent.proposal_conflicts',
-                                                        {
-                                                            count: proposalConflictCount(
-                                                                proposal,
-                                                            ),
-                                                        },
-                                                    )
-                                                }}
-                                            </p>
-
-                                            <div
-                                                v-if="
-                                                    proposal.status ===
-                                                        'failed' &&
-                                                    proposal.result?.error
-                                                "
-                                                class="mt-3 rounded-lg border border-red-200 bg-red-50/50 px-3 py-2 text-[11px] text-red-800"
-                                            >
-                                                {{ proposal.result.error }}
+                                                </div>
                                             </div>
 
+                                            <!-- Streaming typing indicator inside the last message -->
                                             <div
                                                 v-if="
-                                                    proposal.status ===
-                                                    'pending'
+                                                    isStreaming &&
+                                                    msg.id ===
+                                                        lastAssistantMessageId
                                                 "
-                                                class="mt-3 flex shrink-0 items-center gap-2"
+                                                class="flex items-center gap-1.5 py-1"
+                                                :class="{
+                                                    'mt-2 pt-2 border-t border-outline-glass/40':
+                                                        msg.content &&
+                                                        msg.content.trim() !==
+                                                            '',
+                                                }"
                                             >
-                                                <button
-                                                    type="button"
-                                                    class="inline-flex h-8 items-center gap-1 rounded-lg border border-outline-glass bg-surface-container-lowest/40 px-3 text-[11px] font-semibold text-on-surface-variant transition hover:bg-surface-container disabled:opacity-50"
-                                                    :disabled="
-                                                        isStreaming ||
-                                                        proposalActionId !==
-                                                            null
-                                                    "
-                                                    @click="
-                                                        rejectProposal(proposal)
-                                                    "
+                                                <Loader2
+                                                    class="h-3 w-3 animate-spin text-primary"
+                                                />
+                                                <span
+                                                    class="text-[9px] text-on-surface-variant/70 italic"
+                                                    >{{
+                                                        streamingStatusLabel
+                                                    }}</span
                                                 >
-                                                    <X :size="13" />
+                                            </div>
+
+                                            <!-- Clarification Questionnaire -->
+                                            <div
+                                                v-if="msg.meta?.clarification"
+                                                class="mt-3 space-y-3 pt-3 border-t border-outline-glass"
+                                            >
+                                                <p
+                                                    v-if="
+                                                        msg.content !==
+                                                        msg.meta.clarification
+                                                            .question
+                                                    "
+                                                    class="font-semibold text-primary text-[10px] uppercase tracking-wider"
+                                                >
                                                     {{
-                                                        t(
-                                                            'agent.proposal_reject',
-                                                        )
+                                                        msg.meta.clarification
+                                                            .question
                                                     }}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    class="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-3 text-[11px] font-semibold text-white transition hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
-                                                    :disabled="
-                                                        isStreaming ||
-                                                        proposalActionId !==
-                                                            null ||
-                                                        !hasSelectedActions(
-                                                            proposal.id,
-                                                        )
-                                                    "
-                                                    @click="
-                                                        applyProposal(proposal)
-                                                    "
+                                                </p>
+                                                <div
+                                                    class="flex flex-col gap-2"
                                                 >
-                                                    <Loader2
-                                                        v-if="
-                                                            proposalActionId ===
-                                                            proposal.id
+                                                    <button
+                                                        v-for="(
+                                                            option, idx
+                                                        ) in msg.meta
+                                                            .clarification
+                                                            .options"
+                                                        :key="idx"
+                                                        @click="
+                                                            useSuggestion(
+                                                                option,
+                                                            )
                                                         "
-                                                        class="h-3.5 w-3.5 animate-spin"
-                                                    />
-                                                    <Check v-else :size="13" />
+                                                        :disabled="
+                                                            msg.id !==
+                                                            lastAssistantMessageId
+                                                        "
+                                                        class="flex items-center justify-between text-left p-3 rounded-xl border border-outline-glass bg-surface-container-low/40 hover:bg-primary/5 hover:border-primary/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-outline-glass transition-all group"
+                                                    >
+                                                        <div
+                                                            class="flex items-start gap-2.5 min-w-0"
+                                                        >
+                                                            <span
+                                                                class="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-surface-container-high text-[10px] font-bold text-on-surface-variant group-hover:bg-primary/10 group-hover:text-primary transition-colors"
+                                                            >
+                                                                {{
+                                                                    String.fromCharCode(
+                                                                        65 +
+                                                                            idx,
+                                                                    )
+                                                                }}
+                                                            </span>
+                                                            <span
+                                                                class="text-xs text-on-surface leading-tight font-medium group-hover:text-primary transition-colors whitespace-normal break-words"
+                                                            >
+                                                                {{
+                                                                    option.replace(
+                                                                        /^[A-Z][:.)\-]\s*/i,
+                                                                        '',
+                                                                    )
+                                                                }}
+                                                            </span>
+                                                        </div>
+                                                        <span
+                                                            v-if="
+                                                                isRecommendedOption(
+                                                                    option,
+                                                                    idx,
+                                                                    msg.meta
+                                                                        .clarification,
+                                                                )
+                                                            "
+                                                            class="shrink-0 text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 animate-pulse"
+                                                        >
+                                                            {{
+                                                                t(
+                                                                    'agent.recommended',
+                                                                )
+                                                            }}
+                                                        </span>
+                                                    </button>
+                                                </div>
+                                                <p
+                                                    v-if="
+                                                        msg.id ===
+                                                        lastAssistantMessageId
+                                                    "
+                                                    class="text-[10px] text-on-surface-variant italic mt-1.5"
+                                                >
                                                     {{
                                                         t(
-                                                            'agent.proposal_apply',
+                                                            'agent.clarification_hint',
                                                         )
                                                     }}
-                                                </button>
+                                                </p>
                                             </div>
-                                        </article>
+                                        </div>
+
+                                        <!-- Tool-result bubbles (proposals) attached to this assistant turn -->
+                                        <template
+                                            v-if="
+                                                proposalsForMessage(msg.id)
+                                                    .length > 0
+                                            "
+                                        >
+                                            <article
+                                                v-for="proposal in proposalsForMessage(
+                                                    msg.id,
+                                                )"
+                                                :key="proposal.id"
+                                                class="rounded-2xl border border-dashed border-primary/30 bg-primary/5 px-4 py-3 text-xs leading-relaxed shadow-sm transition-all"
+                                            >
+                                                <div
+                                                    class="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-primary"
+                                                >
+                                                    <Sparkles :size="13" />
+                                                    <span>{{
+                                                        t(
+                                                            'agent.proposal_title',
+                                                        )
+                                                    }}</span>
+                                                    <span
+                                                        class="rounded-full bg-surface-container px-2 py-0.5 text-[9px] font-semibold normal-case tracking-normal text-on-surface-variant"
+                                                    >
+                                                        {{
+                                                            proposalStatusLabel(
+                                                                proposal.status,
+                                                            )
+                                                        }}
+                                                    </span>
+                                                </div>
+
+                                                <h2
+                                                    class="text-sm font-semibold text-on-surface"
+                                                >
+                                                    {{ proposal.summary }}
+                                                </h2>
+
+                                                <ul class="mt-3 space-y-2">
+                                                    <li
+                                                        v-for="(
+                                                            action, idx
+                                                        ) in proposal.actions"
+                                                        :key="`${proposal.id}-${idx}`"
+                                                        :class="
+                                                            actionDiffClass(
+                                                                action,
+                                                                proposal.status ===
+                                                                    'pending'
+                                                                    ? isActionSelected(
+                                                                          proposal.id,
+                                                                          idx,
+                                                                      )
+                                                                    : isActionApplied(
+                                                                          proposal,
+                                                                          idx,
+                                                                      ),
+                                                                proposal.status ===
+                                                                    'pending',
+                                                                proposal.status ===
+                                                                    'applied',
+                                                            )
+                                                        "
+                                                    >
+                                                        <div
+                                                            class="flex items-center gap-2.5 min-w-0 flex-1"
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                v-if="
+                                                                    proposal.status ===
+                                                                    'pending'
+                                                                "
+                                                                :checked="
+                                                                    isActionSelected(
+                                                                        proposal.id,
+                                                                        idx,
+                                                                    )
+                                                                "
+                                                                @change="
+                                                                    toggleActionSelection(
+                                                                        proposal.id,
+                                                                        idx,
+                                                                    )
+                                                                "
+                                                                class="h-4 w-4 shrink-0 rounded border-outline-glass bg-surface-container-low text-primary focus:ring-primary/20 accent-primary cursor-pointer"
+                                                            />
+                                                            <span
+                                                                class="truncate font-medium leading-5"
+                                                            >
+                                                                {{
+                                                                    action.label
+                                                                }}
+                                                            </span>
+                                                        </div>
+                                                        <span
+                                                            class="shrink-0 text-[9px] font-bold uppercase tracking-wider opacity-60"
+                                                        >
+                                                            {{
+                                                                getActionTypeName(
+                                                                    action.type,
+                                                                )
+                                                            }}
+                                                        </span>
+                                                    </li>
+                                                </ul>
+
+                                                <p
+                                                    v-if="
+                                                        proposalConflictCount(
+                                                            proposal,
+                                                        ) > 0
+                                                    "
+                                                    class="mt-3 text-[11px] font-medium text-amber-700"
+                                                >
+                                                    {{
+                                                        t(
+                                                            'agent.proposal_conflicts',
+                                                            {
+                                                                count: proposalConflictCount(
+                                                                    proposal,
+                                                                ),
+                                                            },
+                                                        )
+                                                    }}
+                                                </p>
+
+                                                <div
+                                                    v-if="
+                                                        proposal.status ===
+                                                            'failed' &&
+                                                        proposal.result?.error
+                                                    "
+                                                    class="mt-3 rounded-lg border border-red-200 bg-red-50/50 px-3 py-2 text-[11px] text-red-800"
+                                                >
+                                                    {{ proposal.result.error }}
+                                                </div>
+
+                                                <div
+                                                    v-if="
+                                                        proposal.status ===
+                                                        'pending'
+                                                    "
+                                                    class="mt-3 flex shrink-0 items-center gap-2"
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        class="inline-flex h-8 items-center gap-1 rounded-lg border border-outline-glass bg-surface-container-lowest/40 px-3 text-[11px] font-semibold text-on-surface-variant transition hover:bg-surface-container disabled:opacity-50"
+                                                        :disabled="
+                                                            isStreaming ||
+                                                            proposalActionId !==
+                                                                null
+                                                        "
+                                                        @click="
+                                                            rejectProposal(
+                                                                proposal,
+                                                            )
+                                                        "
+                                                    >
+                                                        <X :size="13" />
+                                                        {{
+                                                            t(
+                                                                'agent.proposal_reject',
+                                                            )
+                                                        }}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        class="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-3 text-[11px] font-semibold text-white transition hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        :disabled="
+                                                            isStreaming ||
+                                                            proposalActionId !==
+                                                                null ||
+                                                            !hasSelectedActions(
+                                                                proposal.id,
+                                                            )
+                                                        "
+                                                        @click="
+                                                            applyProposal(
+                                                                proposal,
+                                                            )
+                                                        "
+                                                    >
+                                                        <Loader2
+                                                            v-if="
+                                                                proposalActionId ===
+                                                                proposal.id
+                                                            "
+                                                            class="h-3.5 w-3.5 animate-spin"
+                                                        />
+                                                        <Check
+                                                            v-else
+                                                            :size="13"
+                                                        />
+                                                        {{
+                                                            t(
+                                                                'agent.proposal_apply',
+                                                            )
+                                                        }}
+                                                    </button>
+                                                </div>
+                                            </article>
+                                        </template>
                                     </div>
                                 </div>
                             </div>
@@ -1044,6 +1321,24 @@ onMounted(() => {
 </template>
 
 <style scoped>
+@keyframes borderPulse {
+    0%,
+    100% {
+        border-color: rgba(109, 122, 119, 0.15);
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+    50% {
+        border-color: rgba(0, 104, 95, 0.45);
+        box-shadow:
+            0 4px 6px -1px rgba(0, 104, 95, 0.08),
+            0 2px 4px -1px rgba(0, 104, 95, 0.04);
+    }
+}
+
+.streaming-bubble {
+    animation: borderPulse 2s infinite ease-in-out;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
     height: 6px;

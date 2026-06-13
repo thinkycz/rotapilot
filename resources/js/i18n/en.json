@@ -301,7 +301,10 @@
         "proposal_status_applied": "Applied",
         "proposal_status_rejected": "Rejected",
         "proposal_status_failed": "Failed",
-        "proposal_conflicts": "Applied with {count} conflict warnings."
+        "proposal_conflicts": "Applied with {count} conflict warnings.",
+        "recommended": "Recommended",
+        "tool_call_executed": "Executed tool: {name}",
+        "clarification_hint": "Click an option above to reply, or type your own response below."
     },
     "conflicts": {
         "title": "Conflicts",

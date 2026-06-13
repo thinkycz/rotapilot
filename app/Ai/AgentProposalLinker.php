@@ -73,4 +73,90 @@ class AgentProposalLinker
                 ->update(['message_id' => $messageId]);
         }
     }
+
+    /**
+     * Link clarifying questions created by the latest assistant message in a conversation.
+     */
+    public function linkQuestionsToLatestAssistantMessage(string $conversationId): void
+    {
+        $message = ConversationMessage::query()
+            ->where('conversation_id', $conversationId)
+            ->where('role', 'assistant')
+            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if (!$message instanceof ConversationMessage) {
+            return;
+        }
+
+        $toolResults = $message->getAttribute('tool_results');
+        $linked = false;
+
+        if (\is_array($toolResults)) {
+            foreach ($toolResults as $toolResult) {
+                if (!\is_array($toolResult)) {
+                    continue;
+                }
+
+                $name = $toolResult['name'] ?? null;
+                if ($name !== 'AskClarifyingQuestionsTool') {
+                    continue;
+                }
+
+                $result = $toolResult['result'] ?? null;
+                if (!\is_string($result)) {
+                    continue;
+                }
+
+                $decoded = \json_decode($result, true);
+                if (!\is_array($decoded)) {
+                    continue;
+                }
+
+                $meta = $message->getAttribute('meta') ?? [];
+                if (!\is_array($meta)) {
+                    $meta = [];
+                }
+                $meta['clarification'] = [
+                    'question' => $decoded['question'] ?? '',
+                    'options' => $decoded['options'] ?? [],
+                    'recommended_option' => $decoded['recommended_option'] ?? null,
+                ];
+
+                $message->setAttribute('meta', $meta);
+                $message->save();
+                $linked = true;
+            }
+        }
+
+        if (!$linked) {
+            $content = \trim(Typer::assertNullableString($message->getAttribute('content')) ?? '');
+            if ($content !== '') {
+                $jsonStr = $content;
+                if (\preg_match('/```json\\s*(.*?)\\s*```/s', $content, $matches) === 1) {
+                    $jsonStr = $matches[1];
+                } elseif (\preg_match('/```\\s*(.*?)\\s*```/s', $content, $matches) === 1) {
+                    $jsonStr = $matches[1];
+                }
+
+                $decoded = \json_decode($jsonStr, true);
+                if (\is_array($decoded) && isset($decoded['question'], $decoded['options'])) {
+                    $meta = $message->getAttribute('meta') ?? [];
+                    if (!\is_array($meta)) {
+                        $meta = [];
+                    }
+                    $meta['clarification'] = [
+                        'question' => $decoded['question'],
+                        'options' => $decoded['options'],
+                        'recommended_option' => $decoded['recommended_option'] ?? null,
+                    ];
+
+                    $message->setAttribute('meta', $meta);
+                    $message->setAttribute('content', $decoded['question']);
+                    $message->save();
+                }
+            }
+        }
+    }
 }

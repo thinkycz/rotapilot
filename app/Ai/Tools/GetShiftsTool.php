@@ -13,6 +13,7 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
 use Thinkycz\LaravelCore\Support\Typer;
+use Throwable;
 
 class GetShiftsTool implements Tool
 {
@@ -47,73 +48,84 @@ class GetShiftsTool implements Tool
      */
     public function handle(Request $request): string
     {
-        $user = User::mustAuth();
-        $managedStores = Authorization::managedStores($user);
-        $managedStoreIds = $managedStores->pluck('id')->all();
+        try {
+            $user = User::mustAuth();
+            $managedStores = Authorization::managedStores($user);
+            $managedStoreIds = $managedStores->pluck('id')->all();
 
-        $startDate = Typer::assertString($request['start_date'] ?? null);
-        $endDate = Typer::assertString($request['end_date'] ?? null);
-        $storeIdVal = $request['store_id'] ?? null;
-        $storeId = Typer::assertNullableString($storeIdVal);
-
-        if ($storeId !== null) {
-            $storeIdInt = (int) $storeId;
-            if (!\in_array($storeIdInt, $managedStoreIds, true)) {
-                $errorJson = \json_encode([
-                    'error' => 'You do not have permission to access store ID ' . $storeId,
-                ]);
-
-                return $errorJson === false ? '' : $errorJson;
+            $startDate = Typer::parseNullableString($request['start_date'] ?? null) ?? '';
+            $endDate = Typer::parseNullableString($request['end_date'] ?? null) ?? '';
+            $storeIdVal = $request['store_id'] ?? null;
+            $storeId = null;
+            if (\is_string($storeIdVal)) {
+                $storeId = $storeIdVal;
+            } elseif (\is_int($storeIdVal)) {
+                $storeId = (string) $storeIdVal;
             }
-            $targetStoreIds = [$storeIdInt];
-        } else {
-            $targetStoreIds = $managedStoreIds;
-        }
 
-        $shifts = ShiftRequirement::query()
-            ->whereIn('store_id', $targetStoreIds)
-            ->whereDate('date', '>=', $startDate)
-            ->whereDate('date', '<=', $endDate)
-            ->with(['store', 'assignments.employeeProfile'])
-            ->get();
+            if ($storeId !== null) {
+                $storeIdInt = (int) $storeId;
+                if (!\in_array($storeIdInt, $managedStoreIds, true)) {
+                    $errorJson = \json_encode([
+                        'error' => 'You do not have permission to access store ID ' . $storeId,
+                    ]);
 
-        return $shifts->map(static function (ShiftRequirement $shift): array {
-            $activeAssignments = $shift->getAssignments()->filter(
-                static fn(ShiftAssignment $a): bool => $a->getStatus() !== ShiftAssignmentStatusEnum::Cancelled,
-            );
-
-            if ($activeAssignments->isEmpty()) {
-                $fillStatus = 'unassigned';
-            } elseif ($activeAssignments->contains(static fn(ShiftAssignment $a): bool => $a->getStatus() === ShiftAssignmentStatusEnum::Draft)) {
-                $fillStatus = 'draft';
+                    return $errorJson === false ? '' : $errorJson;
+                }
+                $targetStoreIds = [$storeIdInt];
             } else {
-                $fillStatus = 'confirmed';
+                $targetStoreIds = $managedStoreIds;
             }
 
-            $assignedEmployees = $activeAssignments->map(static fn(ShiftAssignment $a): array => [
-                'assignment_id' => $a->getKey(),
-                'id' => $a->getEmployeeProfile()->getKey(),
-                'name' => $a->getEmployeeProfile()->getName(),
-                'start_time' => $a->getStartTime(),
-                'end_time' => $a->getEndTime(),
-                'status' => $a->getStatus()->value,
-            ])->values()->all();
+            $shifts = ShiftRequirement::query()
+                ->whereIn('store_id', $targetStoreIds)
+                ->whereDate('date', '>=', $startDate)
+                ->whereDate('date', '<=', $endDate)
+                ->with(['store', 'assignments.employeeProfile'])
+                ->get();
 
-            return [
-                'id' => $shift->getKey(),
-                'schedule_id' => $shift->getScheduleId(),
-                'date' => $shift->getDate(),
-                'start_time' => $shift->getStartTime(),
-                'end_time' => $shift->getEndTime(),
-                'store' => [
-                    'id' => $shift->getStore()->getKey(),
-                    'name' => $shift->getStore()->getName(),
-                ],
-                'role_label' => $shift->getRoleLabel(),
-                'note' => $shift->getNote(),
-                'fill_status' => $fillStatus,
-                'assigned_employees' => $assignedEmployees,
-            ];
-        })->toJson();
+            return $shifts->map(static function (ShiftRequirement $shift): array {
+                $activeAssignments = $shift->getAssignments()->filter(
+                    static fn(ShiftAssignment $a): bool => $a->getStatus() !== ShiftAssignmentStatusEnum::Cancelled,
+                );
+
+                if ($activeAssignments->isEmpty()) {
+                    $fillStatus = 'unassigned';
+                } elseif ($activeAssignments->contains(static fn(ShiftAssignment $a): bool => $a->getStatus() === ShiftAssignmentStatusEnum::Draft)) {
+                    $fillStatus = 'draft';
+                } else {
+                    $fillStatus = 'confirmed';
+                }
+
+                $assignedEmployees = $activeAssignments->map(static fn(ShiftAssignment $a): array => [
+                    'assignment_id' => $a->getKey(),
+                    'id' => $a->getEmployeeProfile()->getKey(),
+                    'name' => $a->getEmployeeProfile()->getName(),
+                    'start_time' => $a->getStartTime(),
+                    'end_time' => $a->getEndTime(),
+                    'status' => $a->getStatus()->value,
+                ])->values()->all();
+
+                return [
+                    'id' => $shift->getKey(),
+                    'schedule_id' => $shift->getScheduleId(),
+                    'date' => $shift->getDate(),
+                    'start_time' => $shift->getStartTime(),
+                    'end_time' => $shift->getEndTime(),
+                    'store' => [
+                        'id' => $shift->getStore()->getKey(),
+                        'name' => $shift->getStore()->getName(),
+                    ],
+                    'role_label' => $shift->getRoleLabel(),
+                    'note' => $shift->getNote(),
+                    'fill_status' => $fillStatus,
+                    'assigned_employees' => $assignedEmployees,
+                ];
+            })->toJson();
+        } catch (Throwable $e) {
+            $encoded = \json_encode(['error' => $e->getMessage()]);
+
+            return \is_string($encoded) ? $encoded : '[]';
+        }
     }
 }

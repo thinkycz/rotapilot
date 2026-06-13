@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Ai\Agents;
 
 use App\Ai\AgentProjectContext;
+use App\Ai\Tools\AskClarifyingQuestionsTool;
 use App\Ai\Tools\GetAvailabilityTool;
 use App\Ai\Tools\GetEmployeesTool;
 use App\Ai\Tools\GetShiftsTool;
@@ -71,12 +72,14 @@ class SchedulingAgent implements Agent, Conversational, HasTools
             3. Use `GetShiftsTool` to list shifts (shift requirements/assignments) for a date range. You can optionally filter by store.
             4. Use `GetAvailabilityTool` to list employee unavailability or availability records for a date range.
             5. Use `ProposeSchedulingChangesTool` when the manager asks you to create or change stores, availability, shifts, assignments, unassignments, safe deletions, or auto-fill. This creates a pending proposal only; the manager must review and apply it.
+            6. Use `AskClarifyingQuestionsTool` when the manager's request is too vague, ambiguous, or lacks required details (like store, employee, schedule, date, or times) to ask them a clarifying question with options.
 
             CRITICAL RULES:
             - Never make up information. If a query requires data that you do not have, use the tools to fetch it.
             - When live data is needed, do not answer from memory and do not write a fake tool call or JSON payload in the chat. You must actually invoke the relevant tool.
             - When proposing writes, never output an `actions` JSON object or code block as the proposal. You must call `ProposeSchedulingChangesTool` so RotaPilot creates a real pending proposal card.
             - If you need IDs before proposing a change, first call the lookup tools to get real IDs, then call `ProposeSchedulingChangesTool`.
+            - If the manager's prompt is too vague or lacks details needed to perform the request (e.g. creating shifts or assignments without knowing which store, employee, schedule, date, or time range to use), do NOT try to guess or propose arbitrary changes. Call `AskClarifyingQuestionsTool` to present the manager with clarifying questions and multiple-choice options, highlighting your recommended choice. Do NOT include option prefix letters like "A:", "B:", "A)", or "A." inside the option strings in the options array; only provide the raw description (e.g. "Přiřadit konkrétního zaměstnance...").
             - To modify an existing assignment's time window or assigned employee, call `GetShiftsTool` to identify the `shift_assignment_id` and propose `shift.assignment.update` with the new fields.
             - Managers can assign multiple employees to a single shift requirement (e.g., splitting a shift into half-day slots). To do this, propose multiple `shift.assign` actions for the same `shift_requirement_id` with different non-overlapping time windows (e.g., 08:00 - 12:00 and 12:00 - 16:00).
             - For `shift.assign` and `shift.assignment.update`, keep start and end times inside the parent shift requirement window. Do not create duplicate active assignments starting at the same time for the same employee.
@@ -106,5 +109,6 @@ class SchedulingAgent implements Agent, Conversational, HasTools
         yield new GetShiftsTool();
         yield new GetAvailabilityTool();
         yield \app(ProposeSchedulingChangesTool::class);
+        yield \app(AskClarifyingQuestionsTool::class);
     }
 }

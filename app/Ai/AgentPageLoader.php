@@ -22,7 +22,7 @@ class AgentPageLoader
      * (Inertia v3 does not follow bare 302 redirects — see
      * `docs/lessons.md`).
      *
-     * @return array{conversationId: string|null, messages: array<int, array{id: string, role: string, content: string, created_at: string|null}>, proposals: array<int, array<string, mixed>>}
+     * @return array{conversationId: string|null, messages: array<int, array{id: string, role: string, content: string, created_at: string|null, meta: array<string, mixed>|null, tool_calls: array<mixed>|null, tool_results: array<mixed>|null}>, proposals: array<int, array<string, mixed>>}
      */
     public function load(Request $request, string|null $conversationId = null): array
     {
@@ -78,7 +78,7 @@ class AgentPageLoader
      *
      * @param array<int, ConversationMessage> $messages
      *
-     * @return array<int, array{id: string, role: string, content: string, created_at: string|null}>
+     * @return array<int, array{id: string, role: string, content: string, created_at: string|null, meta: array<string, mixed>|null, tool_calls: array<mixed>|null, tool_results: array<mixed>|null}>
      */
     private function visibleMessages(array $messages): array
     {
@@ -104,11 +104,24 @@ class AgentPageLoader
             $skipNextAssistant = false;
             $createdAt = Typer::assertNullableCarbon($msg->getAttribute('created_at'));
 
+            $meta = $msg->getAttribute('meta');
+            if (\is_array($meta)) {
+                $meta = Typer::assertStringKeyArray($meta);
+            } else {
+                $meta = null;
+            }
+
+            $toolCalls = $msg->getAttribute('tool_calls');
+            $toolResults = $msg->getAttribute('tool_results');
+
             $visible[] = [
                 'id' => Typer::assertString($msg->getAttribute('id')),
                 'role' => $role,
                 'content' => $content,
                 'created_at' => $createdAt !== null ? $createdAt->toIso8601String() : null,
+                'meta' => $meta,
+                'tool_calls' => \is_array($toolCalls) ? $toolCalls : null,
+                'tool_results' => \is_array($toolResults) ? $toolResults : null,
             ];
         }
 

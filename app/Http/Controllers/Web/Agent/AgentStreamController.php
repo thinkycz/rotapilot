@@ -69,6 +69,7 @@ class AgentStreamController
 
         return $agent->stream($prompt)->then(static function () use ($conversationId, $linker): void {
             $linker->linkProposalsToLatestAssistantMessage($conversationId);
+            $linker->linkQuestionsToLatestAssistantMessage($conversationId);
         });
     }
 
