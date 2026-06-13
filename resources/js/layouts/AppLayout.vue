@@ -5,7 +5,6 @@ import {
     CalendarRange,
     Calendar,
     CalendarCheck2,
-    AlertTriangle,
     Coffee,
     UserRound,
     Settings as SettingsIcon,
@@ -37,6 +36,11 @@ const navItems = computed(() => {
         return [
             { href: '/dashboard', key: 'dashboard', icon: Activity },
             { href: '/my-calendar', key: 'my_calendar', icon: Calendar },
+            {
+                href: '/my-availabilities',
+                key: 'my_availabilities',
+                icon: CalendarCheck2,
+            },
         ];
     }
     return [
@@ -45,7 +49,6 @@ const navItems = computed(() => {
         { href: '/employees/index', key: 'employees', icon: UserRound },
         { href: '/schedules/index', key: 'schedules', icon: CalendarRange },
         { href: '/availability', key: 'availability', icon: CalendarCheck2 },
-        { href: '/conflicts', key: 'conflicts', icon: AlertTriangle },
     ];
 });
 

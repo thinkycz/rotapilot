@@ -8,7 +8,6 @@ use App\Enums\ShiftSourceEnum;
 use App\Models\Schedule;
 use App\Models\ShiftRequirement;
 use App\Models\User;
-use App\Services\Scheduling\ConflictDetectionService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
@@ -39,7 +38,7 @@ class ApplyAiPreviewAction implements ShouldQueue
     /**
      * Handle the job.
      */
-    public function handle(ConflictDetectionService $conflicts): void
+    public function handle(): void
     {
         $schedule = Schedule::query()->find($this->scheduleId);
         if (!$schedule instanceof Schedule) {
@@ -60,10 +59,8 @@ class ApplyAiPreviewAction implements ShouldQueue
             $date = $row['date'] ?? '';
             $startTime = $row['start_time'] ?? '';
             $endTime = $row['end_time'] ?? '';
-            $count = $row['required_employee_count'] ?? 1;
             $roleLabel = $row['role_label'] ?? null;
             $note = $row['note'] ?? null;
-
             $req = new ShiftRequirement();
             $req->forceFill([
                 'schedule_id' => $schedule->getKey(),
@@ -71,14 +68,11 @@ class ApplyAiPreviewAction implements ShouldQueue
                 'date' => \is_string($date) ? $date : '',
                 'start_time' => \is_string($startTime) ? $startTime : '',
                 'end_time' => \is_string($endTime) ? $endTime : '',
-                'required_employee_count' => \is_int($count) ? $count : (\is_string($count) && \ctype_digit($count) ? (int) $count : 1),
                 'role_label' => \is_string($roleLabel) ? $roleLabel : null,
                 'note' => \is_string($note) ? $note : null,
                 'source' => ShiftSourceEnum::Ai->value,
                 'created_by' => $actor->getKey(),
             ])->save();
         }
-
-        $conflicts->recompute($schedule);
     }
 }

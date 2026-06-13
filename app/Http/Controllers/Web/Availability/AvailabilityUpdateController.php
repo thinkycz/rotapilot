@@ -23,6 +23,10 @@ class AvailabilityUpdateController
     public function __invoke(Request $request): SymfonyResponse
     {
         $actor = User::mustAuth();
+        if (!$actor->isStoreManager()) {
+            \abort(403);
+        }
+
         $id = (int) $request->query('id', '0');
         $row = EmployeeAvailability::query()->find($id);
         if (!$row instanceof EmployeeAvailability) {
@@ -52,7 +56,7 @@ class AvailabilityUpdateController
         $endStr = \is_string($endTime) ? $endTime : null;
 
         if (!$isClosed && ($startStr === null || $endStr === null)) {
-            $request->session()->flash('error', \__('Available/preferred days need start and end times.'));
+            $request->session()->flash('availability_modal_error', \__('Available/backup days need start and end times.'));
 
             return \back();
         }
@@ -64,7 +68,7 @@ class AvailabilityUpdateController
             'note' => $validated->has('note') ? (\is_string($validated->mixed('note')) ? $validated->mixed('note') : null) : null,
         ])->save();
 
-        $request->session()->flash('success', \__('Availability updated.'));
+        $request->session()->flash('availability_modal_success', \__('Availability updated.'));
 
         return \back();
     }

@@ -45,7 +45,7 @@ class ShiftAssignmentDestroyController
 
         $this->assignments->unassign($assignment);
 
-        $request->session()->flash('success', \__('Assignment removed.'));
+        $request->session()->flash('shift_modal_success', \__('Assignment removed.'));
 
         return \back();
     }

@@ -81,14 +81,6 @@ class ShiftRequirement extends BaseModel
     }
 
     /**
-     * Required employee count getter.
-     */
-    public function getRequiredEmployeeCount(): int
-    {
-        return $this->assertInt('required_employee_count');
-    }
-
-    /**
      * Role label getter.
      */
     public function getRoleLabel(): string|null
@@ -187,7 +179,6 @@ class ShiftRequirement extends BaseModel
     {
         return [
             'date' => 'date',
-            'required_employee_count' => 'integer',
         ];
     }
 }

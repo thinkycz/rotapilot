@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Web\Employees;
 
 use App\Models\EmployeeProfile;
+use App\Models\Store;
 use App\Models\User;
 use App\Support\Authorization;
 use App\Support\ModelFinder;
@@ -23,10 +24,10 @@ class EmployeeShowController
         $id = (int) $request->query('id', '0');
         $employee = ModelFinder::findOrAbort(EmployeeProfile::class, $id);
 
-        $employee->loadMissing('user');
-
         Authorization::mustViewEmployee($user, $employee);
 
+        $employee->loadMissing('user');
+        $login = $employee->getUser();
         $storeList = $employee->stores()->orderBy('name')->get();
 
         return Inertia::render('employees/Show', [
@@ -39,8 +40,14 @@ class EmployeeShowController
                 'max_hours_per_week' => $employee->getMaxHoursPerWeek(),
                 'is_active' => $employee->getIsActive(),
                 'has_login' => $employee->hasLoginAccount(),
+                'login' => $login instanceof User ? [
+                    'id' => $login->getKey(),
+                    'email' => $login->getEmail(),
+                    'locale' => $login->getLocale(),
+                ] : null,
+                'public_schedule_url' => '/public/employee-schedules?token=' . $employee->ensurePublicScheduleToken(),
             ],
-            'stores' => $storeList->map(static fn(\App\Models\Store $s): array => [
+            'stores' => $storeList->map(static fn(Store $s): array => [
                 'id' => $s->getKey(),
                 'name' => $s->getName(),
             ])->values()->all(),

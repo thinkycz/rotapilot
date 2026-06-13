@@ -83,8 +83,8 @@ defineProps<{
                         {{ formatDate(upcoming_shifts[0]?.date) }}
                     </p>
                     <p class="text-xs text-on-surface">
-                        {{ upcoming_shifts[0]?.start_time }} –
-                        {{ upcoming_shifts[0]?.end_time }}
+                        {{ upcoming_shifts[0]?.start_time.substring(0, 5) }} –
+                        {{ upcoming_shifts[0]?.end_time.substring(0, 5) }}
                     </p>
                 </div>
                 <p

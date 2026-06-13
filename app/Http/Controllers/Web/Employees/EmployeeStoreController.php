@@ -85,6 +85,8 @@ class EmployeeStoreController
             'max_hours_per_week' => $maxHours,
             'is_active' => $isActive,
         ])->save();
+        $employee->refresh();
+        $employee->ensurePublicScheduleToken();
 
         foreach ($validStoreIds as $validStoreId) {
             EmployeeStore::query()->getQuery()->insert([

@@ -9,7 +9,6 @@ use App\Http\Validation\ShiftRequirementValidity;
 use App\Models\Schedule;
 use App\Models\ShiftRequirement;
 use App\Models\User;
-use App\Services\Scheduling\ConflictDetectionService;
 use App\Support\Authorization;
 use App\Support\ModelFinder;
 use Illuminate\Http\Request;
@@ -18,11 +17,6 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 class ShiftRequirementUpdateController
 {
     use ValidatesWebRequests;
-
-    /**
-     * Constructor.
-     */
-    public function __construct(private readonly ConflictDetectionService $conflicts) {}
 
     /**
      * Update a shift requirement.
@@ -43,7 +37,6 @@ class ShiftRequirementUpdateController
             'date' => $validity->date()->required()->toArray(),
             'start_time' => $validity->startTime()->required()->toArray(),
             'end_time' => $validity->endTime()->required()->toArray(),
-            'required_employee_count' => $validity->requiredEmployeeCount()->required()->toArray(),
             'role_label' => $validity->roleLabel()->nullable()->toArray(),
             'note' => $validity->note()->nullable()->toArray(),
         ]);
@@ -52,12 +45,9 @@ class ShiftRequirementUpdateController
             'date' => $validated->assertString('date'),
             'start_time' => $validated->assertString('start_time'),
             'end_time' => $validated->assertString('end_time'),
-            'required_employee_count' => $validated->assertInt('required_employee_count'),
             'role_label' => $validated->assertNullableString('role_label'),
             'note' => $validated->assertNullableString('note'),
         ])->save();
-
-        $this->conflicts->recompute($schedule);
 
         $request->session()->flash('success', \__('Shift updated.'));
 

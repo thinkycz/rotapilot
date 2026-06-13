@@ -8,7 +8,6 @@ use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Models\Schedule;
 use App\Models\ShiftRequirement;
 use App\Models\User;
-use App\Services\Scheduling\ConflictDetectionService;
 use App\Support\Authorization;
 use App\Support\ModelFinder;
 use Illuminate\Http\Request;
@@ -17,11 +16,6 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 class ShiftRequirementDestroyController
 {
     use ValidatesWebRequests;
-
-    /**
-     * Constructor.
-     */
-    public function __construct(private readonly ConflictDetectionService $conflicts) {}
 
     /**
      * Delete a shift requirement.
@@ -39,9 +33,8 @@ class ShiftRequirementDestroyController
         }
 
         $req->delete();
-        $this->conflicts->recompute($schedule);
 
-        $request->session()->flash('success', \__('Shift removed.'));
+        $request->session()->flash('shift_modal_success', \__('Shift removed.'));
 
         return \back();
     }

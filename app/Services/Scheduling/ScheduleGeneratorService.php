@@ -22,7 +22,6 @@ class ScheduleGeneratorService
      */
     public function __construct(
         private readonly AvailabilityMatcherService $availability,
-        private readonly OverlapDetectorService $overlaps,
     ) {}
 
     /**
@@ -100,7 +99,7 @@ class ScheduleGeneratorService
             return $a['weekly'] <=> $b['weekly'];
         });
 
-        $need = $requirement->getRequiredEmployeeCount() - $requirement->getAssignedCount();
+        $need = 1 - $requirement->getAssignedCount();
         if ($need <= 0) {
             return [];
         }
@@ -185,7 +184,7 @@ class ScheduleGeneratorService
             if ($weekStart > $req->getDate() || $weekEnd < $req->getDate()) {
                 continue;
             }
-            $duration = $this->durationHours($req->getStartTime(), $req->getEndTime());
+            $duration = $this->durationHours($assignment->getStartTime(), $assignment->getEndTime());
             $employeeId = $assignment->getEmployeeProfileId();
             $hours[$employeeId] = ($hours[$employeeId] ?? 0.0) + $duration;
         }
@@ -195,36 +194,31 @@ class ScheduleGeneratorService
 
     /**
      * Check whether the employee has any overlapping assignment that would
-     * conflict with the requirement. Delegates to OverlapDetectorService
-     * after pre-loading the candidate requirements.
+     * conflict with the requirement.
      */
     private function hasOverlap(int $employeeId, ShiftRequirement $r): bool
     {
         $overlapping = ShiftAssignment::query()
             ->tap(static fn($q) => ShiftAssignment::scopeActive($q))
             ->where('employee_profile_id', $employeeId)
+            ->with('shiftRequirement')
             ->get();
 
-        $requirementIds = [];
         foreach ($overlapping as $a) {
-            $requirementIds[] = $a->getShiftRequirementId();
+            $req = $a->getShiftRequirement();
+            if ($req->getKey() === $r->getKey()) {
+                continue;
+            }
+            if ($req->getDate() !== $r->getDate()) {
+                continue;
+            }
+
+            if ($r->getStartTime() < $a->getEndTime() && $r->getEndTime() > $a->getStartTime()) {
+                return true;
+            }
         }
 
-        if (\count($requirementIds) === 0) {
-            return false;
-        }
-
-        $others = ShiftRequirement::query()
-            ->whereIn('id', $requirementIds)
-            ->get();
-
-        return $this->overlaps->hasOverlap(
-            $others->all(),
-            $r->getKey(),
-            $r->getDate(),
-            $r->getStartTime(),
-            $r->getEndTime(),
-        );
+        return false;
     }
 
     /**

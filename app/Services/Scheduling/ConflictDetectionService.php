@@ -10,15 +10,15 @@ use App\Enums\ShiftAssignmentStatusEnum;
 use App\Models\EmployeeAvailability;
 use App\Models\EmployeeProfile;
 use App\Models\Schedule;
-use App\Models\ScheduleConflict;
 use App\Models\ShiftRequirement;
 use App\Models\Store;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use stdClass;
+use Thinkycz\LaravelCore\Support\Typer;
 
 /**
- * Scans a schedule and rewrites all conflict rows for it.
+ * Scans a schedule and detects conflicts at runtime.
  */
 class ConflictDetectionService
 {
@@ -44,9 +44,11 @@ class ConflictDetectionService
     }
 
     /**
-     * Recompute all conflicts for a schedule.
+     * Detect all conflicts for a schedule dynamically.
+     *
+     * @return array<int, array<string, mixed>>
      */
-    public function recompute(Schedule $schedule): void
+    public function detect(Schedule $schedule): array
     {
         $schedule->loadMissing(['store', 'shiftRequirements']);
         $store = $schedule->getStore();
@@ -60,13 +62,14 @@ class ConflictDetectionService
             ->groupBy('employee_profile_id')
             ->all();
 
-        ScheduleConflict::query()->getQuery()->where('schedule_id', $schedule->getKey())->delete();
+        $conflicts = [];
+        $counter = 1;
 
-        $this->detectUnderstaffed($schedule, $requirements);
-        $this->detectOutsideBusinessHours($schedule, $store, $requirements);
-        $this->detectEmployeeIssues($schedule, $requirements, $availabilities);
-        $this->detectOverlaps($schedule, $requirements);
-        $this->detectMaxHours($schedule, $requirements);
+        $conflicts = \array_merge($conflicts, $this->detectOutsideBusinessHours($store, $requirements, $counter));
+        $conflicts = \array_merge($conflicts, $this->detectEmployeeIssues($requirements, $availabilities, $counter));
+        $conflicts = \array_merge($conflicts, $this->detectOverlaps($requirements, $counter));
+
+        return \array_merge($conflicts, $this->detectMaxHours($schedule, $requirements, $counter));
     }
 
     /**
@@ -92,53 +95,34 @@ class ConflictDetectionService
     }
 
     /**
-     * Detect understaffed shifts.
-     *
-     * @param iterable<int|string, ShiftRequirement> $requirements
-     */
-    private function detectUnderstaffed(Schedule $schedule, iterable $requirements): void
-    {
-        foreach ($requirements as $r) {
-            $assigned = $r->getAssignedCount();
-            if ($assigned < $r->getRequiredEmployeeCount()) {
-                $missing = $r->getRequiredEmployeeCount() - $assigned;
-                $this->conflict(
-                    $schedule,
-                    $r->getKey(),
-                    null,
-                    ConflictTypeEnum::Understaffed,
-                    ConflictSeverityEnum::Warning,
-                    "Needs {$missing} more employee(s).",
-                    'Assign more employees to this shift.',
-                );
-            }
-        }
-    }
-
-    /**
      * Detect shifts outside the store's business hours.
      *
      * @param iterable<int|string, ShiftRequirement> $requirements
+     *
+     * @return array<int, array<string, mixed>>
      */
-    private function detectOutsideBusinessHours(Schedule $schedule, Store|null $store, iterable $requirements): void
+    private function detectOutsideBusinessHours(Store|null $store, iterable $requirements, int &$counter): array
     {
         if ($store === null) {
-            return;
+            return [];
         }
 
+        $conflicts = [];
         foreach ($requirements as $r) {
             if (!$this->businessHours->isWithinBusinessHours($store, $r->getDate(), $r->getStartTime(), $r->getEndTime())) {
-                $this->conflict(
-                    $schedule,
+                $conflicts[] = $this->makeConflict(
+                    $counter++,
                     $r->getKey(),
                     null,
                     ConflictTypeEnum::OutsideBusinessHours,
                     ConflictSeverityEnum::Warning,
-                    'Shift is outside the store business hours.',
-                    'Adjust the shift window or update the business hours.',
+                    Typer::assertString(\__('Shift is outside the store business hours.')),
+                    Typer::assertString(\__('Adjust the shift window or update the business hours.')),
                 );
             }
         }
+
+        return $conflicts;
     }
 
     /**
@@ -146,9 +130,12 @@ class ConflictDetectionService
      *
      * @param iterable<int|string, ShiftRequirement> $requirements
      * @param array<int|string, \Illuminate\Support\Collection<int, stdClass>> $availabilities
+     *
+     * @return array<int, array<string, mixed>>
      */
-    private function detectEmployeeIssues(Schedule $schedule, iterable $requirements, array $availabilities): void
+    private function detectEmployeeIssues(iterable $requirements, array $availabilities, int &$counter): array
     {
+        $conflicts = [];
         foreach ($requirements as $r) {
             $rows = $r->assignments()
                 ->where('status', '!=', ShiftAssignmentStatusEnum::Cancelled->value)
@@ -166,54 +153,67 @@ class ConflictDetectionService
                     }
                 }
 
-                $verdict = $this->availability->check($models, $r->getDate(), $r->getStartTime(), $r->getEndTime());
+                $verdict = $this->availability->check($models, $r->getDate(), $row->getStartTime(), $row->getEndTime());
 
                 if ($verdict === AvailabilityVerdict::Unavailable) {
-                    $this->conflict(
-                        $schedule,
+                    $conflicts[] = $this->makeConflict(
+                        $counter++,
                         $r->getKey(),
                         $employeeId,
                         ConflictTypeEnum::UnavailableEmployee,
                         ConflictSeverityEnum::Critical,
-                        'Employee is marked unavailable for this time.',
-                        'Remove this assignment or pick another employee.',
+                        Typer::assertString(\__('Employee is marked unavailable for this time.')),
+                        Typer::assertString(\__('Remove this assignment or pick another employee.')),
                     );
                 } elseif ($verdict === AvailabilityVerdict::Missing) {
-                    $this->conflict(
-                        $schedule,
+                    $conflicts[] = $this->makeConflict(
+                        $counter++,
                         $r->getKey(),
                         $employeeId,
                         ConflictTypeEnum::MissingAvailability,
                         ConflictSeverityEnum::Info,
-                        'No availability record for this date.',
-                        'Enter availability for the employee.',
+                        Typer::assertString(\__('No availability record for this date.')),
+                        Typer::assertString(\__('Enter availability for the employee.')),
                     );
                 }
             }
         }
+
+        return $conflicts;
     }
 
     /**
      * Detect overlapping shifts per employee.
      *
      * @param iterable<int|string, ShiftRequirement> $requirements
+     *
+     * @return array<int, array<string, mixed>>
      */
-    private function detectOverlaps(Schedule $schedule, iterable $requirements): void
+    private function detectOverlaps(iterable $requirements, int &$counter): array
     {
+        $conflicts = [];
         $byEmployee = [];
         foreach ($requirements as $r) {
             $rows = $r->assignments()
                 ->where('status', '!=', ShiftAssignmentStatusEnum::Cancelled->value)
                 ->get();
             foreach ($rows as $a) {
-                $byEmployee[$a->getEmployeeProfileId()][] = $r;
+                $byEmployee[$a->getEmployeeProfileId()][] = [
+                    'requirement' => $r,
+                    'assignment' => $a,
+                ];
             }
         }
 
-        foreach ($byEmployee as $employeeId => $reqs) {
-            foreach ($reqs as $r1) {
-                foreach ($reqs as $r2) {
-                    if ($r1->getKey() >= $r2->getKey()) {
+        foreach ($byEmployee as $employeeId => $items) {
+            foreach ($items as $item1) {
+                foreach ($items as $item2) {
+                    $r1 = $item1['requirement'];
+                    $a1 = $item1['assignment'];
+                    $r2 = $item2['requirement'];
+                    $a2 = $item2['assignment'];
+
+                    if ($a1->getKey() >= $a2->getKey()) {
                         continue;
                     }
 
@@ -221,38 +221,43 @@ class ConflictDetectionService
                         continue;
                     }
 
-                    if ($r1->getStartTime() < $r2->getEndTime() && $r2->getStartTime() < $r1->getEndTime()) {
-                        $this->conflict(
-                            $schedule,
+                    if ($a1->getStartTime() < $a2->getEndTime() && $a2->getStartTime() < $a1->getEndTime()) {
+                        $conflicts[] = $this->makeConflict(
+                            $counter++,
                             $r1->getKey(),
                             $employeeId,
                             ConflictTypeEnum::OverlappingShift,
                             ConflictSeverityEnum::Critical,
-                            'Employee is assigned to overlapping shifts.',
-                            'Remove one of the overlapping assignments.',
+                            Typer::assertString(\__('Employee is assigned to overlapping shifts.')),
+                            Typer::assertString(\__('Remove one of the overlapping assignments.')),
                         );
-                        $this->conflict(
-                            $schedule,
+                        $conflicts[] = $this->makeConflict(
+                            $counter++,
                             $r2->getKey(),
                             $employeeId,
                             ConflictTypeEnum::OverlappingShift,
                             ConflictSeverityEnum::Critical,
-                            'Employee is assigned to overlapping shifts.',
-                            'Remove one of the overlapping assignments.',
+                            Typer::assertString(\__('Employee is assigned to overlapping shifts.')),
+                            Typer::assertString(\__('Remove one of the overlapping assignments.')),
                         );
                     }
                 }
             }
         }
+
+        return $conflicts;
     }
 
     /**
      * Detect per-employee weekly max-hours violations.
      *
      * @param iterable<int|string, ShiftRequirement> $requirements
+     *
+     * @return array<int, array<string, mixed>>
      */
-    private function detectMaxHours(Schedule $schedule, iterable $requirements): void
+    private function detectMaxHours(Schedule $schedule, iterable $requirements, int &$counter): array
     {
+        $conflicts = [];
         $employeeIds = [];
         foreach ($requirements as $r) {
             $rows = $r->assignments()
@@ -264,7 +269,7 @@ class ConflictDetectionService
         }
 
         if (\count($employeeIds) === 0) {
-            return;
+            return [];
         }
 
         $byEmployee = [];
@@ -276,7 +281,6 @@ class ConflictDetectionService
         $weeklyHours = [];
 
         foreach ($requirements as $r) {
-            $duration = $this->durationHours($r->getStartTime(), $r->getEndTime());
             $rows = $r->assignments()
                 ->where('status', '!=', ShiftAssignmentStatusEnum::Cancelled->value)
                 ->get();
@@ -292,6 +296,7 @@ class ConflictDetectionService
                     continue;
                 }
 
+                $duration = $this->durationHours($row->getStartTime(), $row->getEndTime());
                 $weekKey = (string) Carbon::parse($r->getDate())->startOfWeek(CarbonInterface::MONDAY)->format('Y-m-d');
                 $weeklyHours[$employeeId][$weekKey] = ($weeklyHours[$employeeId][$weekKey] ?? 0) + $duration;
             }
@@ -308,17 +313,19 @@ class ConflictDetectionService
                     continue;
                 }
 
-                $this->conflict(
-                    $schedule,
+                $conflicts[] = $this->makeConflict(
+                    $counter++,
                     null,
                     $employeeId,
                     ConflictTypeEnum::MaxHoursExceeded,
                     ConflictSeverityEnum::Warning,
-                    "Employee scheduled for {$hours}h this week (max {$max}h).",
-                    'Reduce assignments or raise the weekly cap.',
+                    Typer::assertString(\__('Employee scheduled for :hours h this week (max :max h).', ['hours' => $hours, 'max' => $max])),
+                    Typer::assertString(\__('Reduce assignments or raise the weekly cap.')),
                 );
             }
         }
+
+        return $conflicts;
     }
 
     /**
@@ -353,27 +360,27 @@ class ConflictDetectionService
     }
 
     /**
-     * Persist a single conflict row.
+     * Helper to make standardized conflict array.
+     *
+     * @return array<string, mixed>
      */
-    private function conflict(
-        Schedule $schedule,
+    private function makeConflict(
+        int $id,
         int|null $requirementId,
         int|null $employeeId,
         ConflictTypeEnum $type,
         ConflictSeverityEnum $severity,
         string $message,
         string|null $suggestedFix,
-    ): void {
-        ScheduleConflict::query()->getQuery()->insert([
-            'schedule_id' => $schedule->getKey(),
+    ): array {
+        return [
+            'id' => $id,
             'shift_requirement_id' => $requirementId,
             'employee_profile_id' => $employeeId,
             'type' => $type->value,
             'severity' => $severity->value,
             'message' => $message,
             'suggested_fix' => $suggestedFix,
-            'created_at' => \now(),
-            'updated_at' => \now(),
-        ]);
+        ];
     }
 }

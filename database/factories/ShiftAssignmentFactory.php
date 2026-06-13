@@ -24,6 +24,8 @@ class ShiftAssignmentFactory extends Factory
         return [
             'shift_requirement_id' => ShiftRequirementFactory::new(),
             'employee_profile_id' => EmployeeProfileFactory::new(),
+            'start_time' => '10:00',
+            'end_time' => '18:00',
             'status' => 'draft',
             'source' => 'manual',
             'assigned_by' => UserFactory::new(),

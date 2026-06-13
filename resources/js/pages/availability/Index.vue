@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { ref, computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import ModalOverlay from '@/components/ui/ModalOverlay.vue';
+import FlashAlerts from '@/components/ui/FlashAlerts.vue';
 import { useBoundLocale } from '@/composables/useBoundLocale';
 import { formatDateRange, parseIsoDate } from '@/lib/date';
 
@@ -52,6 +53,8 @@ const form = useForm({
 
 const showAdd = ref<string | null>(null);
 const editingId = ref<number | null>(null);
+const availabilityDeleted = ref(false);
+const showAvailabilityModalFlash = ref(false);
 const weekdays = computed(() => tm('common.weekdays') as string[]);
 const monthRange = computed(() =>
     formatDateRange(props.days[0], props.days[props.days.length - 1]),
@@ -59,6 +62,8 @@ const monthRange = computed(() =>
 
 function openAdd(employeeId: number, date: string): void {
     editingId.value = null;
+    availabilityDeleted.value = false;
+    showAvailabilityModalFlash.value = false;
     showAdd.value = `${employeeId}-${date}`;
     form.employee_profile_id = employeeId;
     form.store_id = props.filter_store_id || 0;
@@ -72,6 +77,8 @@ function openAdd(employeeId: number, date: string): void {
 
 function openEdit(entry: DayEntry, employeeId: number, date: string): void {
     editingId.value = entry.id;
+    availabilityDeleted.value = false;
+    showAvailabilityModalFlash.value = false;
     showAdd.value = `${employeeId}-${date}`;
     form.employee_profile_id = employeeId;
     form.store_id = props.filter_store_id || 0;
@@ -86,20 +93,17 @@ function openEdit(entry: DayEntry, employeeId: number, date: string): void {
 function closeAdd(): void {
     showAdd.value = null;
     editingId.value = null;
+    availabilityDeleted.value = false;
+    showAvailabilityModalFlash.value = false;
 }
 
 function submitAdd(): void {
+    showAvailabilityModalFlash.value = true;
     if (editingId.value !== null) {
-        form.post(`/availability/update?id=${editingId.value}`, {
-            onSuccess: () => {
-                closeAdd();
-                form.reset('note', 'type', 'start_time', 'end_time');
-            },
-        });
+        form.post(`/availability/update?id=${editingId.value}`);
     } else {
         form.post('/availability/store', {
             onSuccess: () => {
-                closeAdd();
                 form.reset('note', 'type', 'start_time', 'end_time');
             },
         });
@@ -108,12 +112,13 @@ function submitAdd(): void {
 
 function destroy(id: number): void {
     if (confirm(t('common.confirm_title'))) {
+        showAvailabilityModalFlash.value = true;
         router.post(
             `/availability/destroy?id=${id}`,
             {},
             {
                 onSuccess: () => {
-                    closeAdd();
+                    availabilityDeleted.value = true;
                 },
             },
         );
@@ -123,7 +128,7 @@ function destroy(id: number): void {
 const typeColor: Record<string, string> = {
     available: 'bg-emerald-100 text-emerald-700',
     unavailable: 'bg-rose-100 text-rose-700',
-    preferred: 'bg-blue-100 text-blue-700',
+    backup: 'bg-blue-100 text-blue-700',
 };
 
 function formatTimeRange(start: string | null, end: string | null): string {
@@ -256,7 +261,7 @@ function weekdayLabel(date: string): string {
                                 >
                                     {{
                                         row.days[d]!.type === 'unavailable'
-                                            ? 'UNA'
+                                            ? 'X'
                                             : formatTimeRange(
                                                   row.days[d]!.start_time,
                                                   row.days[d]!.end_time,
@@ -278,7 +283,25 @@ function weekdayLabel(date: string): string {
         </div>
 
         <ModalOverlay :open="showAdd !== null" @close="closeAdd">
-            <form @submit.prevent="submitAdd" class="space-y-3">
+            <div v-if="availabilityDeleted" class="space-y-3">
+                <h3 class="font-heading text-sm font-bold text-on-surface">
+                    {{ t('common.delete') }}
+                </h3>
+                <FlashAlerts
+                    v-if="showAvailabilityModalFlash"
+                    success-key="availability_modal_success"
+                    error-key="availability_modal_error"
+                />
+                <button
+                    type="button"
+                    @click="closeAdd"
+                    class="inline-flex h-8 items-center rounded-lg border border-outline-glass bg-white px-3 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
+                >
+                    {{ t('common.close') }}
+                </button>
+            </div>
+
+            <form v-else @submit.prevent="submitAdd" class="space-y-3">
                 <h3 class="font-heading text-sm font-bold text-on-surface">
                     {{
                         editingId
@@ -288,6 +311,11 @@ function weekdayLabel(date: string): string {
                             : t('availability.create_cta')
                     }}
                 </h3>
+                <FlashAlerts
+                    v-if="showAvailabilityModalFlash"
+                    success-key="availability_modal_success"
+                    error-key="availability_modal_error"
+                />
                 <div>
                     <label
                         class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-on-surface-variant"
@@ -304,8 +332,8 @@ function weekdayLabel(date: string): string {
                         <option value="unavailable">
                             {{ t('availability.type_unavailable') }}
                         </option>
-                        <option value="preferred">
-                            {{ t('availability.type_preferred') }}
+                        <option value="backup">
+                            {{ t('availability.type_backup') }}
                         </option>
                     </select>
                 </div>

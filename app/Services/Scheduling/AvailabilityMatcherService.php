@@ -44,7 +44,7 @@ class AvailabilityMatcherService
                         $hasBlockingUnavailable = true;
                     }
                 }
-            } elseif ($type === AvailabilityTypeEnum::Available || $type === AvailabilityTypeEnum::Preferred) {
+            } elseif ($type === AvailabilityTypeEnum::Available || $type === AvailabilityTypeEnum::Backup) {
                 if ($start !== null && $end !== null && $this->isContained($startTime, $endTime, (string) $start, (string) $end)) {
                     $hasMatchingWindow = true;
                 }

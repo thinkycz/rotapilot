@@ -11,6 +11,7 @@
         "availability": "Požadavky",
         "conflicts": "Konflikty",
         "my_calendar": "Můj kalendář",
+        "my_availabilities": "Moje dostupnost",
         "settings": "Nastavení",
         "logout": "Odhlásit se"
     },
@@ -107,6 +108,7 @@
         "edit": "Upravit",
         "delete": "Smazat",
         "back": "Zpět",
+        "close": "Zavřít",
         "loading": "Načítání…",
         "no_data": "Zatím žádná data.",
         "confirm": "Potvrdit",
@@ -176,7 +178,17 @@
         "unassign": "Odebrat",
         "confirm_unassign": "Odebrat z provozovny?",
         "no_assigned_stores": "Žádné přiřazené provozovny.",
-        "no_stores_available": "Žádné provozovny k dispozici"
+        "no_stores_available": "Žádné provozovny k dispozici",
+        "view_public_schedules": "Zobrazit veřejné rozvrhy",
+        "login_account": "Přihlašovací účet",
+        "create_login": "Vytvořit přihlášení",
+        "create_login_random": "Vytvořit s náhodným heslem",
+        "update_login": "Upravit přihlášení",
+        "set_password": "Nastavit heslo",
+        "generate_password": "Vygenerovat náhodné heslo",
+        "generated_password": "Vygenerované heslo. Zkopírujte ho teď, znovu se nezobrazí.",
+        "delete_login": "Smazat přihlášení",
+        "confirm_delete_login": "Smazat přihlašovací účet zaměstnance?"
     },
     "schedules": {
         "title_index": "Rozvrhy",
@@ -226,7 +238,15 @@
         "required_count": "Vyžadovaný počet",
         "role_label_optional": "Pozice (volitelné)",
         "auto_fill": "Automaticky obsadit",
-        "critical_conflicts_warning": "Publikování je zablokováno kvůli kritickým konfliktům."
+        "critical_conflicts_warning": "Upozornění: V tomto rozvrhu jsou nevyřešené kritické konflikty."
+    },
+    "public_schedules": {
+        "title": "Rozvrhy zaměstnance",
+        "no_store": "Není vybraná provozovna",
+        "no_stores": "Tento zaměstnanec není přiřazen k žádné provozovně.",
+        "no_schedules": "Nejsou dostupné žádné publikované aktuální ani budoucí rozvrhy.",
+        "shift_list": "Seznam směn",
+        "no_shifts": "V tomto rozvrhu nejsou žádné směny."
     },
     "availability": {
         "title": "Požadavky",
@@ -236,7 +256,7 @@
         "type": "Typ",
         "type_available": "Dostupný",
         "type_unavailable": "Nedostupný",
-        "type_preferred": "Preferovaný",
+        "type_backup": "Záloha",
         "type_missing": "Nenastaveno",
         "start_time": "Začátek",
         "end_time": "Konec",
@@ -287,6 +307,11 @@
         "title": "Můj kalendář",
         "empty": "V tomto období nemáte naplánované žádné směny.",
         "no_profile": "K vašemu účtu zatím není přiřazen žádný profil zaměstnance. Požádejte manažera o jeho přiřazení."
+    },
+    "my_availabilities": {
+        "title": "Moje dostupnost",
+        "no_profile": "K vašemu účtu zatím není přiřazen žádný profil zaměstnance. Požádejte manažera o jeho přiřazení.",
+        "manager_entry": "Záznam manažera"
     },
     "fields": {
         "email": "E-mail",

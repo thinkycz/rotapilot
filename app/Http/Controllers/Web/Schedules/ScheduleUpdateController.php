@@ -8,6 +8,7 @@ use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Http\Validation\ScheduleValidity;
 use App\Models\Schedule;
 use App\Support\ModelFinder;
+use App\Support\ScheduleTitle;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
@@ -26,22 +27,23 @@ class ScheduleUpdateController
 
         $validity = ScheduleValidity::inject();
         $validated = $this->validateRequest($request, [
-            'name' => $validity->name()->required()->toArray(),
             'month' => $validity->month()->required()->toArray(),
             'year' => $validity->year()->required()->toArray(),
         ]);
 
-        $periodStart = CarbonImmutable::create(
-            $validated->assertInt('year'),
-            $validated->assertInt('month'),
-            1,
-        );
+        $month = $validated->assertInt('month');
+        $year = $validated->assertInt('year');
+
+        $periodStart = CarbonImmutable::create($year, $month, 1);
         if (!$periodStart instanceof CarbonImmutable) {
             \abort(422);
         }
 
+        $schedule->loadMissing('store');
+        $store = $schedule->getStore();
+
         $schedule->forceFill([
-            'name' => $validated->assertString('name'),
+            'name' => ScheduleTitle::generate($store, $periodStart),
             'period_start' => $periodStart->startOfMonth()->format('Y-m-d'),
             'period_end' => $periodStart->endOfMonth()->format('Y-m-d'),
         ])->save();

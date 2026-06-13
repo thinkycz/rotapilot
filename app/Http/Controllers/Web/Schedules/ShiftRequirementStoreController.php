@@ -11,7 +11,6 @@ use App\Models\Schedule;
 use App\Models\ShiftRequirement;
 use App\Models\User;
 use App\Services\Scheduling\AssignmentService;
-use App\Services\Scheduling\ConflictDetectionService;
 use App\Support\Authorization;
 use App\Support\ModelFinder;
 use Illuminate\Http\Request;
@@ -26,7 +25,6 @@ class ShiftRequirementStoreController
      * Constructor.
      */
     public function __construct(
-        private readonly ConflictDetectionService $conflicts,
         private readonly AssignmentService $assignments,
     ) {}
 
@@ -48,7 +46,6 @@ class ShiftRequirementStoreController
             'date' => $validity->date()->required()->toArray(),
             'start_time' => $validity->startTime()->required()->toArray(),
             'end_time' => $validity->endTime()->required()->toArray(),
-            'required_employee_count' => $validity->requiredEmployeeCount()->required()->toArray(),
             'role_label' => $validity->roleLabel()->nullable()->toArray(),
             'note' => $validity->note()->nullable()->toArray(),
             'employee_profile_ids' => 'nullable|array',
@@ -82,7 +79,6 @@ class ShiftRequirementStoreController
                 'date' => $validated->assertString('date'),
                 'start_time' => $validated->assertString('start_time'),
                 'end_time' => $validated->assertString('end_time'),
-                'required_employee_count' => $validated->assertInt('required_employee_count'),
                 'role_label' => $validated->assertNullableString('role_label'),
                 'note' => $validated->assertNullableString('note'),
                 'source' => 'manual',
@@ -94,9 +90,7 @@ class ShiftRequirementStoreController
             }
         });
 
-        $this->conflicts->recompute($schedule);
-
-        $request->session()->flash('success', \__('Shift created.'));
+        $request->session()->flash('create_shift_modal_success', \__('Shift created.'));
 
         return \back();
     }

@@ -7,11 +7,14 @@ namespace App\Http\Controllers\Web\Schedules;
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Http\Validation\ScheduleValidity;
 use App\Models\Schedule;
+use App\Models\ShiftRequirement;
 use App\Models\Store;
 use App\Models\User;
 use App\Support\Authorization;
+use App\Support\ScheduleTitle;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class ScheduleStoreController
@@ -27,7 +30,6 @@ class ScheduleStoreController
 
         $validity = ScheduleValidity::inject();
         $validated = $this->validateRequest($request, [
-            'name' => $validity->name()->required()->toArray(),
             'store_id' => 'required|integer|exists:stores,id',
             'month' => $validity->month()->required()->toArray(),
             'year' => $validity->year()->required()->toArray(),
@@ -42,24 +44,51 @@ class ScheduleStoreController
             \abort(403);
         }
 
-        $periodStart = CarbonImmutable::create(
-            $validated->assertInt('year'),
-            $validated->assertInt('month'),
-            1,
-        );
+        $month = $validated->assertInt('month');
+        $year = $validated->assertInt('year');
+
+        $periodStart = CarbonImmutable::create($year, $month, 1);
         if (!$periodStart instanceof CarbonImmutable) {
             \abort(422);
         }
 
         $schedule = new Schedule();
         $schedule->forceFill([
-            'name' => $validated->assertString('name'),
+            'name' => ScheduleTitle::generate($store, $periodStart),
             'store_id' => $store->getKey(),
             'period_start' => $periodStart->startOfMonth()->format('Y-m-d'),
             'period_end' => $periodStart->endOfMonth()->format('Y-m-d'),
             'status' => 'draft',
             'created_by' => $actor->getKey(),
-        ])->save();
+        ]);
+
+        DB::transaction(static function () use ($schedule, $store, $actor): void {
+            $schedule->save();
+
+            $start = CarbonImmutable::parse($schedule->getPeriodStart());
+            $end = CarbonImmutable::parse($schedule->getPeriodEnd());
+
+            for ($date = $start; $date->lte($end); $date = $date->addDay()) {
+                $dayOfWeek = $date->dayOfWeekIso; // 1=Monday..7=Sunday
+                $bh = $store->findBusinessHourFor($dayOfWeek);
+                if ($bh !== null && !$bh->getIsClosed()) {
+                    $opensAt = $bh->getOpensAt();
+                    $closesAt = $bh->getClosesAt();
+                    if ($opensAt !== null && $closesAt !== null) {
+                        $req = new ShiftRequirement();
+                        $req->forceFill([
+                            'schedule_id' => $schedule->getKey(),
+                            'store_id' => $store->getKey(),
+                            'date' => $date->format('Y-m-d'),
+                            'start_time' => $opensAt,
+                            'end_time' => $closesAt,
+                            'source' => 'manual',
+                            'created_by' => $actor->getKey(),
+                        ])->save();
+                    }
+                }
+            }
+        });
 
         $request->session()->flash('success', \__('Schedule created.'));
 

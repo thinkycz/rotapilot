@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 use Thinkycz\LaravelCore\Models\BaseModel;
 use Thinkycz\LaravelCore\Support\Typer;
 
@@ -113,6 +114,33 @@ class EmployeeProfile extends BaseModel
     public function getIsActive(): bool
     {
         return $this->assertBool('is_active');
+    }
+
+    /**
+     * Public schedule token getter.
+     */
+    public function getPublicScheduleToken(): string|null
+    {
+        return $this->assertNullableString('public_schedule_token');
+    }
+
+    /**
+     * Ensure public schedule token.
+     */
+    public function ensurePublicScheduleToken(): string
+    {
+        $token = $this->getPublicScheduleToken();
+        if ($token !== null && $token !== '') {
+            return $token;
+        }
+
+        do {
+            $token = Str::random(48);
+        } while (self::query()->where('public_schedule_token', $token)->exists());
+
+        $this->forceFill(['public_schedule_token' => $token])->save();
+
+        return $token;
     }
 
     /**

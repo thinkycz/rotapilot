@@ -67,15 +67,6 @@ use Thinkycz\LaravelCore\Support\Typer;
     $response->assertJsonPath('component', 'calendar/Mine');
 });
 
-\test('store manager can view conflicts page', function (): void {
-    $user = Typer::assertInstance(UserFactory::new()->createOne(['role' => 'store_manager']), User::class);
-
-    $response = $this->be($user, 'users')->get('/conflicts', $this->inertiaHeaders());
-
-    $response->assertOk();
-    $response->assertJsonPath('component', 'conflicts/Index');
-});
-
 \test('store manager can view stores create form', function (): void {
     $user = Typer::assertInstance(UserFactory::new()->createOne(['role' => 'store_manager']), User::class);
 
@@ -301,7 +292,6 @@ use Thinkycz\LaravelCore\Support\Typer;
     ]);
 
     $response = $this->be($manager, 'users')->post('/schedules/store', [
-        'name' => 'Schedule Test',
         'store_id' => $store->getKey(),
         'month' => 6,
         'year' => 2026,
@@ -310,7 +300,7 @@ use Thinkycz\LaravelCore\Support\Typer;
     $response->assertRedirect();
 
     $this->assertDatabaseHas('schedules', [
-        'name' => 'Schedule Test',
+        'name' => $store->getName() . ' - June 2026',
         'store_id' => $store->getKey(),
         'period_start' => '2026-06-01 00:00:00',
         'period_end' => '2026-06-30 00:00:00',
@@ -333,7 +323,6 @@ use Thinkycz\LaravelCore\Support\Typer;
     ]), Schedule::class);
 
     $response = $this->be($manager, 'users')->post('/schedules/update?id=' . $schedule->getKey(), [
-        'name' => 'Updated Schedule Name',
         'month' => 2,
         'year' => 2028,
     ], $this->inertiaHeaders());
@@ -342,7 +331,7 @@ use Thinkycz\LaravelCore\Support\Typer;
 
     $this->assertDatabaseHas('schedules', [
         'id' => $schedule->getKey(),
-        'name' => 'Updated Schedule Name',
+        'name' => $store->getName() . ' - February 2028',
         'period_start' => '2028-02-01 00:00:00',
         'period_end' => '2028-02-29 00:00:00',
     ]);
@@ -391,7 +380,6 @@ use Thinkycz\LaravelCore\Support\Typer;
         'date' => '2026-06-16',
         'start_time' => '08:00',
         'end_time' => '16:00',
-        'required_employee_count' => 3,
         'role_label' => 'Barista',
         'note' => 'Test shift note',
     ], $this->inertiaHeaders());
@@ -403,7 +391,6 @@ use Thinkycz\LaravelCore\Support\Typer;
         'date' => '2026-06-16 00:00:00',
         'start_time' => '08:00',
         'end_time' => '16:00',
-        'required_employee_count' => 3,
     ]);
 
     $requirement = ShiftRequirement::query()
@@ -448,7 +435,6 @@ use Thinkycz\LaravelCore\Support\Typer;
         'date' => '2026-06-17',
         'start_time' => '08:00',
         'end_time' => '16:00',
-        'required_employee_count' => 2,
         'role_label' => 'Barista',
         'note' => 'Assigned during creation',
         'employee_profile_ids' => [$employeeOne->getKey(), $employeeTwo->getKey()],
@@ -499,7 +485,6 @@ use Thinkycz\LaravelCore\Support\Typer;
         'date' => '2026-06-18',
         'start_time' => '08:00',
         'end_time' => '16:00',
-        'required_employee_count' => 1,
         'role_label' => null,
         'note' => null,
         'employee_profile_ids' => [$foreignEmployee->getKey()],
@@ -531,7 +516,6 @@ use Thinkycz\LaravelCore\Support\Typer;
         'date' => '2026-06-19',
         'start_time' => '08:00',
         'end_time' => '16:00',
-        'required_employee_count' => 1,
         'role_label' => null,
         'note' => null,
         'employee_profile_ids' => [999999],

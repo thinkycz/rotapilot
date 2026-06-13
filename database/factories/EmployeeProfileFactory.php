@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Models\EmployeeProfile;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends Factory<EmployeeProfile>
@@ -29,6 +30,7 @@ class EmployeeProfileFactory extends Factory
             'role_label' => 'Barista',
             'max_hours_per_week' => 40,
             'is_active' => true,
+            'public_schedule_token' => Str::random(48),
         ];
     }
 }

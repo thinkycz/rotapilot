@@ -11,6 +11,7 @@
         "availability": "Availability",
         "conflicts": "Conflicts",
         "my_calendar": "My Calendar",
+        "my_availabilities": "My Availabilities",
         "settings": "Settings",
         "logout": "Log out"
     },
@@ -107,6 +108,7 @@
         "edit": "Edit",
         "delete": "Delete",
         "back": "Back",
+        "close": "Close",
         "loading": "Loading…",
         "no_data": "No data yet.",
         "confirm": "Confirm",
@@ -176,7 +178,17 @@
         "unassign": "Unassign",
         "confirm_unassign": "Unassign from store?",
         "no_assigned_stores": "No assigned stores.",
-        "no_stores_available": "No stores available"
+        "no_stores_available": "No stores available",
+        "view_public_schedules": "View public schedules",
+        "login_account": "Login account",
+        "create_login": "Create login",
+        "create_login_random": "Create with random password",
+        "update_login": "Update login",
+        "set_password": "Set password",
+        "generate_password": "Generate random password",
+        "generated_password": "Generated password. Copy it now; it will not be shown again.",
+        "delete_login": "Delete login",
+        "confirm_delete_login": "Delete this employee login account?"
     },
     "schedules": {
         "title_index": "Schedules",
@@ -226,7 +238,15 @@
         "required_count": "Required count",
         "role_label_optional": "Role label (optional)",
         "auto_fill": "Auto-fill",
-        "critical_conflicts_warning": "Publishing is blocked due to critical conflicts."
+        "critical_conflicts_warning": "Warning: There are unresolved critical conflicts in this schedule."
+    },
+    "public_schedules": {
+        "title": "Employee schedules",
+        "no_store": "No store selected",
+        "no_stores": "This employee is not assigned to any stores.",
+        "no_schedules": "No published current or future schedules are available.",
+        "shift_list": "Shift list",
+        "no_shifts": "No shifts in this schedule."
     },
     "availability": {
         "title": "Availability",
@@ -236,7 +256,7 @@
         "type": "Type",
         "type_available": "Available",
         "type_unavailable": "Unavailable",
-        "type_preferred": "Preferred",
+        "type_backup": "Backup",
         "type_missing": "Not set",
         "start_time": "Start time",
         "end_time": "End time",
@@ -287,6 +307,11 @@
         "title": "My calendar",
         "empty": "You do not have any shifts scheduled for this period.",
         "no_profile": "No employee profile is assigned to your account yet. Ask a manager to assign one."
+    },
+    "my_availabilities": {
+        "title": "My availabilities",
+        "no_profile": "No employee profile is assigned to your account yet. Ask a manager to assign one.",
+        "manager_entry": "Manager entry"
     },
     "fields": {
         "email": "Email",

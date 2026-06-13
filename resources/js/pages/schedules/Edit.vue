@@ -44,7 +44,6 @@ const monthOptions = computed(() =>
 );
 
 const form = useForm({
-    name: props.schedule?.name ?? '',
     store_id: props.schedule?.store_id ?? props.default_store_id ?? 0,
     month: props.schedule?.month ?? props.default_month ?? 1,
     year:
@@ -76,20 +75,6 @@ function submit(): void {
             @submit.prevent="submit"
             class="max-w-2xl space-y-4 rounded-2xl border border-outline-glass bg-surface-container-lowest p-6 shadow-sm"
         >
-            <div>
-                <label
-                    class="mb-1 block text-xs font-semibold text-on-surface-variant"
-                >
-                    {{ t('schedules.name') }}
-                </label>
-                <input
-                    v-model="form.name"
-                    type="text"
-                    required
-                    class="w-full rounded-xl border border-outline-glass bg-white px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none"
-                />
-            </div>
-
             <div>
                 <label
                     class="mb-1 block text-xs font-semibold text-on-surface-variant"

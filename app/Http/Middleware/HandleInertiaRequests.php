@@ -47,6 +47,13 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => static fn(): string|null => self::flashMessage($request, 'success'),
                 'error' => static fn(): string|null => self::flashMessage($request, 'error'),
+                'shift_modal_success' => static fn(): string|null => self::flashMessage($request, 'shift_modal_success'),
+                'shift_modal_error' => static fn(): string|null => self::flashMessage($request, 'shift_modal_error'),
+                'create_shift_modal_success' => static fn(): string|null => self::flashMessage($request, 'create_shift_modal_success'),
+                'create_shift_modal_error' => static fn(): string|null => self::flashMessage($request, 'create_shift_modal_error'),
+                'availability_modal_success' => static fn(): string|null => self::flashMessage($request, 'availability_modal_success'),
+                'availability_modal_error' => static fn(): string|null => self::flashMessage($request, 'availability_modal_error'),
+                'employee_login_generated_password' => static fn(): string|null => self::flashMessage($request, 'employee_login_generated_password'),
             ],
         ];
     }

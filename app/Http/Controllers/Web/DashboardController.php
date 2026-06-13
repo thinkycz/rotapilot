@@ -7,7 +7,6 @@ namespace App\Http\Controllers\Web;
 use App\Models\EmployeeAvailability;
 use App\Models\EmployeeProfile;
 use App\Models\Schedule;
-use App\Models\ScheduleConflict;
 use App\Models\ShiftAssignment;
 use App\Models\ShiftRequirement;
 use App\Models\Store;
@@ -61,13 +60,6 @@ class DashboardController
             ->whereBetween('date', [$startOfMonth, $endOfMonth])
             ->count();
 
-        $openConflicts = ScheduleConflict::query()
-            ->tap(static fn(Builder $query) => ScheduleConflict::scopeUnresolved($query))
-            ->whereIn('schedule_id', function (\Illuminate\Database\Query\Builder $sub) use ($storeIds): void {
-                $sub->select('id')->from('schedules')->whereIn('store_id', \count($storeIds) === 0 ? [0] : $storeIds);
-            })
-            ->count();
-
         $recentScheduleRows = Schedule::query()
             ->whereIn('store_id', \count($storeIds) === 0 ? [0] : $storeIds)
             ->orderBy('period_start', 'desc')
@@ -101,7 +93,6 @@ class DashboardController
                 'managed_stores' => $managedStores->count(),
                 'active_employees' => $activeEmployees,
                 'shifts_this_month' => $shiftsThisMonth,
-                'open_conflicts' => $openConflicts,
             ],
             'stores' => $managedStores->map(static fn(Store $s): array => [
                 'id' => $s->getKey(),
@@ -152,8 +143,8 @@ class DashboardController
                     return [
                         'id' => $a->getKey(),
                         'date' => $req->getDate(),
-                        'start_time' => $req->getStartTime(),
-                        'end_time' => $req->getEndTime(),
+                        'start_time' => $a->getStartTime(),
+                        'end_time' => $a->getEndTime(),
                         'store_id' => $req->getStoreId(),
                     ];
                 })->values()->all();

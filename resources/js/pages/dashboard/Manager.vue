@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import {
-    Activity,
-    Calendar,
-    Coffee,
-    ArrowRight,
-    AlertTriangle,
-} from '@lucide/vue';
+import { Activity, Calendar, Coffee, ArrowRight } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useBoundLocale } from '@/composables/useBoundLocale';
@@ -22,7 +16,6 @@ interface Stat {
     managed_stores: number;
     active_employees: number;
     shifts_this_month: number;
-    open_conflicts: number;
 }
 interface StoreRef {
     id: number;
@@ -101,7 +94,7 @@ defineProps<{
             </Link>
         </section>
 
-        <div class="grid gap-6 md:grid-cols-4">
+        <div class="grid gap-6 md:grid-cols-3">
             <section
                 class="rounded-2xl border border-outline-glass bg-surface-container-lowest p-6 shadow-sm"
             >
@@ -172,31 +165,6 @@ defineProps<{
                     class="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary-container"
                 >
                     {{ t('dashboard.open_schedules') }}
-                    <ArrowRight :size="14" />
-                </Link>
-            </section>
-
-            <section
-                class="rounded-2xl border border-outline-glass bg-surface-container-lowest p-6 shadow-sm"
-            >
-                <div
-                    class="mb-4 flex h-9 w-9 items-center justify-center rounded-lg bg-rose-50 text-rose-600"
-                >
-                    <AlertTriangle :size="18" />
-                </div>
-                <h3 class="font-heading text-sm font-bold text-on-surface">
-                    {{ t('dashboard.stat_conflicts') }}
-                </h3>
-                <p
-                    class="mt-2 font-heading text-3xl font-black tracking-tight text-on-surface"
-                >
-                    {{ stats?.open_conflicts ?? 0 }}
-                </p>
-                <Link
-                    href="/conflicts"
-                    class="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary-container"
-                >
-                    {{ t('dashboard.open_conflicts') }}
                     <ArrowRight :size="14" />
                 </Link>
             </section>

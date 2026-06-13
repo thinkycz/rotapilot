@@ -60,13 +60,13 @@ class ScheduleSeeder extends Seeder
         $scheduleId = $schedule->getKey();
 
         $rows = [
-            ['date' => $start->format('Y-m-d'), 'start_time' => '10:00', 'end_time' => '18:00', 'required_employee_count' => 1],
-            ['date' => $start->copy()->addDay()->format('Y-m-d'), 'start_time' => '10:00', 'end_time' => '18:00', 'required_employee_count' => 1],
-            ['date' => $start->copy()->addDays(2)->format('Y-m-d'), 'start_time' => '11:00', 'end_time' => '20:00', 'required_employee_count' => 2],
-            ['date' => $start->copy()->addDays(3)->format('Y-m-d'), 'start_time' => '10:00', 'end_time' => '18:00', 'required_employee_count' => 2],
-            ['date' => $start->copy()->addDays(4)->format('Y-m-d'), 'start_time' => '09:00', 'end_time' => '21:00', 'required_employee_count' => 3],
-            ['date' => $start->copy()->addDays(5)->format('Y-m-d'), 'start_time' => '06:00', 'end_time' => '14:00', 'required_employee_count' => 1],
-            ['date' => $start->copy()->addDays(6)->format('Y-m-d'), 'start_time' => '10:00', 'end_time' => '18:00', 'required_employee_count' => 1],
+            ['date' => $start->format('Y-m-d'), 'start_time' => '10:00', 'end_time' => '18:00'],
+            ['date' => $start->copy()->addDay()->format('Y-m-d'), 'start_time' => '10:00', 'end_time' => '18:00'],
+            ['date' => $start->copy()->addDays(2)->format('Y-m-d'), 'start_time' => '11:00', 'end_time' => '20:00'],
+            ['date' => $start->copy()->addDays(3)->format('Y-m-d'), 'start_time' => '10:00', 'end_time' => '18:00'],
+            ['date' => $start->copy()->addDays(4)->format('Y-m-d'), 'start_time' => '09:00', 'end_time' => '21:00'],
+            ['date' => $start->copy()->addDays(5)->format('Y-m-d'), 'start_time' => '06:00', 'end_time' => '14:00'],
+            ['date' => $start->copy()->addDays(6)->format('Y-m-d'), 'start_time' => '10:00', 'end_time' => '18:00'],
         ];
 
         foreach ($rows as $row) {
@@ -92,14 +92,14 @@ class ScheduleSeeder extends Seeder
                 [
                     'shift_requirement_id' => $shiftRow->getKey(),
                     'employee_profile_id' => $employeeIds[$idx % \count($employeeIds)],
+                    'start_time' => $shiftRow->getStartTime(),
+                    'end_time' => $shiftRow->getEndTime(),
                 ],
                 [
                     'assigned_by' => $actorId,
-                    'status' => 'assigned',
+                    'status' => 'confirmed',
                 ],
             );
         }
-
-        \App\Models\ScheduleConflict::query()->where('schedule_id', $scheduleId)->delete();
     }
 }

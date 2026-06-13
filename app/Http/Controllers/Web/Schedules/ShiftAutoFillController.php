@@ -38,9 +38,13 @@ class ShiftAutoFillController
             \abort(403);
         }
 
-        $this->assignments->autoFill($req, User::mustAuth());
+        $created = $this->assignments->autoFill($req, User::mustAuth());
 
-        $request->session()->flash('success', \__('Shift auto-filled.'));
+        if (\count($created) === 0) {
+            $request->session()->flash('shift_modal_error', \__('No eligible employees found for auto-fill.'));
+        } else {
+            $request->session()->flash('shift_modal_success', \__('Shift auto-filled.'));
+        }
 
         return \back();
     }

@@ -6,9 +6,9 @@ namespace App\Http\Controllers\Web\Schedules;
 
 use App\Models\EmployeeProfile;
 use App\Models\Schedule;
-use App\Models\ScheduleConflict;
 use App\Models\ShiftAssignment;
 use App\Models\User;
+use App\Services\Scheduling\ConflictDetectionService;
 use App\Support\Authorization;
 use App\Support\ModelFinder;
 use Carbon\Carbon;
@@ -18,6 +18,13 @@ use Inertia\Response;
 
 class ScheduleShowController
 {
+    /**
+     * Constructor.
+     */
+    public function __construct(
+        private readonly ConflictDetectionService $conflictDetector,
+    ) {}
+
     /**
      * Show a schedule.
      */
@@ -31,10 +38,10 @@ class ScheduleShowController
             \abort(403);
         }
 
-        $schedule->loadMissing(['store', 'shiftRequirements', 'conflicts']);
+        $schedule->loadMissing(['store', 'shiftRequirements']);
         $store = $schedule->getStore();
         $requirements = $schedule->getShiftRequirements();
-        $conflicts = $schedule->getConflicts();
+        $conflicts = $this->conflictDetector->detect($schedule);
 
         $start = Carbon::parse($schedule->getPeriodStart());
         $end = Carbon::parse($schedule->getPeriodEnd());
@@ -53,17 +60,19 @@ class ScheduleShowController
                     'id' => $r->getKey(),
                     'start_time' => $r->getStartTime(),
                     'end_time' => $r->getEndTime(),
-                    'required_employee_count' => $r->getRequiredEmployeeCount(),
                     'role_label' => $r->getRoleLabel(),
                     'note' => $r->getNote(),
                     'source' => $r->getSource()->value,
                     'assignments' => $r->assignments()
                         ->with('employeeProfile')
+                        ->orderBy('start_time')
                         ->get()
                         ->map(static fn(ShiftAssignment $a): array => [
                             'id' => $a->getKey(),
                             'employee_profile_id' => $a->getEmployeeProfileId(),
                             'employee_name' => $a->getEmployeeProfile()->getName(),
+                            'start_time' => $a->getStartTime(),
+                            'end_time' => $a->getEndTime(),
                             'status' => $a->getStatus()->value,
                         ])->values()->all(),
                 ];
@@ -84,14 +93,14 @@ class ScheduleShowController
                 'store_name' => $store->getName(),
             ],
             'days' => $byDate,
-            'conflicts' => $conflicts->map(static fn(ScheduleConflict $c): array => [
-                'id' => $c->getKey(),
-                'type' => $c->getType()->value,
-                'severity' => $c->getSeverity()->value,
-                'message' => $c->getMessage(),
-                'suggested_fix' => $c->getSuggestedFix(),
-                'employee_id' => $c->getEmployeeProfileId(),
-                'shift_requirement_id' => $c->getShiftRequirementId(),
+            'conflicts' => \collect($conflicts)->map(static fn(array $c): array => [
+                'id' => $c['id'],
+                'type' => $c['type'],
+                'severity' => $c['severity'],
+                'message' => $c['message'],
+                'suggested_fix' => $c['suggested_fix'],
+                'employee_id' => $c['employee_profile_id'],
+                'shift_requirement_id' => $c['shift_requirement_id'],
             ])->values()->all(),
             'employees' => $employees->map(static fn(EmployeeProfile $e): array => [
                 'id' => $e->getKey(),

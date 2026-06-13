@@ -11,6 +11,7 @@
         "availability": "Dostupnosť",
         "conflicts": "Konflikty",
         "my_calendar": "Môj kalendár",
+        "my_availabilities": "Moja dostupnosť",
         "settings": "Nastavenia",
         "logout": "Odhlásiť sa"
     },
@@ -107,6 +108,7 @@
         "edit": "Upraviť",
         "delete": "Zmazať",
         "back": "Späť",
+        "close": "Zavrieť",
         "loading": "Načítava sa…",
         "no_data": "Zatiaľ žiadne dáta.",
         "confirm": "Potvrdiť",
@@ -176,7 +178,17 @@
         "unassign": "Odobrať",
         "confirm_unassign": "Odobrať z prevádzky?",
         "no_assigned_stores": "Žiadne priradené prevádzky.",
-        "no_stores_available": "Žiadne prevádzky k dispozícii"
+        "no_stores_available": "Žiadne prevádzky k dispozícii",
+        "view_public_schedules": "Zobraziť verejné plány",
+        "login_account": "Prihlasovací účet",
+        "create_login": "Vytvoriť prihlásenie",
+        "create_login_random": "Vytvoriť s náhodným heslom",
+        "update_login": "Upraviť prihlásenie",
+        "set_password": "Nastaviť heslo",
+        "generate_password": "Vygenerovať náhodné heslo",
+        "generated_password": "Vygenerované heslo. Skopírujte ho teraz, znova sa nezobrazí.",
+        "delete_login": "Zmazať prihlásenie",
+        "confirm_delete_login": "Zmazať prihlasovací účet zamestnanca?"
     },
     "schedules": {
         "title_index": "Plány",
@@ -226,7 +238,15 @@
         "required_count": "Vyžadovaný počet",
         "role_label_optional": "Pozícia (voliteľné)",
         "auto_fill": "Automaticky obsadiť",
-        "critical_conflicts_warning": "Publikovanie je zablokované kvôli kritickým konfliktom."
+        "critical_conflicts_warning": "Upozornenie: V tomto rozvrhu sú nevyriešené kritické konflikty."
+    },
+    "public_schedules": {
+        "title": "Plány zamestnanca",
+        "no_store": "Nie je vybraná prevádzka",
+        "no_stores": "Tento zamestnanec nie je priradený k žiadnej prevádzke.",
+        "no_schedules": "Nie sú dostupné žiadne publikované aktuálne ani budúce plány.",
+        "shift_list": "Zoznam zmien",
+        "no_shifts": "V tomto pláne nie sú žiadne zmeny."
     },
     "availability": {
         "title": "Dostupnosť",
@@ -236,7 +256,7 @@
         "type": "Typ",
         "type_available": "Dostupný",
         "type_unavailable": "Nedostupný",
-        "type_preferred": "Preferovaný",
+        "type_backup": "Záloha",
         "type_missing": "Nenastavené",
         "start_time": "Začiatok",
         "end_time": "Koniec",
@@ -287,6 +307,11 @@
         "title": "Môj kalendár",
         "empty": "V tomto období nemáte naplánované žiadne zmeny.",
         "no_profile": "K vášmu účtu zatiaľ nie je priradený žiadny profil zamestnanca. Požiadajte manažéra o jeho priradenie."
+    },
+    "my_availabilities": {
+        "title": "Moja dostupnosť",
+        "no_profile": "K vášmu účtu zatiaľ nie je priradený žiadny profil zamestnanca. Požiadajte manažéra o jeho priradenie.",
+        "manager_entry": "Záznam manažéra"
     },
     "fields": {
         "email": "E-mail",

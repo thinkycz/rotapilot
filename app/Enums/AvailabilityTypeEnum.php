@@ -10,7 +10,7 @@ enum AvailabilityTypeEnum: string
 
     case Unavailable = 'unavailable';
 
-    case Preferred = 'preferred';
+    case Backup = 'backup';
 
     /**
      * Get possible values.

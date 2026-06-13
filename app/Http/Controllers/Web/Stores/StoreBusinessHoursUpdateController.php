@@ -8,7 +8,6 @@ use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Models\Store;
 use App\Models\StoreBusinessHour;
 use App\Models\User;
-use App\Services\Scheduling\ConflictDetectionService;
 use App\Support\Authorization;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
@@ -16,11 +15,6 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 class StoreBusinessHoursUpdateController
 {
     use ValidatesWebRequests;
-
-    /**
-     * Constructor.
-     */
-    public function __construct(private readonly ConflictDetectionService $conflicts) {}
 
     /**
      * Update business hours for a store.
@@ -80,12 +74,6 @@ class StoreBusinessHoursUpdateController
                     'is_closed' => $isClosed,
                 ],
             );
-        }
-
-        // Recompute outside-business-hours conflicts for all schedules of this store.
-        $schedules = $store->schedules()->get();
-        foreach ($schedules as $schedule) {
-            $this->conflicts->recompute($schedule);
         }
 
         $request->session()->flash('success', \__('Business hours updated.'));

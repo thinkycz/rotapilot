@@ -166,26 +166,6 @@ class Schedule extends BaseModel
     }
 
     /**
-     * Conflicts relationship.
-     *
-     * @return HasMany<ScheduleConflict, $this>
-     */
-    public function conflicts(): HasMany
-    {
-        return $this->hasMany(ScheduleConflict::class);
-    }
-
-    /**
-     * Conflicts getter.
-     *
-     * @return \Illuminate\Database\Eloquent\Collection<int|string, ScheduleConflict>
-     */
-    public function getConflicts(): \Illuminate\Database\Eloquent\Collection
-    {
-        return $this->assertRelationshipCollection('conflicts', ScheduleConflict::class);
-    }
-
-    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

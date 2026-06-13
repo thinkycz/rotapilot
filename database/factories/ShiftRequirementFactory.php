@@ -28,7 +28,6 @@ class ShiftRequirementFactory extends Factory
             'date' => Carbon::now()->addDays(7)->format('Y-m-d'),
             'start_time' => '08:00:00',
             'end_time' => '16:00:00',
-            'required_employee_count' => 1,
             'role_label' => 'Barista',
             'note' => $this->faker->sentence(),
             'source' => 'manual',

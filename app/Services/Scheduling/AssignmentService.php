@@ -6,7 +6,6 @@ namespace App\Services\Scheduling;
 
 use App\Enums\ShiftAssignmentStatusEnum;
 use App\Models\EmployeeProfile;
-use App\Models\Schedule;
 use App\Models\ShiftAssignment;
 use App\Models\ShiftRequirement;
 use App\Models\User;
@@ -22,19 +21,12 @@ class AssignmentService
     private readonly ScheduleGeneratorService $generator;
 
     /**
-     * Conflict detection service.
-     */
-    private readonly ConflictDetectionService $conflicts;
-
-    /**
      * Constructor.
      */
     public function __construct(
         ScheduleGeneratorService $generator,
-        ConflictDetectionService $conflicts,
     ) {
         $this->generator = $generator;
-        $this->conflicts = $conflicts;
     }
 
     /**
@@ -53,17 +45,27 @@ class AssignmentService
                 continue;
             }
 
-            $existing = $this->findAssignment($requirement->getKey(), $employee->getKey());
+            $existing = $this->findAssignment(
+                $requirement->getKey(),
+                $employee->getKey(),
+                $requirement->getStartTime(),
+                $requirement->getEndTime(),
+            );
             if ($existing instanceof ShiftAssignment) {
                 $created[] = $existing;
 
                 continue;
             }
 
-            $created[] = $this->createDraftAssignment($requirement, $employee, $actor, 'manual');
+            $created[] = $this->createDraftAssignment(
+                $requirement,
+                $employee,
+                $actor,
+                'manual',
+                $requirement->getStartTime(),
+                $requirement->getEndTime(),
+            );
         }
-
-        $this->recomputeForRequirement($requirement);
 
         return $created;
     }
@@ -71,13 +73,14 @@ class AssignmentService
     /**
      * Manually assign a single employee.
      */
-    public function assign(ShiftRequirement $requirement, EmployeeProfile $employee, User $actor): ShiftAssignment
-    {
-        $assignment = $this->assignWithoutRecompute($requirement, $employee, $actor);
-
-        $this->recomputeForRequirement($requirement);
-
-        return $assignment;
+    public function assign(
+        ShiftRequirement $requirement,
+        EmployeeProfile $employee,
+        User $actor,
+        string|null $startTime = null,
+        string|null $endTime = null,
+    ): ShiftAssignment {
+        return $this->assignWithoutRecompute($requirement, $employee, $actor, $startTime, $endTime);
     }
 
     /**
@@ -87,13 +90,18 @@ class AssignmentService
         ShiftRequirement $requirement,
         EmployeeProfile $employee,
         User $actor,
+        string|null $startTime = null,
+        string|null $endTime = null,
     ): ShiftAssignment {
-        $existing = $this->findAssignment($requirement->getKey(), $employee->getKey());
+        $startTime ??= $requirement->getStartTime();
+        $endTime ??= $requirement->getEndTime();
+
+        $existing = $this->findAssignment($requirement->getKey(), $employee->getKey(), $startTime, $endTime);
         if ($existing instanceof ShiftAssignment) {
             return $existing;
         }
 
-        return $this->createDraftAssignment($requirement, $employee, $actor, 'manual');
+        return $this->createDraftAssignment($requirement, $employee, $actor, 'manual', $startTime, $endTime);
     }
 
     /**
@@ -103,9 +111,6 @@ class AssignmentService
     {
         $requirement = $assignment->shiftRequirement;
         $assignment->delete();
-        if ($requirement instanceof ShiftRequirement) {
-            $this->recomputeForRequirement($requirement);
-        }
     }
 
     /**
@@ -116,28 +121,21 @@ class AssignmentService
         EmployeeProfile $employee,
         User $actor,
         string $source,
+        string $startTime,
+        string $endTime,
     ): ShiftAssignment {
         $assignment = new ShiftAssignment();
         $assignment->forceFill([
             'shift_requirement_id' => $requirement->getKey(),
             'employee_profile_id' => $employee->getKey(),
+            'start_time' => $startTime,
+            'end_time' => $endTime,
             'status' => ShiftAssignmentStatusEnum::Draft->value,
             'source' => $source,
             'assigned_by' => $actor->getKey(),
         ])->save();
 
         return $assignment;
-    }
-
-    /**
-     * Load the parent schedule and trigger a conflict recompute.
-     */
-    private function recomputeForRequirement(ShiftRequirement $requirement): void
-    {
-        $schedule = Schedule::query()->find($requirement->getScheduleId());
-        if ($schedule instanceof Schedule) {
-            $this->conflicts->recompute($schedule);
-        }
     }
 
     /**
@@ -151,12 +149,18 @@ class AssignmentService
     /**
      * Find an existing assignment for a requirement and employee.
      */
-    private function findAssignment(int $requirementId, int $employeeId): ShiftAssignment|null
-    {
+    private function findAssignment(
+        int $requirementId,
+        int $employeeId,
+        string $startTime,
+        string $endTime,
+    ): ShiftAssignment|null {
         $rows = ShiftAssignment::query()
             ->getQuery()
             ->where('shift_requirement_id', $requirementId)
             ->where('employee_profile_id', $employeeId)
+            ->where('start_time', $startTime)
+            ->where('end_time', $endTime)
             ->get();
 
         $row = $rows->first();

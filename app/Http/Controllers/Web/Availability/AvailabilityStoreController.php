@@ -41,6 +41,9 @@ class AvailabilityStoreController
         ]);
 
         $actor = User::mustAuth();
+        if (!$actor->isStoreManager()) {
+            \abort(403);
+        }
 
         $employeeId = $validated->assertInt('employee_profile_id');
         $employee = EmployeeProfile::query()->find($employeeId);
@@ -69,13 +72,13 @@ class AvailabilityStoreController
 
         if (!$isClosed) {
             if ($startStr === null || $endStr === null) {
-                $request->session()->flash('error', \__('Available/preferred days need start and end times.'));
+                $request->session()->flash('availability_modal_error', \__('Available/backup days need start and end times.'));
 
                 return \back();
             }
 
             if ($endStr <= $startStr) {
-                $request->session()->flash('error', \__('End time must be after start time.'));
+                $request->session()->flash('availability_modal_error', \__('End time must be after start time.'));
 
                 return \back();
             }
@@ -93,7 +96,7 @@ class AvailabilityStoreController
             'created_by' => $actor->getKey(),
         ]);
 
-        $request->session()->flash('success', \__('Availability added.'));
+        $request->session()->flash('availability_modal_success', \__('Availability added.'));
 
         return \back();
     }

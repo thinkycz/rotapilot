@@ -79,6 +79,22 @@ class ShiftAssignment extends BaseModel
     }
 
     /**
+     * Start time getter.
+     */
+    public function getStartTime(): string
+    {
+        return $this->assertString('start_time');
+    }
+
+    /**
+     * End time getter.
+     */
+    public function getEndTime(): string
+    {
+        return $this->assertString('end_time');
+    }
+
+    /**
      * Assigned by getter.
      */
     public function getAssignedBy(): int|null

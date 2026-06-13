@@ -86,7 +86,6 @@ return Application::configure(basePath: \dirname(__DIR__))
                 \str_starts_with($path, 'availability') => 'availability/Index',
                 \str_starts_with($path, 'shift-requirements'), \str_starts_with($path, 'shift-assignments') => 'schedules/Show',
                 \str_starts_with($path, 'schedules') => 'schedules/Edit',
-                \str_starts_with($path, 'conflicts') => 'conflicts/Index',
                 default => 'auth/Login',
             };
 

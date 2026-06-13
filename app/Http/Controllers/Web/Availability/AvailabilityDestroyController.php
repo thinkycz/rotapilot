@@ -22,6 +22,10 @@ class AvailabilityDestroyController
     public function __invoke(Request $request): SymfonyResponse
     {
         $actor = User::mustAuth();
+        if (!$actor->isStoreManager()) {
+            \abort(403);
+        }
+
         $id = (int) $request->query('id', '0');
         $row = EmployeeAvailability::query()->find($id);
         if (!$row instanceof EmployeeAvailability) {
@@ -38,7 +42,7 @@ class AvailabilityDestroyController
 
         $row->delete();
 
-        $request->session()->flash('success', \__('Availability removed.'));
+        $request->session()->flash('availability_modal_success', \__('Availability removed.'));
 
         return \back();
     }

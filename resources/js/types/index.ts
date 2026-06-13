@@ -18,6 +18,13 @@ export interface AppMeta {
 export interface FlashProps {
     success: string | null;
     error: string | null;
+    shift_modal_success?: string | null;
+    shift_modal_error?: string | null;
+    create_shift_modal_success?: string | null;
+    create_shift_modal_error?: string | null;
+    availability_modal_success?: string | null;
+    availability_modal_error?: string | null;
+    employee_login_generated_password?: string | null;
 }
 
 export interface SharedProps {

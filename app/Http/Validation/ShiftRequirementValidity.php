@@ -42,7 +42,6 @@ class ShiftRequirementValidity
             'date' => [$this->date()],
             'start_time' => [$this->startTime()],
             'end_time' => [$this->endTime()],
-            'required_employee_count' => [$this->requiredEmployeeCount()],
             'role_label' => [$this->roleLabel()],
             'note' => [$this->note()],
             'source' => [$this->source()],
@@ -60,7 +59,6 @@ class ShiftRequirementValidity
             'date' => [$this->date()],
             'start_time' => [$this->startTime()],
             'end_time' => [$this->endTime()],
-            'required_employee_count' => [$this->requiredEmployeeCount()],
             'role_label' => [$this->roleLabel()],
             'note' => [$this->note()],
             'source' => [$this->source()],
@@ -89,14 +87,6 @@ class ShiftRequirementValidity
     public function endTime(): Validity
     {
         return $this->baseValidity->make()->string(null)->dateFormat('H:i');
-    }
-
-    /**
-     * Required count validation.
-     */
-    public function requiredEmployeeCount(): Validity
-    {
-        return $this->baseValidity->make()->integer(50, 1);
     }
 
     /**

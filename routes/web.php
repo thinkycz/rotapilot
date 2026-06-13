@@ -14,18 +14,20 @@ use App\Http\Controllers\Web\Availability\AvailabilityIndexController;
 use App\Http\Controllers\Web\Availability\AvailabilityStoreController;
 use App\Http\Controllers\Web\Availability\AvailabilityUpdateController;
 use App\Http\Controllers\Web\Calendar\MyCalendarController;
-use App\Http\Controllers\Web\Conflicts\ConflictIndexController;
-use App\Http\Controllers\Web\Conflicts\ConflictResolveController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\Employees\EmployeeCreateController;
 use App\Http\Controllers\Web\Employees\EmployeeDestroyController;
 use App\Http\Controllers\Web\Employees\EmployeeEditController;
 use App\Http\Controllers\Web\Employees\EmployeeIndexController;
+use App\Http\Controllers\Web\Employees\EmployeeLoginController;
 use App\Http\Controllers\Web\Employees\EmployeeShowController;
 use App\Http\Controllers\Web\Employees\EmployeeStoreAssignController;
 use App\Http\Controllers\Web\Employees\EmployeeStoreController;
 use App\Http\Controllers\Web\Employees\EmployeeStoreUnassignController;
 use App\Http\Controllers\Web\Employees\EmployeeUpdateController;
+use App\Http\Controllers\Web\EmployeeSchedules\PublicEmployeeScheduleController;
+use App\Http\Controllers\Web\MyAvailabilities\MyAvailabilityIndexController;
+use App\Http\Controllers\Web\MyAvailabilities\MyAvailabilityWriteController;
 use App\Http\Controllers\Web\Schedules\ScheduleArchiveController;
 use App\Http\Controllers\Web\Schedules\ScheduleCreateController;
 use App\Http\Controllers\Web\Schedules\ScheduleDestroyController;
@@ -78,6 +80,7 @@ Resolver::resolveRouteRegistrar()
     });
 
 Resolver::resolveRouteRegistrar()->get('email/verify', EmailVerificationConfirmController::class);
+Resolver::resolveRouteRegistrar()->get('public/employee-schedules', PublicEmployeeScheduleController::class);
 
 Resolver::resolveRouteRegistrar()
     ->middleware(EnsureInertiaUserIsAuthenticated::class)
@@ -109,6 +112,11 @@ Resolver::resolveRouteRegistrar()
         $router->get('employees/edit', EmployeeEditController::class);
         $router->post('employees/update', EmployeeUpdateController::class);
         $router->post('employees/destroy', EmployeeDestroyController::class);
+        $router->post('employees/login/store', [EmployeeLoginController::class, 'store']);
+        $router->post('employees/login/update', [EmployeeLoginController::class, 'update']);
+        $router->post('employees/login/password', [EmployeeLoginController::class, 'password']);
+        $router->post('employees/login/generate-password', [EmployeeLoginController::class, 'generatePassword']);
+        $router->post('employees/login/destroy', [EmployeeLoginController::class, 'destroy']);
         $router->post('employees/stores/store', EmployeeStoreAssignController::class);
         $router->post('employees/stores/destroy', EmployeeStoreUnassignController::class);
 
@@ -137,8 +145,8 @@ Resolver::resolveRouteRegistrar()
 
         // My calendar (employee self-service)
         $router->get('my-calendar', MyCalendarController::class);
-
-        // Conflicts
-        $router->get('conflicts', ConflictIndexController::class);
-        $router->post('conflicts/resolve', ConflictResolveController::class);
+        $router->get('my-availabilities', MyAvailabilityIndexController::class);
+        $router->post('my-availabilities/store', [MyAvailabilityWriteController::class, 'store']);
+        $router->post('my-availabilities/update', [MyAvailabilityWriteController::class, 'update']);
+        $router->post('my-availabilities/destroy', [MyAvailabilityWriteController::class, 'destroy']);
     });
