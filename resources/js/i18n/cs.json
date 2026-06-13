@@ -21,13 +21,14 @@
             "subtitle": "Pro pokračování zadejte své přihlašovací údaje.",
             "submit": "Přihlásit se",
             "forgot_link": "Zapomněli jste heslo?",
-            "back_link": "Zpět na přihlášení"
+            "back_link": "Zpět na přihlášení",
+            "register_prompt": "Nemáte ještě účet?"
         },
         "register": {
             "title": "Vytvořit účet správce provozovny",
             "subtitle": "Zaregistrujte se a spravujte své provozovny, zaměstnance a směny. Zaměstnance zve jejich správce.",
             "submit": "Registrovat",
-            "login_link": "Přihlásit se"
+            "login_prompt": "Máte již účet?"
         },
         "forgot": {
             "title": "Zapomenuté heslo",

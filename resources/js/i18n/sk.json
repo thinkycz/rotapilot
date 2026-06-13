@@ -21,13 +21,14 @@
             "subtitle": "Pre pokračovanie zadajte svoje prihlasovacie údaje.",
             "submit": "Prihlásiť sa",
             "forgot_link": "Zabudli ste heslo?",
-            "back_link": "Späť na prihlásenie"
+            "back_link": "Späť na prihlásenie",
+            "register_prompt": "Nemáte ešte účet?"
         },
         "register": {
             "title": "Vytvoriť účet správcu prevádzky",
             "subtitle": "Zaregistrujte sa a spravujte svoje prevádzky, zamestnancov a zmeny. Zamestnancov pozýva ich správca.",
             "submit": "Registrovať",
-            "login_link": "Prihlásiť sa"
+            "login_prompt": "Máte už účet?"
         },
         "forgot": {
             "title": "Zabudnuté heslo",
