@@ -27,6 +27,28 @@ export interface FlashProps {
     employee_login_generated_password?: string | null;
 }
 
+export interface AgentConversation {
+    id: string;
+    title: string;
+    updated_at: string;
+}
+
+export interface AgentProposalAction {
+    type: string;
+    label: string;
+    payload: Record<string, unknown>;
+}
+
+export interface AgentProposal {
+    id: number;
+    conversation_id: string;
+    status: 'pending' | 'applied' | 'rejected' | 'failed';
+    summary: string;
+    actions: AgentProposalAction[];
+    result: Record<string, unknown> | null;
+    created_at: string | null;
+}
+
 export interface SharedProps {
     [key: string]: unknown;
 
@@ -35,5 +57,6 @@ export interface SharedProps {
         user: AuthUser | null;
     };
     flash: FlashProps;
+    conversations: AgentConversation[];
     errors: Record<string, string>;
 }

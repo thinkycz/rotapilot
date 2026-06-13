@@ -116,6 +116,14 @@ class EmployeeAvailability extends BaseModel
     }
 
     /**
+     * Employee profile getter.
+     */
+    public function getEmployeeProfile(): EmployeeProfile
+    {
+        return $this->assertRelationship('employeeProfile', EmployeeProfile::class);
+    }
+
+    /**
      * Store relationship.
      *
      * @return BelongsTo<Store, $this>

@@ -149,7 +149,7 @@ function publicScheduleRow(Store $store, string $name, string $periodStart, stri
     $response->assertJsonPath('props.schedules.1.id', $future->getKey());
 });
 
-\test('employee detail includes the public schedule url for manager preview', function (): void {
+\test('employee detail includes the public schedule url for manager access', function (): void {
     [$manager, $store] = \publicScheduleManagerAndStore();
     $employee = \publicScheduleEmployee($store);
 

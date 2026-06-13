@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Middleware;
+use Laravel\Ai\Models\Conversation;
 use Thinkycz\LaravelCore\Support\Config;
 use Thinkycz\LaravelCore\Support\Resolver;
 use Thinkycz\LaravelCore\Support\Typer;
@@ -55,6 +56,7 @@ class HandleInertiaRequests extends Middleware
                 'availability_modal_error' => static fn(): string|null => self::flashMessage($request, 'availability_modal_error'),
                 'employee_login_generated_password' => static fn(): string|null => self::flashMessage($request, 'employee_login_generated_password'),
             ],
+            'conversations' => fn(): array => $this->agentConversations(),
         ];
     }
 
@@ -104,5 +106,37 @@ class HandleInertiaRequests extends Middleware
             'role' => $user->getRole()->value,
             'is_active' => $user->getIsActive(),
         ];
+    }
+
+    /**
+     * Get the latest 20 conversations for the authenticated user, if they are a manager.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function agentConversations(): array
+    {
+        $user = Resolver::resolveAuthManager()->guard('users')->user();
+
+        if ($user instanceof User === false || !$user->isStoreManager()) {
+            return [];
+        }
+
+        return Conversation::query()
+            ->where('user_id', $user->id)
+            ->orderBy('updated_at', 'desc')
+            ->limit(20)
+            ->get()
+            ->map(static function (Conversation $c): array {
+                $id = Typer::assertString($c->getAttribute('id'));
+                $title = Typer::assertString($c->getAttribute('title'));
+                $updatedAt = Typer::assertNullableCarbon($c->getAttribute('updated_at'));
+
+                return [
+                    'id' => $id,
+                    'title' => $title,
+                    'updated_at' => $updatedAt !== null ? $updatedAt->toIso8601String() : null,
+                ];
+            })
+            ->all();
     }
 }

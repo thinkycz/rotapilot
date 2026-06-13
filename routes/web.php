@@ -2,6 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Web\Agent\AgentConversationDestroyController;
+use App\Http\Controllers\Web\Agent\AgentIndexController;
+use App\Http\Controllers\Web\Agent\AgentProposalApplyController;
+use App\Http\Controllers\Web\Agent\AgentProposalRejectController;
+use App\Http\Controllers\Web\Agent\AgentStreamController;
 use App\Http\Controllers\Web\Auth\EmailVerificationConfirmController;
 use App\Http\Controllers\Web\Auth\ForgotPasswordController;
 use App\Http\Controllers\Web\Auth\LoginController;
@@ -142,6 +147,13 @@ Resolver::resolveRouteRegistrar()
         $router->post('shift-requirements/auto-fill', ShiftAutoFillController::class);
         $router->post('shift-assignments/store', ShiftAssignmentStoreController::class);
         $router->post('shift-assignments/destroy', ShiftAssignmentDestroyController::class);
+
+        // AI Agent
+        $router->get('agent', AgentIndexController::class);
+        $router->post('agent/stream', AgentStreamController::class);
+        $router->post('agent/conversations/destroy', AgentConversationDestroyController::class);
+        $router->post('agent/proposals/apply', AgentProposalApplyController::class);
+        $router->post('agent/proposals/reject', AgentProposalRejectController::class);
 
         // My calendar (employee self-service)
         $router->get('my-calendar', MyCalendarController::class);

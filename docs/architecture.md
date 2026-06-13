@@ -2,7 +2,7 @@
 
 ## High-level
 
-This project is a Laravel 13 + Inertia 3 + Vue 3 multi-tenant shift planner. Each authenticated `User` (admin / store_manager / employee) operates on a per-user dataset of stores, employee profiles, schedules, shift requirements, and shift assignments. Managers create stores, employees, availability windows, schedules, and shift requirements. Employees log in to view their published shifts. The AI planner turns natural-language prompts into editable shift requirements.
+This project is a Laravel 13 + Inertia 3 + Vue 3 multi-tenant shift planner. Each authenticated `User` (`store_manager` / `employee`) operates on a per-user dataset of stores, employee profiles, schedules, shift requirements, and shift assignments. Managers create stores, employees, availability windows, schedules, and shift requirements. Employees log in to view their published shifts. The `/agent` assistant helps managers query live scheduling data through scoped Laravel AI tools.
 
 The backend ships with two HTTP surfaces and one framework helper package; the frontend is a Vite-built Vue 3 app that consumes Inertia pages from the backend.
 

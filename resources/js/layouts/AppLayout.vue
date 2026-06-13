@@ -9,6 +9,9 @@ import {
     UserRound,
     Settings as SettingsIcon,
     LogOut,
+    Bot,
+    Trash2,
+    MessageSquare,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -17,13 +20,16 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
 import FlashAlerts from '@/components/ui/FlashAlerts.vue';
 import { useBoundLocale } from '@/composables/useBoundLocale';
 import { useSharedProps } from '@/composables/useSharedProps';
+import { useConfirmDialog } from '@/composables/useConfirmDialog';
 
 defineProps<{
     title: string;
+    fullBleed?: boolean;
 }>();
 
-const { auth } = useSharedProps();
+const { auth, conversations } = useSharedProps();
 const { t } = useI18n();
+const { confirm } = useConfirmDialog();
 
 useBoundLocale();
 
@@ -49,6 +55,7 @@ const navItems = computed(() => {
         { href: '/employees/index', key: 'employees', icon: UserRound },
         { href: '/schedules/index', key: 'schedules', icon: CalendarRange },
         { href: '/availability', key: 'availability', icon: CalendarCheck2 },
+        { href: '/agent', key: 'agent', icon: Bot },
     ];
 });
 
@@ -61,6 +68,21 @@ const userInitials = computed(() => {
     if (!email) return 'DU';
     return email.substring(0, 2).toUpperCase();
 });
+
+async function deleteConversation(id: string): Promise<void> {
+    const ok = await confirm(t('agent.confirm_delete'), {
+        title: t('agent.delete_title'),
+        confirmLabel: t('common.delete'),
+        cancelLabel: t('common.cancel'),
+        variant: 'danger',
+    });
+
+    if (ok) {
+        router.post('/agent/conversations/destroy', {
+            conversation_id: id,
+        });
+    }
+}
 
 function logout(): void {
     router.post('/logout');
@@ -85,7 +107,7 @@ function logout(): void {
             </div>
 
             <!-- Nav Links -->
-            <nav class="flex-1 space-y-1.5">
+            <nav class="space-y-1.5">
                 <Link
                     v-for="item in navItems"
                     :key="item.key"
@@ -101,6 +123,61 @@ function logout(): void {
                     {{ t(`nav.${item.key}`) }}
                 </Link>
             </nav>
+
+            <!-- Conversations Section (Manager Only) -->
+            <div
+                v-if="!isEmployee"
+                class="mt-6 flex flex-1 flex-col min-h-0 border-t border-outline-glass pt-4"
+            >
+                <div class="mb-2 px-2">
+                    <span
+                        class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant opacity-75"
+                    >
+                        {{ t('nav.agent') }}
+                    </span>
+                </div>
+
+                <div
+                    class="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar"
+                >
+                    <div
+                        v-for="chat in conversations"
+                        :key="chat.id"
+                        class="group relative flex items-center justify-between rounded-xl px-3 py-2 text-xs font-medium transition-all hover:bg-surface-container-low"
+                        :class="[
+                            activeUrl.includes(`conversation=${chat.id}`)
+                                ? 'bg-surface-container-low font-bold text-primary border-r-2 border-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]'
+                                : 'text-on-surface-variant hover:text-on-surface',
+                        ]"
+                    >
+                        <Link
+                            :href="`/agent?conversation=${chat.id}`"
+                            class="flex flex-1 items-center gap-2 truncate pr-6"
+                        >
+                            <MessageSquare :size="12" class="shrink-0" />
+                            <span class="truncate">{{ chat.title }}</span>
+                        </Link>
+
+                        <button
+                            @click.prevent="deleteConversation(chat.id)"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded-md p-1 text-on-surface-variant/50 hover:bg-rose-50/50 hover:text-error-red opacity-0 group-hover:opacity-100 transition-all duration-200"
+                            :title="t('agent.delete_tooltip')"
+                            :aria-label="t('agent.delete_tooltip')"
+                        >
+                            <Trash2 :size="12" />
+                        </button>
+                    </div>
+                    <div
+                        v-if="conversations.length === 0"
+                        class="px-3 py-2 text-[11px] text-on-surface-variant/60 italic"
+                    >
+                        {{ t('agent.no_conversations') }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Spacer if employee (to push footer down) -->
+            <div v-else class="flex-1"></div>
 
             <!-- Footer: User Identity + Quick Actions -->
             <div
@@ -167,7 +244,7 @@ function logout(): void {
 
             <div class="flex items-center gap-1.5">
                 <Link
-                    v-for="item in navItems.slice(0, 4)"
+                    v-for="item in navItems"
                     :key="item.key"
                     :href="item.href"
                     :class="[
@@ -204,21 +281,39 @@ function logout(): void {
         </header>
 
         <!-- Main Workspace -->
-        <main class="flex min-h-screen flex-1 flex-col overflow-x-hidden">
-            <div class="relative flex flex-1 flex-col p-4 md:p-8">
-                <!-- Ambient Decorator -->
-                <div
-                    class="pointer-events-none absolute top-1/2 left-1/2 h-[70vw] w-[70vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-[100px]"
-                ></div>
+        <main
+            :class="[
+                'flex flex-1 flex-col overflow-x-hidden',
+                fullBleed ? 'h-screen min-h-0' : 'min-h-screen',
+            ]"
+        >
+            <!-- Full-bleed mode: no padding, no max-width (e.g. AI agent page) -->
+            <template v-if="fullBleed">
+                <FlashAlerts class="px-4 pt-4" />
+                <div class="flex flex-1 flex-col min-h-0">
+                    <slot />
+                </div>
+            </template>
 
-                <div class="z-10 flex flex-1 flex-col max-w-6xl w-full mx-auto">
-                    <FlashAlerts />
+            <!-- Default padded layout -->
+            <template v-else>
+                <div class="relative flex flex-1 flex-col p-4 md:p-8">
+                    <!-- Ambient Decorator -->
+                    <div
+                        class="pointer-events-none absolute top-1/2 left-1/2 h-[70vw] w-[70vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-[100px]"
+                    ></div>
 
-                    <div class="flex-1">
-                        <slot />
+                    <div
+                        class="z-10 flex flex-1 flex-col max-w-6xl w-full mx-auto"
+                    >
+                        <FlashAlerts />
+
+                        <div class="flex-1">
+                            <slot />
+                        </div>
                     </div>
                 </div>
-            </div>
+            </template>
         </main>
         <ConfirmDialog />
     </div>

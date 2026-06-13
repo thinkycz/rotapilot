@@ -29,7 +29,7 @@
 
 ## Domain overview
 
-RotaPilot is an AI-powered shift planner for small multi-store businesses. Store managers create stores, employees, availability, and shift requirements. Employees log in to view their published shifts. The AI planner turns natural-language prompts into editable shift requirements.
+RotaPilot is an AI-assisted shift planner for small multi-store businesses. Store managers create stores, employees, availability, schedules, shift requirements, and assignments. Employees log in to view their published shifts. The `/agent` assistant answers manager questions about stores, employees, shifts, and availability by using scoped Laravel AI tools over live application data.
 
 Tables: `users`, `stores`, `store_business_hours`, `store_manager_store`, `employee_profiles`, `employee_store`, `employee_availabilities`, `schedules`, `shift_requirements`, `shift_assignments`, `schedule_conflicts`, plus Laravel AI SDK's `agent_conversations` and `agent_conversation_messages`.
 
@@ -48,13 +48,12 @@ Tables: `users`, `stores`, `store_business_hours`, `store_manager_store`, `emplo
     - `/dashboard` (role-aware)
     - `/verify-email`
     - `/settings/profile`, `/settings/password`
-    - `/stores/*` (admin/manager)
-    - `/employees/*` (admin/manager)
-    - `/availability` (admin/manager)
-    - `/schedules/*` (admin/manager)
-    - `/shift-requirements/*`, `/shift-assignments/*` (admin/manager)
-    - `/ai-planner` (admin/manager)
-    - `/conflicts` (admin/manager)
+    - `/stores/*` (manager)
+    - `/employees/*` (manager)
+    - `/availability` (manager)
+    - `/schedules/*` (manager)
+    - `/shift-requirements/*`, `/shift-assignments/*` (manager)
+    - `/agent` (manager)
     - `/my-calendar` (employee)
 - Minimal API compatibility (unchanged from starter):
     - `/api/v1/auth/*`
@@ -69,8 +68,8 @@ Tables: `users`, `stores`, `store_business_hours`, `store_manager_store`, `emplo
 - Login/register issue an HTTP-only bearer cookie through `Thinkycz\LaravelCore\Guards\DatabaseTokenGuard`.
 - Inertia pages receive the current user through `HandleInertiaRequests` shared props.
 - Web form submissions use Laravel redirects, validation errors, and flash messages.
-- `User` model has the `role` column (`admin`/`store_manager`/`employee`).
-- `User` model uses `Laravel\Ai\Concerns\HasConversations` for AI planner chat storage.
+- `User` model has the `role` column (`store_manager`/`employee`).
+- `User` model uses `Laravel\Ai\Concerns\HasConversations` for AI assistant chat storage.
 
 ## Cookies
 
@@ -101,10 +100,12 @@ Copy `.env.example` to `.env` and set:
 - `DB_CONNECTION` (sqlite for dev), `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`
 - `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME`
 - `TRUSTED_PROXIES`
-- AI provider keys (one or more of): `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `MISTRAL_API_KEY`, `DEEPSEEK_API_KEY`, `XAI_API_KEY`, `OPENROUTER_API_KEY`, `OLLAMA_API_KEY`
-- Optional: `AI_DEFAULT_PROVIDER` (`openai` / `anthropic` / `gemini` / etc.), `AI_DEFAULT_MODEL`
+- AI provider key for the assistant: `OPENROUTER_API_KEY`
+- Optional assistant model: `OPENROUTER_MODEL` (defaults to `anthropic/claude-sonnet-4.6`)
 
-When no provider key is set, `AppServiceProvider` binds `SchedulePlannerFakeAgent` so the planner page works end-to-end with deterministic sample output.
+The assistant defaults to the OpenRouter provider. In `local` and `testing`, when `OPENROUTER_API_KEY` is empty, `AppServiceProvider` fakes `SchedulingAgent` through Laravel AI's fake gateway so chat streaming and conversation persistence remain testable without outbound HTTP. In production-like environments, configure `OPENROUTER_API_KEY`; otherwise the provider call will fail and the chat UI shows a localized connection error.
+
+Assistant write requests use confirmed proposals. The model may create a pending proposal for store, availability, shift, assignment, unassignment, safe delete, or auto-fill changes, but production data changes only after the manager clicks Apply in `/agent`. Proposal application is transactional and reports schedule conflicts after successful writes.
 
 ## Cron jobs
 
@@ -112,7 +113,7 @@ When no provider key is set, `AppServiceProvider` binds `SchedulePlannerFakeAgen
 
 ## Queue workers
 
-- `php artisan queue:work --queue=default` for the `ApplyAiPreviewAction` job and any future async work.
+- `php artisan queue:work --queue=default` for future async work. The current `/agent` assistant streams responses synchronously.
 
 ## Deferred
 

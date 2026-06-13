@@ -8,6 +8,7 @@ use App\Enums\ShiftAssignmentStatusEnum;
 use App\Enums\ShiftSourceEnum;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Thinkycz\LaravelCore\Models\BaseModel;
@@ -156,6 +157,16 @@ class ShiftRequirement extends BaseModel
     public function assignments(): HasMany
     {
         return $this->hasMany(ShiftAssignment::class);
+    }
+
+    /**
+     * Assignments getter.
+     *
+     * @return Collection<int|string, ShiftAssignment>
+     */
+    public function getAssignments(): Collection
+    {
+        return $this->assertRelationshipCollection('assignments', ShiftAssignment::class);
     }
 
     /**

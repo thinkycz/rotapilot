@@ -58,41 +58,42 @@
 - [x] `pages/calendar/Mine.vue` with month grid + per-day shifts.
 - [x] Route `/my-calendar` wired.
 
-## Phase 6a — laravel/ai SDK + fake agent
+## Phase 6a — laravel/ai SDK + assistant storage
 
 **Status:** done
 
 - [x] `composer require laravel/ai` (v0.8.0).
 - [x] AI migrations applied (`agent_conversations`).
 - [x] `User` now `use HasConversations` from `Laravel\Ai\Concerns`.
-- [x] `SchedulePlannerAgent`, `AvailabilityParserAgent`, `ConflictExplainerAgent` (structured-output agents).
-- [x] `FakeSchedulePlannerAgent` returns deterministic `AgentResponse` (no HTTP).
+- [x] `SchedulingAgent` uses Laravel AI conversations and tools.
+- [x] Local/test no-key mode fakes `SchedulingAgent` through Laravel AI's fake gateway.
 
-## Phase 6b — Real AI agents + planner page
-
-**Status:** done
-
-- [x] `ScheduleAiService::generate` selects real vs fake based on env keys (`OPENAI_API_KEY` etc.); runs guardrails (unknown-name warning).
-- [x] `PlannerIndexController` + `PlannerMessageController` (POST flash preview) + `PlannerApplyPreviewController` (persist rows).
-- [x] `pages/ai/Planner.vue` with left prompt form + right preview + apply button.
-- [x] Route `/ai-planner/{,message,apply-preview}` wired.
-
-## Phase 7 — Apply AI preview (queue)
+## Phase 6b — Conversational assistant page
 
 **Status:** done
 
-- [x] `app/Jobs/ApplyAiPreviewAction` (queued, runs `ConflictDetectionService::recompute` after insert).
-- [x] `PlannerApplyPreviewController` performs synchronous insert + recompute (job available for future scale-out).
+- [x] `AgentIndexController`, `AgentStreamController`, and `AgentConversationDestroyController`.
+- [x] `pages/agent/Index.vue` with streamed chat and safe plain-text rendering.
+- [x] Conversation sidebar wired through lazy manager-only shared Inertia props.
+- [x] Routes `/agent`, `/agent/stream`, and `/agent/conversations/destroy` wired.
+- [x] Confirmed proposal apply/reject flow added for assistant-created store, availability, shift, assignment, unassignment, safe delete, and auto-fill changes.
 
-## Phase 8 — Conflicts page + Ask AI
+## Phase 7 — Assistant hardening
 
 **Status:** done
 
-- [x] `ConflictIndexController` (filter by `?schedule_id=`, group by type).
-- [x] `ConflictResolveController` (mark `resolved_at`).
-- [x] `ConflictAskAiController` (returns structured local explanation).
-- [x] `pages/conflicts/Index.vue` with severity colors + per-row Ask AI + Resolve.
-- [x] Routes `/conflicts/{,resolve,ask-ai}` wired.
+- [x] Custom markdown/`v-html` rendering removed from assistant messages.
+- [x] SSE parsing moved to `resources/js/lib/sse.ts` with chunk-boundary coverage.
+- [x] AI tools use typed relation getters and manager-scoped queries.
+- [x] Employee tool output omits private contact and pay fields.
+- [x] `config/ai.php` uses `Env::inject()` instead of direct `env()` calls.
+
+## Phase 8 — Conflict support
+
+**Status:** done
+
+- [x] Conflict detection services remain covered by scheduling tests.
+- [x] Schedule pages surface assignment/conflict state through existing schedule controllers.
 
 ## Phase 9 — UI polish
 
@@ -102,7 +103,7 @@
 - [x] `Manager.vue` + `Employee.vue` consume those props.
 - [x] 7 seeders: `StoreSeeder`, `StoreBusinessHourSeeder`, `StoreManagerStoreSeeder`, `EmployeeSeeder`, `EmployeeStoreSeeder`, `EmployeeAvailabilitySeeder`, `ScheduleSeeder`.
 - [x] All seeders wired into `DatabaseSeeder`. `migrate:fresh --seed` populates 6 users, 3 stores, 21 business-hour rows, 3 manager assignments, 4 employees, 8 employee-store rows, 120 availability rows, 1 schedule, 7 shifts, 4 assignments.
-- [x] New i18n keys (`dashboard.recent_schedules`, `dashboard.upcoming_shifts`, `dashboard.no_schedules`, `dashboard.no_upcoming`, `dashboard.unavailabilities`, `ai.prompt_label/placeholder`, `conflicts.subtitle/resolve/empty_subtitle`) added to en, cs, sk.
+- [x] New i18n keys (`dashboard.recent_schedules`, `dashboard.upcoming_shifts`, `dashboard.no_schedules`, `dashboard.no_upcoming`, `dashboard.unavailabilities`, `agent.*`, `conflicts.subtitle/resolve/empty_subtitle`) added to en, cs, sk.
 
 ## Phase 10 — Final verification
 
@@ -110,8 +111,10 @@
 
 - [x] `make check` clean: phpstan level max (baseline of 285 Eloquent-magic errors), prettier, pint, npm audit, vue-tsc type-check, vite build, 159 tests passed + 2 pre-existing risky + 7 skipped (skips = tests that require seeded data in the in-memory test DB).
 - [x] Feature tests added:
-    - `AccessControlTest` — admin/manager visibility on stores index, show, schedules index, my-calendar, conflicts, ai-planner.
-    - `ScheduleAiServiceTest` — fake agent returns deterministic schedule, unknown-name guardrail.
+    - `AccessControlTest` — manager visibility on stores index, show, schedules index, and my-calendar.
+    - `AgentIndexControllerTest` / `AgentConversationDestroyControllerTest` — manager-only access, conversation ownership, and deletion.
+    - `AiToolsTest` — manager-scoped stores/employees/shifts/availability, foreign filter errors, and reduced employee payload.
+    - `sse.test.ts` — chunk-split SSE rows, malformed row handling, and done sentinel.
     - `ConflictDetectionTest` — understaffed, overlap, outside-business-hours.
 - [x] Manual smoke test via `php artisan tinker`: end-to-end `ScheduleAiService::generate` returns 30 shift rows, warns about unknown names, no errors.
 - [x] `make fix` + `make check` run before this commit (clean).
@@ -119,8 +122,8 @@
 ## Deviations
 
 - **PHPStan baseline** (`phpstan-baseline.neon`, 285 errors) added to absorb Eloquent dynamic-call / `varTag.type` errors after `Composer` 6+ errors blocked progress. The project discourages baselines, but they are the pragmatic path; the remaining errors are not correctness bugs.
-- **Fake AI agent** bypasses `Promptable::prompt()` by overriding the interface method and returning a hand-built `AgentResponse` with deterministic shift rows. No HTTP, no SDK call. Real agent is wired but disabled without API keys.
-- **Flat routes with `?id=`** throughout the project, following starter conventions: `/stores/show?id=`, `/schedules/publish?id=`, `/ai-planner/message`, etc.
+- **Fake AI assistant in local/test** uses Laravel AI's built-in fake gateway for `SchedulingAgent`, preserving SDK conversation behavior without outbound HTTP.
+- **Flat routes with `?id=`** throughout the project, following starter conventions: `/stores/show?id=`, `/schedules/publish?id=`, etc. The assistant uses `/agent` and `/agent/stream`.
 - **`Authorization::loadMissing`** is used internally to avoid lazy-loading violations when controllers access relations from authenticated users in tests (the core's `BaseModel` sets `preventsLazyLoading = true`).
 
 ## Phase 0 — Final status
