@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Ai\AgentConversationContext;
+use App\Ai\Tools\ProposeSchedulingChangesTool;
 use App\Models\AgentActionProposal;
 use App\Models\EmployeeAvailability;
 use App\Models\Schedule;
@@ -10,8 +12,11 @@ use App\Models\ShiftRequirement;
 use App\Models\Store;
 use App\Models\User;
 use Database\Factories\ScheduleFactory;
+use Database\Factories\ShiftAssignmentFactory;
 use Database\Factories\ShiftRequirementFactory;
 use Database\Factories\UserFactory;
+use Laravel\Ai\Models\ConversationMessage;
+use Laravel\Ai\Tools\Request;
 use Thinkycz\LaravelCore\Support\Typer;
 
 \test('guest is redirected from proposal apply', function (): void {
@@ -33,6 +38,7 @@ use Thinkycz\LaravelCore\Support\Typer;
 \test('manager can apply own pending proposal transactionally', function (): void {
     $manager = Typer::assertInstance(UserFactory::new()->createOne([
         'role' => 'store_manager',
+        'locale' => 'cs',
     ]), User::class);
     $conversation = \createAgentConversation($manager);
     $store = \managedStoreFor($manager, 'Existing Store');
@@ -88,6 +94,15 @@ use Thinkycz\LaravelCore\Support\Typer;
     static::assertTrue(EmployeeAvailability::query()->where('employee_profile_id', $employee->getKey())->where('source', 'ai')->exists());
     static::assertTrue(ShiftAssignment::query()->where('shift_requirement_id', $shift->getKey())->where('employee_profile_id', $employee->getKey())->exists());
     static::assertSame(AgentActionProposal::STATUS_APPLIED, Typer::assertInstance($proposal->refresh(), AgentActionProposal::class)->getStatus());
+    static::assertTrue(ConversationMessage::query()
+        ->where('conversation_id', $conversation->getKey())
+        ->where('role', 'assistant')
+        ->where('content', 'like', 'Hotovo, návrh%')
+        ->exists());
+    static::assertFalse(ConversationMessage::query()
+        ->where('conversation_id', $conversation->getKey())
+        ->where('content', 'like', '%internal confirmation event%')
+        ->exists());
 });
 
 \test('failed proposal apply rolls back domain changes and marks failed', function (): void {
@@ -113,16 +128,121 @@ use Thinkycz\LaravelCore\Support\Typer;
         ],
     ]);
 
-    $this
+    $response = $this
         ->from('/agent?conversation=' . $conversation->getKey())
         ->be($manager, 'users')
         ->post('/agent/proposals/apply', [
             'proposal_id' => $proposal->getKey(),
-        ], $this->inertiaHeaders())
-        ->assertRedirect('/agent?conversation=' . $conversation->getKey());
+        ], $this->inertiaHeaders());
+
+    $response->assertRedirect('/agent?conversation=' . $conversation->getKey());
 
     static::assertFalse(Store::query()->where('name', 'Rollback Store')->exists());
     static::assertSame(AgentActionProposal::STATUS_FAILED, Typer::assertInstance($proposal->refresh(), AgentActionProposal::class)->getStatus());
+});
+
+\test('manager can apply normalized shift assignment proposal with omitted times', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne([
+        'role' => 'store_manager',
+    ]), User::class);
+    $conversation = \createAgentConversation($manager);
+    $store = \managedStoreFor($manager, 'Existing Store');
+    $employee = \employeeFor($store, 'Assigned Employee');
+    $schedule = Typer::assertInstance(ScheduleFactory::new()->createOne([
+        'store_id' => $store->getKey(),
+        'created_by' => $manager->getKey(),
+    ]), Schedule::class);
+    $shift = Typer::assertInstance(ShiftRequirementFactory::new()->createOne([
+        'schedule_id' => $schedule->getKey(),
+        'store_id' => $store->getKey(),
+        'start_time' => '10:00:00',
+        'end_time' => '18:00:00',
+        'created_by' => $manager->getKey(),
+    ]), ShiftRequirement::class);
+
+    \app(AgentConversationContext::class)->setConversationId($conversation->getKey());
+    $this->be($manager, 'users');
+
+    $payload = \decodeToolJson(\app(ProposeSchedulingChangesTool::class)->handle(new Request([
+        'summary' => 'Assign employee',
+        'actions' => [
+            [
+                'type' => 'shift.assign',
+                'shift_requirement_id' => $shift->getKey(),
+                'employee_profile_id' => $employee->getKey(),
+            ],
+        ],
+    ])));
+
+    $response = $this
+        ->from('/agent?conversation=' . $conversation->getKey())
+        ->post('/agent/proposals/apply', [
+            'proposal_id' => $payload['proposal_id'],
+        ], $this->inertiaHeaders());
+
+    $response->assertRedirect('/agent?conversation=' . $conversation->getKey());
+
+    $assignment = Typer::assertInstance(ShiftAssignment::query()
+        ->where('shift_requirement_id', $shift->getKey())
+        ->where('employee_profile_id', $employee->getKey())
+        ->first(), ShiftAssignment::class);
+
+    static::assertSame('10:00', $assignment->getStartTime());
+    static::assertSame('18:00', $assignment->getEndTime());
+});
+
+\test('duplicate assignment start fails with domain error instead of database exception', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne([
+        'role' => 'store_manager',
+    ]), User::class);
+    $conversation = \createAgentConversation($manager);
+    $store = \managedStoreFor($manager, 'Existing Store');
+    $employee = \employeeFor($store, 'Assigned Employee');
+    $schedule = Typer::assertInstance(ScheduleFactory::new()->createOne([
+        'store_id' => $store->getKey(),
+        'created_by' => $manager->getKey(),
+    ]), Schedule::class);
+    $shift = Typer::assertInstance(ShiftRequirementFactory::new()->createOne([
+        'schedule_id' => $schedule->getKey(),
+        'store_id' => $store->getKey(),
+        'start_time' => '10:00:00',
+        'end_time' => '21:00:00',
+        'created_by' => $manager->getKey(),
+    ]), ShiftRequirement::class);
+    ShiftAssignmentFactory::new()->createOne([
+        'shift_requirement_id' => $shift->getKey(),
+        'employee_profile_id' => $employee->getKey(),
+        'start_time' => '10:00',
+        'end_time' => '21:00',
+        'status' => 'draft',
+        'assigned_by' => $manager->getKey(),
+    ]);
+    $proposal = \createAgentProposal($manager, $conversation->getKey(), [
+        [
+            'type' => 'shift.assign',
+            'shift_requirement_id' => $shift->getKey(),
+            'employee_profile_id' => $employee->getKey(),
+            'start_time' => '10:00',
+            'end_time' => '12:00',
+        ],
+    ]);
+
+    $response = $this
+        ->from('/agent?conversation=' . $conversation->getKey())
+        ->be($manager, 'users')
+        ->post('/agent/proposals/apply', [
+            'proposal_id' => $proposal->getKey(),
+        ], $this->inertiaHeaders());
+
+    $response->assertRedirect('/agent?conversation=' . $conversation->getKey());
+
+    $proposal = Typer::assertInstance($proposal->refresh(), AgentActionProposal::class);
+
+    static::assertSame(AgentActionProposal::STATUS_FAILED, $proposal->getStatus());
+    static::assertStringContainsString(
+        'Remove the existing assignment before creating a replacement',
+        Typer::assertString($proposal->getResult()['error'] ?? null),
+    );
 });
 
 \test('manager cannot apply foreign or non pending proposal', function (): void {
@@ -141,9 +261,21 @@ use Thinkycz\LaravelCore\Support\Typer;
         'proposal_id' => $foreign->getKey(),
     ], $this->inertiaHeaders())->assertNotFound();
 
-    $this->be($manager, 'users')->post('/agent/proposals/apply', [
+    $nonPendingResponse = $this->be($manager, 'users')->post('/agent/proposals/apply', [
         'proposal_id' => $applied->getKey(),
-    ], $this->inertiaHeaders())->assertRedirect();
+    ], $this->inertiaHeaders());
+
+    $nonPendingResponse->assertRedirect('/agent?conversation=' . $ownConversation->getKey());
 
     static::assertSame(AgentActionProposal::STATUS_APPLIED, Typer::assertInstance($applied->refresh(), AgentActionProposal::class)->getStatus());
+});
+
+\test('stale proposal apply url redirects back to agent page', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne([
+        'role' => 'store_manager',
+    ]), User::class);
+
+    $response = $this->be($manager, 'users')->get('/agent/proposals/apply');
+
+    $response->assertRedirect('/agent');
 });

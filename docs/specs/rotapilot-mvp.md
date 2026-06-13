@@ -43,7 +43,7 @@ The MVP proves one thing: a store manager can describe staffing needs in plain E
 | `employee_store`              | Many-to-many: employees ↔ stores.                                            |
 | `employee_availabilities`     | Daily availability windows. `source` tracks who entered.                     |
 | `schedules`                   | A planning period for a single store. Has status (draft/published/archived). |
-| `shift_requirements`          | "Need N people on date D from start to end." The unit of planning.           |
+| `shift_requirements`          | "Need one shift slot on date D from start to end." The unit of planning.     |
 | `shift_assignments`           | Employee assigned to a requirement.                                          |
 | `schedule_conflicts`          | Detected problem for a schedule (understaffed, unavailable, etc.).           |
 | `agent_conversations`         | (Laravel AI SDK) Chat sessions for the AI planner.                           |
@@ -115,14 +115,14 @@ When no API key is configured in `local` or `testing`, `AppServiceProvider` fake
 2. Filter by availability (block unavailable; allow within available/preferred windows; treat missing as not-assignable by default).
 3. Exclude overlapping assignments (across all stores).
 4. Sort by `max_hours_per_week` (asc), then by hours already scheduled in this period (asc).
-5. Take the first N until `required_employee_count` is reached.
-6. If fewer than N are assignable, create an `understaffed` conflict.
+5. Take the first eligible employee when the shift requirement has no active assignment.
+6. If no employee is assignable, create an `understaffed` conflict.
 
 ## 8. Conflict Types
 
 | Type                     | Severity | Detected when                                                             |
 | ------------------------ | -------- | ------------------------------------------------------------------------- |
-| `understaffed`           | warning  | Fewer assignments than `required_employee_count`.                         |
+| `understaffed`           | warning  | A shift requirement has no active assignment.                             |
 | `unavailable_employee`   | critical | Assigned employee has an `unavailable` record covering the shift.         |
 | `overlapping_shift`      | critical | Employee has two shifts whose time windows overlap.                       |
 | `outside_business_hours` | warning  | Shift is outside the store's `store_business_hours`.                      |

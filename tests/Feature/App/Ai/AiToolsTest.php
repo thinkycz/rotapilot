@@ -11,6 +11,7 @@ use App\Ai\Tools\ProposeSchedulingChangesTool;
 use App\Enums\UserRoleEnum;
 use App\Models\AgentActionProposal;
 use App\Models\Schedule;
+use App\Models\ShiftAssignment;
 use App\Models\ShiftRequirement;
 use App\Models\Store;
 use App\Models\User;
@@ -22,6 +23,16 @@ use Database\Factories\UserFactory;
 use Illuminate\Support\Facades\DB;
 use Laravel\Ai\Tools\Request;
 use Thinkycz\LaravelCore\Support\Typer;
+
+\test('tool descriptions include project terminology aliases', function (): void {
+    static::assertStringContainsString('Provozovny', (new GetStoresTool())->description());
+    static::assertStringContainsString('Zaměstnanci', (new GetEmployeesTool())->description());
+    static::assertStringContainsString('Směny', (new GetShiftsTool())->description());
+    static::assertStringContainsString('Požadavky', (new GetAvailabilityTool())->description());
+    static::assertStringContainsString('availability/Požadavky', \app(ProposeSchedulingChangesTool::class)->description());
+    static::assertStringContainsString('include shift.unassign', \app(ProposeSchedulingChangesTool::class)->description());
+    static::assertStringContainsString('Never print proposal action JSON in chat', \app(ProposeSchedulingChangesTool::class)->description());
+});
 
 \test('store tool returns only stores managed by authenticated manager', function (): void {
     $manager = Typer::assertInstance(UserFactory::new()->createOne([
@@ -105,6 +116,11 @@ use Thinkycz\LaravelCore\Support\Typer;
 
     static::assertCount(1, $payload);
     static::assertSame('Owned Store', $payload[0]['store']['name']);
+    static::assertSame($schedule->getKey(), $payload[0]['schedule_id']);
+    static::assertSame($requirement->getKey(), $payload[0]['id']);
+    static::assertArrayHasKey('assignment_id', $payload[0]['assigned_employees'][0]);
+    static::assertArrayHasKey('start_time', $payload[0]['assigned_employees'][0]);
+    static::assertArrayHasKey('end_time', $payload[0]['assigned_employees'][0]);
     static::assertSame('Owned Employee', $payload[0]['assigned_employees'][0]['name']);
     static::assertSame('confirmed', $payload[0]['fill_status']);
 });
@@ -223,4 +239,210 @@ use Thinkycz\LaravelCore\Support\Typer;
 
     static::assertArrayHasKey('error', $payload);
     static::assertFalse(AgentActionProposal::query()->where('summary', 'Update foreign store')->exists());
+});
+
+\test('proposal tool rejects missing or invalid availability type without creating proposal', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne([
+        'role' => UserRoleEnum::StoreManager->value,
+    ]), User::class);
+    $conversation = \createAgentConversation($manager);
+    $store = \managedStoreFor($manager, 'Owned Store');
+    $employee = \employeeFor($store, 'Owned Employee');
+
+    \app(AgentConversationContext::class)->setConversationId($conversation->getKey());
+    $this->be($manager, 'users');
+
+    $missingPayload = \decodeToolJson(\app(ProposeSchedulingChangesTool::class)->handle(new Request([
+        'summary' => 'Create missing availability type',
+        'actions' => [
+            [
+                'type' => 'availability.create',
+                'employee_profile_id' => $employee->getKey(),
+                'store_id' => $store->getKey(),
+                'date' => '2026-06-20',
+                'start_time' => '08:00',
+                'end_time' => '12:00',
+            ],
+        ],
+    ])));
+
+    static::assertSame('availability_type must be one of: available, unavailable, backup.', $missingPayload['error']);
+
+    $invalidPayload = \decodeToolJson(\app(ProposeSchedulingChangesTool::class)->handle(new Request([
+        'summary' => 'Create invalid availability type',
+        'actions' => [
+            [
+                'type' => 'availability.create',
+                'employee_profile_id' => $employee->getKey(),
+                'store_id' => $store->getKey(),
+                'date' => '2026-06-20',
+                'availability_type' => 'availability.create',
+                'start_time' => '08:00',
+                'end_time' => '12:00',
+            ],
+        ],
+    ])));
+
+    static::assertSame('availability_type must be one of: available, unavailable, backup.', $invalidPayload['error']);
+    static::assertFalse(AgentActionProposal::query()->whereIn('summary', [
+        'Create missing availability type',
+        'Create invalid availability type',
+    ])->exists());
+});
+
+\test('proposal tool defaults omitted shift assignment times to the shift window', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne([
+        'role' => UserRoleEnum::StoreManager->value,
+    ]), User::class);
+    $conversation = \createAgentConversation($manager);
+    $store = \managedStoreFor($manager, 'Owned Store');
+    $employee = \employeeFor($store, 'Owned Employee');
+    $schedule = Typer::assertInstance(ScheduleFactory::new()->createOne([
+        'store_id' => $store->getKey(),
+        'created_by' => $manager->getKey(),
+    ]), Schedule::class);
+    $shift = Typer::assertInstance(ShiftRequirementFactory::new()->createOne([
+        'schedule_id' => $schedule->getKey(),
+        'store_id' => $store->getKey(),
+        'start_time' => '09:00:00',
+        'end_time' => '17:00:00',
+        'created_by' => $manager->getKey(),
+    ]), ShiftRequirement::class);
+
+    \app(AgentConversationContext::class)->setConversationId($conversation->getKey());
+    $this->be($manager, 'users');
+
+    $payload = \decodeToolJson(\app(ProposeSchedulingChangesTool::class)->handle(new Request([
+        'summary' => 'Assign employee to shift',
+        'actions' => [
+            [
+                'type' => 'shift.assign',
+                'shift_requirement_id' => $shift->getKey(),
+                'employee_profile_id' => $employee->getKey(),
+            ],
+        ],
+    ])));
+
+    static::assertSame('pending', $payload['status']);
+
+    $proposal = Typer::assertInstance(AgentActionProposal::query()->find($payload['proposal_id']), AgentActionProposal::class);
+    $actions = $proposal->getActions();
+
+    static::assertSame('09:00', $actions[0]['start_time']);
+    static::assertSame('17:00', $actions[0]['end_time']);
+    static::assertFalse(ShiftAssignment::query()->where('shift_requirement_id', $shift->getKey())->exists());
+});
+
+\test('proposal tool rejects shift assignments outside the shift window without creating proposal', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne([
+        'role' => UserRoleEnum::StoreManager->value,
+    ]), User::class);
+    $conversation = \createAgentConversation($manager);
+    $store = \managedStoreFor($manager, 'Owned Store');
+    $employee = \employeeFor($store, 'Owned Employee');
+    $schedule = Typer::assertInstance(ScheduleFactory::new()->createOne([
+        'store_id' => $store->getKey(),
+        'created_by' => $manager->getKey(),
+    ]), Schedule::class);
+    $shift = Typer::assertInstance(ShiftRequirementFactory::new()->createOne([
+        'schedule_id' => $schedule->getKey(),
+        'store_id' => $store->getKey(),
+        'start_time' => '10:00:00',
+        'end_time' => '21:00:00',
+        'created_by' => $manager->getKey(),
+    ]), ShiftRequirement::class);
+
+    \app(AgentConversationContext::class)->setConversationId($conversation->getKey());
+    $this->be($manager, 'users');
+
+    $payload = \decodeToolJson(\app(ProposeSchedulingChangesTool::class)->handle(new Request([
+        'summary' => 'Assign employee outside shift window',
+        'actions' => [
+            [
+                'type' => 'shift.assign',
+                'shift_requirement_id' => $shift->getKey(),
+                'employee_profile_id' => $employee->getKey(),
+                'start_time' => '08:00',
+                'end_time' => '12:00',
+            ],
+        ],
+    ])));
+
+    static::assertSame('Assignment time must be within the shift hours.', $payload['error']);
+    static::assertFalse(AgentActionProposal::query()->where('summary', 'Assign employee outside shift window')->exists());
+});
+
+\test('proposal tool rejects duplicate assignment starts unless the existing assignment is unassigned first', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne([
+        'role' => UserRoleEnum::StoreManager->value,
+    ]), User::class);
+    $conversation = \createAgentConversation($manager);
+    $store = \managedStoreFor($manager, 'Owned Store');
+    $employee = \employeeFor($store, 'Owned Employee');
+    $schedule = Typer::assertInstance(ScheduleFactory::new()->createOne([
+        'store_id' => $store->getKey(),
+        'created_by' => $manager->getKey(),
+    ]), Schedule::class);
+    $shift = Typer::assertInstance(ShiftRequirementFactory::new()->createOne([
+        'schedule_id' => $schedule->getKey(),
+        'store_id' => $store->getKey(),
+        'start_time' => '10:00:00',
+        'end_time' => '21:00:00',
+        'created_by' => $manager->getKey(),
+    ]), ShiftRequirement::class);
+    $assignment = Typer::assertInstance(ShiftAssignmentFactory::new()->createOne([
+        'shift_requirement_id' => $shift->getKey(),
+        'employee_profile_id' => $employee->getKey(),
+        'start_time' => '10:00',
+        'end_time' => '21:00',
+        'status' => 'draft',
+        'assigned_by' => $manager->getKey(),
+    ]), ShiftAssignment::class);
+
+    \app(AgentConversationContext::class)->setConversationId($conversation->getKey());
+    $this->be($manager, 'users');
+
+    $duplicatePayload = \decodeToolJson(\app(ProposeSchedulingChangesTool::class)->handle(new Request([
+        'summary' => 'Duplicate assignment start',
+        'actions' => [
+            [
+                'type' => 'shift.assign',
+                'shift_requirement_id' => $shift->getKey(),
+                'employee_profile_id' => $employee->getKey(),
+                'start_time' => '10:00',
+                'end_time' => '12:00',
+            ],
+        ],
+    ])));
+
+    static::assertStringContainsString('already has assignment ID ' . $assignment->getKey(), Typer::assertString($duplicatePayload['error']));
+    static::assertFalse(AgentActionProposal::query()->where('summary', 'Duplicate assignment start')->exists());
+
+    $replacementPayload = \decodeToolJson(\app(ProposeSchedulingChangesTool::class)->handle(new Request([
+        'summary' => 'Replace assignment start',
+        'actions' => [
+            [
+                'type' => 'shift.unassign',
+                'shift_assignment_id' => $assignment->getKey(),
+            ],
+            [
+                'type' => 'shift.assign',
+                'shift_requirement_id' => $shift->getKey(),
+                'employee_profile_id' => $employee->getKey(),
+                'start_time' => '10:00',
+                'end_time' => '12:00',
+            ],
+        ],
+    ])));
+
+    static::assertSame('pending', $replacementPayload['status']);
+
+    $proposal = Typer::assertInstance(AgentActionProposal::query()->find($replacementPayload['proposal_id']), AgentActionProposal::class);
+    $actions = $proposal->getActions();
+
+    static::assertSame('shift.unassign', $actions[0]['type']);
+    static::assertSame($assignment->getKey(), $actions[0]['shift_assignment_id']);
+    static::assertSame('shift.assign', $actions[1]['type']);
+    static::assertSame('10:00', $actions[1]['start_time']);
+    static::assertSame('12:00', $actions[1]['end_time']);
 });

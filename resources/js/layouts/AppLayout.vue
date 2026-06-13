@@ -78,9 +78,15 @@ async function deleteConversation(id: string): Promise<void> {
     });
 
     if (ok) {
-        router.post('/agent/conversations/destroy', {
-            conversation_id: id,
-        });
+        router.post(
+            '/agent/conversations/destroy',
+            {
+                conversation_id: id,
+            },
+            {
+                preserveScroll: true,
+            },
+        );
     }
 }
 
@@ -137,36 +143,42 @@ function logout(): void {
                     </span>
                 </div>
 
-                <div
-                    class="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar"
-                >
-                    <div
-                        v-for="chat in conversations"
-                        :key="chat.id"
-                        class="group relative flex items-center justify-between rounded-xl px-3 py-2 text-xs font-medium transition-all hover:bg-surface-container-low"
-                        :class="[
-                            activeUrl.includes(`conversation=${chat.id}`)
-                                ? 'bg-surface-container-low font-bold text-primary border-r-2 border-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]'
-                                : 'text-on-surface-variant hover:text-on-surface',
-                        ]"
+                <div class="flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                    <TransitionGroup
+                        name="conversation-list"
+                        tag="div"
+                        class="relative space-y-1"
                     >
-                        <Link
-                            :href="`/agent?conversation=${chat.id}`"
-                            class="flex flex-1 items-center gap-2 truncate pr-6"
+                        <div
+                            v-for="chat in conversations"
+                            :key="chat.id"
+                            class="group relative flex items-center justify-between rounded-xl px-3 py-2 text-xs font-medium transition-all hover:bg-surface-container-low"
+                            :class="[
+                                activeUrl.includes(`conversation=${chat.id}`)
+                                    ? 'bg-surface-container-low font-bold text-primary border-r-2 border-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]'
+                                    : 'text-on-surface-variant hover:text-on-surface',
+                            ]"
                         >
-                            <MessageSquare :size="12" class="shrink-0" />
-                            <span class="truncate">{{ chat.title }}</span>
-                        </Link>
+                            <Link
+                                :href="`/agent?conversation=${chat.id}`"
+                                class="flex flex-1 items-center gap-2 truncate pr-6"
+                            >
+                                <MessageSquare :size="12" class="shrink-0" />
+                                <span class="truncate">{{ chat.title }}</span>
+                            </Link>
 
-                        <button
-                            @click.prevent="deleteConversation(chat.id)"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded-md p-1 text-on-surface-variant/50 hover:bg-rose-50/50 hover:text-error-red opacity-0 group-hover:opacity-100 transition-all duration-200"
-                            :title="t('agent.delete_tooltip')"
-                            :aria-label="t('agent.delete_tooltip')"
-                        >
-                            <Trash2 :size="12" />
-                        </button>
-                    </div>
+                            <button
+                                @click.stop.prevent="
+                                    deleteConversation(chat.id)
+                                "
+                                class="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded-md p-1 text-on-surface-variant/50 hover:bg-rose-50/50 hover:text-error-red opacity-0 group-hover:opacity-100 transition-all duration-200"
+                                :title="t('agent.delete_tooltip')"
+                                :aria-label="t('agent.delete_tooltip')"
+                            >
+                                <Trash2 :size="12" />
+                            </button>
+                        </div>
+                    </TransitionGroup>
                     <div
                         v-if="conversations.length === 0"
                         class="px-3 py-2 text-[11px] text-on-surface-variant/60 italic"
@@ -289,7 +301,7 @@ function logout(): void {
         >
             <!-- Full-bleed mode: no padding, no max-width (e.g. AI agent page) -->
             <template v-if="fullBleed">
-                <FlashAlerts class="px-4 pt-4" />
+                <FlashAlerts display="toast" />
                 <div class="flex flex-1 flex-col min-h-0">
                     <slot />
                 </div>
@@ -306,7 +318,7 @@ function logout(): void {
                     <div
                         class="z-10 flex flex-1 flex-col max-w-6xl w-full mx-auto"
                     >
-                        <FlashAlerts />
+                        <FlashAlerts display="toast" />
 
                         <div class="flex-1">
                             <slot />
@@ -318,3 +330,24 @@ function logout(): void {
         <ConfirmDialog />
     </div>
 </template>
+
+<style scoped>
+.conversation-list-move,
+.conversation-list-enter-active,
+.conversation-list-leave-active {
+    transition:
+        opacity 180ms ease,
+        transform 180ms ease;
+}
+
+.conversation-list-enter-from,
+.conversation-list-leave-to {
+    opacity: 0;
+    transform: translateX(-0.5rem);
+}
+
+.conversation-list-leave-active {
+    position: absolute;
+    width: calc(100% - 0.25rem);
+}
+</style>

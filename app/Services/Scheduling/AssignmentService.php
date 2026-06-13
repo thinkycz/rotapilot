@@ -9,6 +9,7 @@ use App\Models\EmployeeProfile;
 use App\Models\ShiftAssignment;
 use App\Models\ShiftRequirement;
 use App\Models\User;
+use RuntimeException;
 
 /**
  * Wraps the generator and the conflict service to apply assignments.
@@ -49,7 +50,6 @@ class AssignmentService
                 $requirement->getKey(),
                 $employee->getKey(),
                 $requirement->getStartTime(),
-                $requirement->getEndTime(),
             );
             if ($existing instanceof ShiftAssignment) {
                 $created[] = $existing;
@@ -96,8 +96,15 @@ class AssignmentService
         $startTime ??= $requirement->getStartTime();
         $endTime ??= $requirement->getEndTime();
 
-        $existing = $this->findAssignment($requirement->getKey(), $employee->getKey(), $startTime, $endTime);
+        $existing = $this->findAssignment($requirement->getKey(), $employee->getKey(), $startTime);
         if ($existing instanceof ShiftAssignment) {
+            if ($endTime !== $existing->getEndTime()) {
+                throw new RuntimeException(
+                    'Employee already has an assignment for this shift starting at ' . $startTime .
+                    '. Remove the existing assignment before creating a replacement with a different end time.',
+                );
+            }
+
             return $existing;
         }
 
@@ -147,20 +154,18 @@ class AssignmentService
     }
 
     /**
-     * Find an existing assignment for a requirement and employee.
+     * Find an existing assignment for the database-unique start slot.
      */
     private function findAssignment(
         int $requirementId,
         int $employeeId,
         string $startTime,
-        string $endTime,
     ): ShiftAssignment|null {
         $rows = ShiftAssignment::query()
             ->getQuery()
             ->where('shift_requirement_id', $requirementId)
             ->where('employee_profile_id', $employeeId)
             ->where('start_time', $startTime)
-            ->where('end_time', $endTime)
             ->get();
 
         $row = $rows->first();

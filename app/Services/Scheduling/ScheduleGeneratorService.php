@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Throwable;
 
 /**
- * Deterministic scheduler. Picks up to N employees for a shift requirement.
+ * Deterministic scheduler. Picks one eligible employee for an open shift requirement.
  */
 class ScheduleGeneratorService
 {

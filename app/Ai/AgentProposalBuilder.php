@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Ai;
 
+use App\Enums\AvailabilityTypeEnum;
+use App\Enums\ShiftAssignmentStatusEnum;
 use App\Models\AgentActionProposal;
 use App\Models\EmployeeAvailability;
 use App\Models\EmployeeProfile;
@@ -15,6 +17,7 @@ use App\Models\User;
 use App\Support\Authorization;
 use Illuminate\Support\Str;
 use Laravel\Ai\Models\Conversation;
+use RuntimeException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Thinkycz\LaravelCore\Support\Typer;
@@ -61,12 +64,17 @@ class AgentProposalBuilder
         }
 
         $actions = [];
+        /** @var array{unassigned_assignment_ids: array<int, true>, ...} $proposalState */
+        $proposalState = [
+            'unassigned_assignment_ids' => [],
+        ];
+
         foreach ($rawActions as $rawAction) {
             if (!\is_array($rawAction)) {
                 continue;
             }
 
-            $actions[] = $this->normalizeAction($user, $rawAction);
+            $actions[] = $this->normalizeAction($user, $rawAction, $proposalState);
         }
 
         if (\count($actions) === 0) {
@@ -87,10 +95,11 @@ class AgentProposalBuilder
      * Normalize and scope-check one action.
      *
      * @param array<mixed> $action
+     * @param array{unassigned_assignment_ids: array<int, true>, ...} $proposalState
      *
      * @return array<string, mixed>
      */
-    private function normalizeAction(User $user, array $action): array
+    private function normalizeAction(User $user, array $action, array &$proposalState): array
     {
         $action = $this->stringKeyed($action);
         $type = Typer::assertString($action['type'] ?? null);
@@ -129,11 +138,8 @@ class AgentProposalBuilder
                 'type' => $type,
                 'shift_requirement_id' => $this->managedShiftRequirement($user, $this->int($action, 'shift_requirement_id'))->getKey(),
             ],
-            'shift.assign' => $this->shiftAssign($user, $type, $action),
-            'shift.unassign' => [
-                'type' => $type,
-                'shift_assignment_id' => $this->managedShiftAssignment($user, $this->int($action, 'shift_assignment_id'))->getKey(),
-            ],
+            'shift.assign' => $this->shiftAssign($user, $type, $action, $proposalState),
+            'shift.unassign' => $this->shiftUnassign($user, $type, $action, $proposalState),
             'shift.autofill' => [
                 'type' => $type,
                 'shift_requirement_id' => $this->managedShiftRequirement($user, $this->int($action, 'shift_requirement_id'))->getKey(),
@@ -182,7 +188,7 @@ class AgentProposalBuilder
             'employee_profile_id' => $employee->getKey(),
             'store_id' => $storeId,
             'date' => $this->string($action, 'date'),
-            'availability_type' => $this->string($action, 'availability_type', 'type'),
+            'availability_type' => $this->availabilityTypeField($action),
             'start_time' => $this->nullableString($action, 'start_time'),
             'end_time' => $this->nullableString($action, 'end_time'),
             'note' => $this->nullableString($action, 'note'),
@@ -203,7 +209,7 @@ class AgentProposalBuilder
         return [
             'type' => $type,
             'availability_id' => $availability->getKey(),
-            'availability_type' => $this->string($action, 'availability_type', 'type'),
+            'availability_type' => $this->availabilityTypeField($action),
             'start_time' => $this->nullableString($action, 'start_time'),
             'end_time' => $this->nullableString($action, 'end_time'),
             'note' => $this->nullableString($action, 'note'),
@@ -259,21 +265,89 @@ class AgentProposalBuilder
      * Normalize shift assignment.
      *
      * @param array<string, mixed> $action
+     * @param array{unassigned_assignment_ids: array<int, true>, ...} $proposalState
      *
      * @return array<string, mixed>
      */
-    private function shiftAssign(User $user, string $type, array $action): array
+    private function shiftAssign(User $user, string $type, array $action, array $proposalState): array
     {
         $requirement = $this->managedShiftRequirement($user, $this->int($action, 'shift_requirement_id'));
         $employee = $this->managedEmployee($user, $this->int($action, 'employee_profile_id'));
+        $startTime = $this->timeString($this->nullableString($action, 'start_time') ?? $requirement->getStartTime());
+        $endTime = $this->timeString($this->nullableString($action, 'end_time') ?? $requirement->getEndTime());
+
+        if ($startTime >= $endTime) {
+            throw new RuntimeException('Assignment start_time must be before end_time.');
+        }
+
+        if ($startTime < $this->timeString($requirement->getStartTime()) || $endTime > $this->timeString($requirement->getEndTime())) {
+            throw new RuntimeException('Assignment time must be within the shift hours.');
+        }
+
+        $this->assertNoDuplicateAssignmentStart($requirement, $employee, $startTime, $proposalState);
 
         return [
             'type' => $type,
             'shift_requirement_id' => $requirement->getKey(),
             'employee_profile_id' => $employee->getKey(),
-            'start_time' => $this->string($action, 'start_time'),
-            'end_time' => $this->string($action, 'end_time'),
+            'start_time' => $startTime,
+            'end_time' => $endTime,
         ];
+    }
+
+    /**
+     * Normalize shift unassignment and remember it for same-batch replacements.
+     *
+     * @param array<string, mixed> $action
+     * @param array{unassigned_assignment_ids: array<int, true>, ...} $proposalState
+     *
+     * @return array<string, mixed>
+     */
+    private function shiftUnassign(User $user, string $type, array $action, array &$proposalState): array
+    {
+        $assignment = $this->managedShiftAssignment($user, $this->int($action, 'shift_assignment_id'));
+
+        $proposalState['unassigned_assignment_ids'][$assignment->getKey()] = true;
+
+        return [
+            'type' => $type,
+            'shift_assignment_id' => $assignment->getKey(),
+        ];
+    }
+
+    /**
+     * Guard the database uniqueness constraint before a proposal is created.
+     *
+     * @param array{unassigned_assignment_ids: array<int, true>, ...} $proposalState
+     */
+    private function assertNoDuplicateAssignmentStart(
+        ShiftRequirement $requirement,
+        EmployeeProfile $employee,
+        string $startTime,
+        array $proposalState,
+    ): void {
+        $existing = ShiftAssignment::query()
+            ->where('shift_requirement_id', $requirement->getKey())
+            ->where('employee_profile_id', $employee->getKey())
+            ->where('start_time', $startTime)
+            ->where('status', '!=', ShiftAssignmentStatusEnum::Cancelled->value)
+            ->first();
+
+        if (!$existing instanceof ShiftAssignment) {
+            return;
+        }
+
+        if (($proposalState['unassigned_assignment_ids'][$existing->getKey()] ?? false) === true) {
+            return;
+        }
+
+        throw new RuntimeException(
+            'Employee profile ID ' . $employee->getKey() .
+            ' already has assignment ID ' . $existing->getKey() .
+            ' for shift requirement ID ' . $requirement->getKey() .
+            ' starting at ' . $startTime .
+            '. Use shift.unassign for the existing assignment before creating a replacement assignment.',
+        );
     }
 
     /**
@@ -385,6 +459,30 @@ class AgentProposalBuilder
         $value = $action[$key] ?? ($fallbackKey !== null ? ($action[$fallbackKey] ?? null) : null);
 
         return Typer::assertString($value);
+    }
+
+    /**
+     * Read and validate availability_type.
+     *
+     * @param array<string, mixed> $action
+     */
+    private function availabilityTypeField(array $action): string
+    {
+        $value = $action['availability_type'] ?? null;
+
+        if (\is_string($value) && \in_array($value, AvailabilityTypeEnum::values(), true)) {
+            return $value;
+        }
+
+        throw new RuntimeException('availability_type must be one of: available, unavailable, backup.');
+    }
+
+    /**
+     * Normalize AI-supplied times to the HH:MM shape used by web forms.
+     */
+    private function timeString(string $value): string
+    {
+        return \mb_substr($value, 0, 5);
     }
 
     /**

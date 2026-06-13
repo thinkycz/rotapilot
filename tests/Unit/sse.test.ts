@@ -10,6 +10,7 @@ describe('parseTextDeltaSseChunk', () => {
         const second = parseTextDeltaSseChunk('ta":"Hello"}\n\n', first.buffer);
         expect(second.deltas).toEqual(['Hello']);
         expect(second.buffer).toBe('');
+        expect(second.eventTypes).toEqual(['text_delta']);
     });
 
     test('ignores malformed rows and keeps later valid deltas', () => {
@@ -25,5 +26,14 @@ describe('parseTextDeltaSseChunk', () => {
         const parsed = parseTextDeltaSseChunk('data: [DONE]\n\n');
 
         expect(parsed.done).toBe(true);
+    });
+
+    test('exposes non-text event types as activity', () => {
+        const parsed = parseTextDeltaSseChunk(
+            'data: {"type":"stream_start"}\n\ndata: {"type":"tool_call","tool_name":"GetShiftsTool"}\n\n',
+        );
+
+        expect(parsed.deltas).toEqual([]);
+        expect(parsed.eventTypes).toEqual(['stream_start', 'tool_call']);
     });
 });

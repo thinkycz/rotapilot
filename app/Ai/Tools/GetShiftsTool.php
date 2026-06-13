@@ -21,7 +21,7 @@ class GetShiftsTool implements Tool
      */
     public function description(): string
     {
-        return 'Get shift requirements and assignments for a date range.';
+        return 'Get shift requirements and assignments for a date range. Use for schedules, shifts, staffing, assignments, open/unassigned shifts, Czech "Rozvrhy"/"Směny"/"Přiřazení", and Slovak "Plány"/"Zmeny"/"Priradenia".';
     }
 
     /**
@@ -91,13 +91,17 @@ class GetShiftsTool implements Tool
             }
 
             $assignedEmployees = $activeAssignments->map(static fn(ShiftAssignment $a): array => [
+                'assignment_id' => $a->getKey(),
                 'id' => $a->getEmployeeProfile()->getKey(),
                 'name' => $a->getEmployeeProfile()->getName(),
+                'start_time' => $a->getStartTime(),
+                'end_time' => $a->getEndTime(),
                 'status' => $a->getStatus()->value,
             ])->values()->all();
 
             return [
                 'id' => $shift->getKey(),
+                'schedule_id' => $shift->getScheduleId(),
                 'date' => $shift->getDate(),
                 'start_time' => $shift->getStartTime(),
                 'end_time' => $shift->getEndTime(),

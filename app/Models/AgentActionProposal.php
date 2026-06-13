@@ -54,6 +54,18 @@ class AgentActionProposal extends BaseModel
     }
 
     /**
+     * Assistant message id getter.
+     */
+    public function getMessageId(): string|null
+    {
+        if (!$this->attributeLoaded('message_id')) {
+            return null;
+        }
+
+        return $this->assertNullableString('message_id');
+    }
+
+    /**
      * Status getter.
      */
     public function getStatus(): string

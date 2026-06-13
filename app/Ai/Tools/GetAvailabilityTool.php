@@ -20,7 +20,7 @@ class GetAvailabilityTool implements Tool
      */
     public function description(): string
     {
-        return 'Get employee availability or unavailability records for a date range.';
+        return 'Get employee availability/unavailability records for a date range. Use for availability, time off, backup coverage, missing availability, Czech "Požadavky"/"Dostupnost"/"Volno", and Slovak "Dostupnosť"/"Voľno".';
     }
 
     /**

@@ -21,6 +21,7 @@ class AgentActionProposalSerializer
         return [
             'id' => $proposal->getKey(),
             'conversation_id' => $proposal->getConversationId(),
+            'message_id' => $proposal->getMessageId(),
             'status' => $proposal->getStatus(),
             'summary' => $proposal->getSummary(),
             'actions' => self::summarizeActions($proposal->getActions()),

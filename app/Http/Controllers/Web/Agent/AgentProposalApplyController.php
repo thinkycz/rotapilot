@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Web\Agent;
 
 use App\Ai\AgentProposalApplyService;
+use App\Ai\AgentProposalChatNotifier;
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Models\AgentActionProposal;
 use App\Models\User;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
 
 class AgentProposalApplyController
@@ -19,8 +20,12 @@ class AgentProposalApplyController
     /**
      * Apply a pending proposal.
      */
-    public function __invoke(Request $request, AgentProposalApplyService $service): RedirectResponse
-    {
+    public function __invoke(
+        Request $request,
+        AgentProposalApplyService $service,
+        AgentProposalChatNotifier $notifier,
+    ): SymfonyResponse {
+        \set_time_limit(0);
         $user = User::mustAuth();
 
         if (!$user->isStoreManager()) {
@@ -42,11 +47,19 @@ class AgentProposalApplyController
 
         try {
             $service->apply($proposal, $user);
-            $request->session()->flash('success', \__('Proposal applied.'));
+            $notifier->applied($proposal, $user);
         } catch (Throwable $throwable) {
-            $request->session()->flash('error', $throwable->getMessage());
+            // Error is caught and saved in the proposal database record via the service.
         }
 
-        return \redirect()->back(fallback: '/agent?conversation=' . $proposal->getConversationId());
+        return \redirect($this->redirectPath($proposal->getConversationId()));
+    }
+
+    /**
+     * Build the canonical GET page for the agent after applying a proposal.
+     */
+    private function redirectPath(string $conversationId): string
+    {
+        return '/agent?conversation=' . \urlencode($conversationId);
     }
 }

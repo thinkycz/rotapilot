@@ -42,6 +42,7 @@ export interface AgentProposalAction {
 export interface AgentProposal {
     id: number;
     conversation_id: string;
+    message_id: string | null;
     status: 'pending' | 'applied' | 'rejected' | 'failed';
     summary: string;
     actions: AgentProposalAction[];

@@ -20,7 +20,7 @@ class GetEmployeesTool implements Tool
      */
     public function description(): string
     {
-        return 'Get all employees across the manager\'s stores.';
+        return 'Get employees across the manager\'s stores. Use for employees, staff, employee IDs/names, Czech "Zaměstnanci", and Slovak "Zamestnanci".';
     }
 
     /**

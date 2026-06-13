@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Web\Agent;
 
 use App\Ai\AgentProposalApplyService;
+use App\Ai\AgentProposalChatNotifier;
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Models\AgentActionProposal;
 use App\Models\User;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
 
 class AgentProposalRejectController
@@ -19,8 +20,13 @@ class AgentProposalRejectController
     /**
      * Reject a pending proposal.
      */
-    public function __invoke(Request $request, AgentProposalApplyService $service): RedirectResponse
-    {
+    public function __invoke(
+        Request $request,
+        AgentProposalApplyService $service,
+        AgentProposalChatNotifier $notifier,
+    ): SymfonyResponse {
+        \set_time_limit(0);
+
         $user = User::mustAuth();
 
         if (!$user->isStoreManager()) {
@@ -42,11 +48,19 @@ class AgentProposalRejectController
 
         try {
             $service->reject($proposal, $user);
-            $request->session()->flash('success', \__('Proposal rejected.'));
+            $notifier->rejected($proposal, $user);
         } catch (Throwable $throwable) {
-            $request->session()->flash('error', $throwable->getMessage());
+            // Rejections generally do not fail, but caught just in case.
         }
 
-        return \redirect()->back(fallback: '/agent?conversation=' . $proposal->getConversationId());
+        return \redirect($this->redirectPath($proposal->getConversationId()));
+    }
+
+    /**
+     * Build the canonical GET page for the agent after rejecting a proposal.
+     */
+    private function redirectPath(string $conversationId): string
+    {
+        return '/agent?conversation=' . \urlencode($conversationId);
     }
 }

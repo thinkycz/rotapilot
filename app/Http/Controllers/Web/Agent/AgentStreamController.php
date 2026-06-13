@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Web\Agent;
 
 use App\Ai\AgentConversationContext;
+use App\Ai\AgentProposalLinker;
 use App\Ai\Agents\SchedulingAgent;
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Models\User;
@@ -20,8 +21,16 @@ class AgentStreamController
     /**
      * Handle the streaming AI chat.
      */
-    public function __invoke(Request $request, AgentConversationContext $context): StreamableAgentResponse
-    {
+    public function __invoke(
+        Request $request,
+        AgentConversationContext $context,
+        AgentProposalLinker $linker,
+    ): StreamableAgentResponse {
+        // SSE streams run for as long as the LLM + tool-call round-trips take.
+        // PHP-FPM's default 30 s limit kills the stream before RememberConversation
+        // can persist messages, leaving zombie conversations with no history.
+        \set_time_limit(0);
+
         $user = User::mustAuth();
 
         if (!$user->isStoreManager()) {
@@ -58,7 +67,9 @@ class AgentStreamController
             $context->setConversationId($conversationId);
         }
 
-        return $agent->stream($prompt);
+        return $agent->stream($prompt)->then(static function () use ($conversationId, $linker): void {
+            $linker->linkProposalsToLatestAssistantMessage($conversationId);
+        });
     }
 
     /**

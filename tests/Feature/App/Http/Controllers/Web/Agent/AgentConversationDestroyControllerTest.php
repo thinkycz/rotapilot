@@ -23,6 +23,7 @@ use Thinkycz\LaravelCore\Support\Typer;
         ], $this->inertiaHeaders());
 
     $response->assertRedirect('/agent');
+    \assertInertiaFlash($response, 'success', 'Conversation deleted.');
 
     static::assertFalse(Conversation::query()->where('id', $conversation->getKey())->exists());
     static::assertFalse(ConversationMessage::query()->where('conversation_id', $conversation->getKey())->exists());
@@ -63,6 +64,7 @@ use Thinkycz\LaravelCore\Support\Typer;
     ], $this->inertiaHeaders());
 
     $response->assertRedirect('/agent');
+    \assertInertiaFlash($response, 'success', 'Conversation deleted.');
 
     static::assertTrue(Conversation::query()->where('id', $conversation->getKey())->exists());
     static::assertTrue(ConversationMessage::query()->where('conversation_id', $conversation->getKey())->exists());
@@ -81,4 +83,14 @@ use Thinkycz\LaravelCore\Support\Typer;
     $response->assertForbidden();
 
     static::assertTrue(Conversation::query()->where('id', $conversation->getKey())->exists());
+});
+
+\test('stale destroy url redirects back to agent page', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne([
+        'role' => UserRoleEnum::StoreManager->value,
+    ]), User::class);
+
+    $response = $this->be($manager, 'users')->get('/agent/conversations/destroy');
+
+    $response->assertRedirect('/agent');
 });

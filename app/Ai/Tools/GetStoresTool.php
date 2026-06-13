@@ -18,7 +18,7 @@ class GetStoresTool implements Tool
      */
     public function description(): string
     {
-        return 'Get the list of stores managed by this user.';
+        return 'Get the list of stores managed by this user. Use for stores, locations, Czech "Provozovny", and Slovak "Prevádzky".';
     }
 
     /**

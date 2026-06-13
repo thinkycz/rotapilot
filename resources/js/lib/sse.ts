@@ -2,6 +2,7 @@ export interface SseParseResult {
     buffer: string;
     deltas: string[];
     done: boolean;
+    eventTypes: string[];
 }
 
 export function parseTextDeltaSseChunk(
@@ -15,6 +16,7 @@ export function parseTextDeltaSseChunk(
             ? ''
             : (lines.pop() ?? '');
     const deltas: string[] = [];
+    const eventTypes: string[] = [];
     let done = false;
 
     for (const line of lines) {
@@ -37,6 +39,10 @@ export function parseTextDeltaSseChunk(
                 delta?: unknown;
             };
 
+            if (typeof parsed.type === 'string') {
+                eventTypes.push(parsed.type);
+            }
+
             if (
                 parsed.type === 'text_delta' &&
                 typeof parsed.delta === 'string'
@@ -48,5 +54,5 @@ export function parseTextDeltaSseChunk(
         }
     }
 
-    return { buffer, deltas, done };
+    return { buffer, deltas, done, eventTypes };
 }

@@ -151,8 +151,11 @@ Resolver::resolveRouteRegistrar()
         // AI Agent
         $router->get('agent', AgentIndexController::class);
         $router->post('agent/stream', AgentStreamController::class);
+        $router->get('agent/conversations/destroy', static fn() => Resolver::resolveRedirector()->to('/agent'));
         $router->post('agent/conversations/destroy', AgentConversationDestroyController::class);
+        $router->get('agent/proposals/apply', static fn() => Resolver::resolveRedirector()->to('/agent'));
         $router->post('agent/proposals/apply', AgentProposalApplyController::class);
+        $router->get('agent/proposals/reject', static fn() => Resolver::resolveRedirector()->to('/agent'));
         $router->post('agent/proposals/reject', AgentProposalRejectController::class);
 
         // My calendar (employee self-service)

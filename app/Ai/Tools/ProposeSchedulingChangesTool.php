@@ -29,7 +29,7 @@ class ProposeSchedulingChangesTool implements Tool
      */
     public function description(): string
     {
-        return 'Create a pending batch proposal for manager-confirmed scheduling changes. This tool does not directly modify stores, availability, shifts, or assignments.';
+        return 'Create a real pending batch proposal for manager-confirmed scheduling changes. This tool does not directly modify stores, availability/Požadavky, shifts, or assignments. Assignment times must be inside the shift window. To replace an existing assignment time, include shift.unassign for the current assignment_id before shift.assign. Never print proposal action JSON in chat; call this tool instead.';
     }
 
     /**
@@ -44,10 +44,35 @@ class ProposeSchedulingChangesTool implements Tool
             'actions' => $schema->array()
                 ->items($schema->object([
                     'type' => $schema->string()
-                        ->description('One of store.create, store.update, availability.create, availability.update, availability.delete, shift.create, shift.update, shift.delete, shift.assign, shift.unassign, shift.autofill.')
+                        ->description(
+                            'Action type. One of: store.create, store.update, ' .
+                            'availability.create, availability.update, availability.delete, ' .
+                            'shift.create, shift.update, shift.delete, shift.assign, shift.unassign, shift.autofill.',
+                        )
                         ->required(),
+                    'availability_type' => $schema->string()
+                        ->description(
+                            'Required for availability.create and availability.update. ' .
+                            'Must be one of: available, unavailable, backup. ' .
+                            'Use "available" when the employee is free/can work. ' .
+                            'Use "unavailable" when the employee cannot work. ' .
+                            'Use "backup" when the employee can only cover if needed.',
+                        ),
                 ]))
-                ->description('Array of action objects. Include the explicit fields needed by each action type.')
+                ->description(
+                    'Array of action objects. Each object must contain "type" and any additional ' .
+                    'fields required by that action type. Required fields: ' .
+                    'store.create: name, timezone, optional address, city, is_active. ' .
+                    'store.update: store_id, name, timezone, optional address, city, is_active. ' .
+                    'availability.create: employee_profile_id, date, availability_type, optional store_id, start_time, end_time, note. ' .
+                    'availability.update: availability_id, availability_type, optional start_time, end_time, note. ' .
+                    'availability.delete: availability_id. ' .
+                    'shift.create: schedule_id, date, start_time, end_time, optional role_label, note, employee_profile_ids. ' .
+                    'shift.update: shift_requirement_id, date, start_time, end_time, optional role_label, note. ' .
+                    'shift.delete and shift.autofill: shift_requirement_id. ' .
+                    'shift.assign: shift_requirement_id, employee_profile_id, optional start_time and end_time; omitted times default to the shift window. Assignment times must be inside the shift window and cannot duplicate an active assignment with the same shift_requirement_id, employee_profile_id, and start_time unless that existing assignment is unassigned earlier in this same proposal. ' .
+                    'shift.unassign: shift_assignment_id.',
+                )
                 ->required(),
         ];
     }

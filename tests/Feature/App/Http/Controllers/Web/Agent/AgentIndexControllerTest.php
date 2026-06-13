@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Ai\Agents\SchedulingAgent;
 use App\Enums\UserRoleEnum;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Models\AgentActionProposal;
 use App\Models\User;
 use Database\Factories\UserFactory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Laravel\Ai\Models\ConversationMessage;
 use Thinkycz\LaravelCore\Support\Typer;
 
 \test('guest is redirected from agent page to login', function (): void {
@@ -51,6 +55,82 @@ use Thinkycz\LaravelCore\Support\Typer;
     $response->assertJsonPath('props.messages.0.role', 'user');
     $response->assertJsonPath('props.messages.0.content', 'Show me shifts');
     $response->assertJsonPath('props.messages.1.role', 'assistant');
+});
+
+\test('internal proposal confirmation messages are hidden from chat history', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne([
+        'role' => UserRoleEnum::StoreManager->value,
+    ]), User::class);
+    $conversation = \createAgentConversation($manager);
+
+    ConversationMessage::query()->create([
+        'id' => (string) Str::uuid(),
+        'conversation_id' => $conversation->getKey(),
+        'user_id' => $manager->getKey(),
+        'agent' => SchedulingAgent::class,
+        'role' => 'user',
+        'content' => 'This is an internal confirmation event, not the manager\'s latest natural-language message.',
+        'attachments' => [],
+        'tool_calls' => [],
+        'tool_results' => [],
+        'usage' => [],
+        'meta' => [],
+    ]);
+
+    ConversationMessage::query()->create([
+        'id' => (string) Str::uuid(),
+        'conversation_id' => $conversation->getKey(),
+        'user_id' => $manager->getKey(),
+        'agent' => SchedulingAgent::class,
+        'role' => 'assistant',
+        'content' => 'I have applied the proposal successfully.',
+        'attachments' => [],
+        'tool_calls' => [],
+        'tool_results' => [],
+        'usage' => [],
+        'meta' => [],
+    ]);
+
+    $response = $this->be($manager, 'users')->get('/agent?conversation=' . $conversation->getKey(), $this->inertiaHeaders());
+
+    $response->assertOk();
+    $response->assertJsonCount(2, 'props.messages');
+    $response->assertJsonPath('props.messages.0.content', 'Show me shifts');
+    $response->assertJsonPath('props.messages.1.content', 'No shifts are scheduled.');
+});
+
+\test('proposals expose message_id field for inline tool-result rendering', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne([
+        'role' => UserRoleEnum::StoreManager->value,
+    ]), User::class);
+    $conversation = \createAgentConversation($manager);
+
+    $assistantMessage = $conversation->messages()
+        ->where('role', 'assistant')
+        ->orderBy('created_at', 'asc')
+        ->first();
+    static::assertNotNull($assistantMessage);
+    $messageId = Typer::assertString($assistantMessage->getAttribute('id'));
+
+    $linked = \createAgentProposal($manager, $conversation->getKey(), [], AgentActionProposal::STATUS_PENDING);
+    $linked->forceFill(['message_id' => $messageId])->save();
+
+    $orphan = \createAgentProposal($manager, $conversation->getKey(), [], AgentActionProposal::STATUS_PENDING);
+
+    $response = $this->be($manager, 'users')->get('/agent?conversation=' . $conversation->getKey(), $this->inertiaHeaders());
+
+    $response->assertOk();
+    $proposals = $response->json('props.proposals');
+    static::assertCount(2, $proposals);
+
+    $byId = [];
+    foreach ($proposals as $proposal) {
+        static::assertArrayHasKey('message_id', $proposal);
+        $byId[$proposal['id']] = $proposal;
+    }
+
+    static::assertSame($messageId, $byId[$linked->getKey()]['message_id']);
+    static::assertNull($byId[$orphan->getKey()]['message_id']);
 });
 
 \test('store manager cannot load foreign or unknown conversations', function (): void {
