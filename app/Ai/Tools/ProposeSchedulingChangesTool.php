@@ -47,7 +47,7 @@ class ProposeSchedulingChangesTool implements Tool
                         ->description(
                             'Action type. One of: store.create, store.update, ' .
                             'availability.create, availability.update, availability.delete, ' .
-                            'shift.create, shift.update, shift.delete, shift.assign, shift.unassign, shift.autofill.',
+                            'shift.create, shift.update, shift.delete, shift.assign, shift.unassign, shift.autofill, shift.assignment.update.',
                         )
                         ->required(),
                     'availability_type' => $schema->string()
@@ -71,7 +71,8 @@ class ProposeSchedulingChangesTool implements Tool
                     'shift.update: shift_requirement_id, date, start_time, end_time, optional role_label, note. ' .
                     'shift.delete and shift.autofill: shift_requirement_id. ' .
                     'shift.assign: shift_requirement_id, employee_profile_id, optional start_time and end_time; omitted times default to the shift window. Assignment times must be inside the shift window and cannot duplicate an active assignment with the same shift_requirement_id, employee_profile_id, and start_time unless that existing assignment is unassigned earlier in this same proposal. ' .
-                    'shift.unassign: shift_assignment_id.',
+                    'shift.unassign: shift_assignment_id. ' .
+                    'shift.assignment.update: shift_assignment_id, optional employee_profile_id, start_time, end_time.',
                 )
                 ->required(),
         ];

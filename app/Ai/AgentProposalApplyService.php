@@ -35,8 +35,10 @@ class AgentProposalApplyService
 
     /**
      * Apply a pending proposal.
+     *
+     * @param array<int, int>|null $selectedIndexes
      */
-    public function apply(AgentActionProposal $proposal, User $actor): AgentActionProposal
+    public function apply(AgentActionProposal $proposal, User $actor, array|null $selectedIndexes = null): AgentActionProposal
     {
         $this->assertPendingOwnProposal($proposal, $actor);
 
@@ -44,9 +46,13 @@ class AgentProposalApplyService
         $appliedActions = [];
 
         try {
-            DB::transaction(function () use ($actor, &$affectedScheduleIds, &$appliedActions, $proposal): void {
-                foreach ($proposal->getActions() as $action) {
+            DB::transaction(function () use ($actor, &$affectedScheduleIds, &$appliedActions, $proposal, $selectedIndexes): void {
+                foreach ($proposal->getActions() as $index => $action) {
+                    if ($selectedIndexes !== null && !\in_array($index, $selectedIndexes, true)) {
+                        continue;
+                    }
                     $result = $this->applyAction($actor, $action);
+                    $result['action_index'] = $index;
                     $appliedActions[] = $result;
 
                     $scheduleId = $result['schedule_id'] ?? null;
@@ -117,6 +123,7 @@ class AgentProposalApplyService
             'shift.assign' => $this->assignShift($actor, $action),
             'shift.unassign' => $this->unassignShift($actor, $action),
             'shift.autofill' => $this->autofillShift($actor, $action),
+            'shift.assignment.update' => $this->updateShiftAssignment($actor, $action),
             default => throw new RuntimeException('Unsupported action type: ' . $type),
         };
     }
@@ -351,6 +358,35 @@ class AgentProposalApplyService
         $this->assignments->unassign($assignment);
 
         return ['type' => 'shift.unassign', 'shift_assignment_id' => $id, 'schedule_id' => $scheduleId];
+    }
+
+    /**
+     * Update shift assignment.
+     *
+     * @param array<string, mixed> $action
+     *
+     * @return array<string, mixed>
+     */
+    private function updateShiftAssignment(User $actor, array $action): array
+    {
+        $assignment = $this->managedShiftAssignment($actor, $this->int($action, 'shift_assignment_id'));
+        $employee = $this->managedEmployee($actor, $this->int($action, 'employee_profile_id'));
+        $startTime = $this->string($action, 'start_time');
+        $endTime = $this->string($action, 'end_time');
+
+        $shift = $assignment->getShiftRequirement();
+        if ($startTime < \mb_substr($shift->getStartTime(), 0, 5) || $endTime > \mb_substr($shift->getEndTime(), 0, 5)) {
+            throw new RuntimeException('Assignment time must be within the shift hours.');
+        }
+
+        $assignment->forceFill([
+            'employee_profile_id' => $employee->getKey(),
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+            'assigned_by' => $actor->getKey(),
+        ])->save();
+
+        return ['type' => 'shift.assignment.update', 'shift_assignment_id' => $assignment->getKey(), 'schedule_id' => $shift->getScheduleId()];
     }
 
     /**

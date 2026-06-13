@@ -36,6 +36,141 @@ const chatScrollContainer = ref<HTMLDivElement | null>(null);
 const promptTextarea = ref<HTMLTextAreaElement | null>(null);
 const streamIdleTimeoutMs = 75000;
 
+const selectedActions = ref<Record<number, Record<number, boolean>>>({});
+
+watch(
+    () => props.proposals,
+    (newProposals) => {
+        newProposals.forEach((p) => {
+            if (
+                p.status === 'pending' &&
+                selectedActions.value[p.id] === undefined
+            ) {
+                const selection: Record<number, boolean> = {};
+                p.actions.forEach((_, idx) => {
+                    selection[idx] = true;
+                });
+                selectedActions.value[p.id] = selection;
+            }
+        });
+    },
+    { immediate: true, deep: true },
+);
+
+function toggleActionSelection(proposalId: number, index: number): void {
+    if (!selectedActions.value[proposalId]) {
+        selectedActions.value[proposalId] = {};
+    }
+    selectedActions.value[proposalId][index] =
+        !selectedActions.value[proposalId][index];
+}
+
+function isActionSelected(proposalId: number, index: number): boolean {
+    const pSelection = selectedActions.value[proposalId];
+    if (!pSelection) return true;
+    return pSelection[index] ?? true;
+}
+
+function isActionApplied(proposal: AgentProposal, index: number): boolean {
+    if (proposal.status !== 'applied') return false;
+    const applied = proposal.result?.applied_actions;
+    if (!Array.isArray(applied)) return true;
+    return applied.some((a: any) => a.action_index === index);
+}
+
+const hasSelectedActions = computed(() => {
+    return (proposalId: number) => {
+        const selectionMap = selectedActions.value[proposalId];
+        if (!selectionMap) return false;
+        return Object.values(selectionMap).some(Boolean);
+    };
+});
+
+function getActionTypeName(type: string): string {
+    if (type.endsWith('.create')) return '+';
+    if (type === 'shift.assign') return 'assign';
+    if (type === 'shift.unassign') return 'remove';
+    if (type.endsWith('.delete')) return 'delete';
+    if (type.endsWith('.update')) return 'edit';
+    return type.split('.')[1] || type;
+}
+
+function actionDiffClass(
+    action: { type: string },
+    isSelectedOrApplied: boolean,
+    isPending: boolean,
+    isApplied: boolean,
+): string {
+    const type = action.type;
+    const base =
+        'rounded-lg border-l-2 px-3 py-2 text-[11px] flex items-center justify-between gap-3 transition-all duration-150 ';
+
+    if (isPending) {
+        const opacity = !isSelectedOrApplied ? 'opacity-40 ' : '';
+        if (type.endsWith('.create') || type === 'shift.assign') {
+            return (
+                base +
+                opacity +
+                'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300'
+            );
+        } else if (type.endsWith('.delete') || type === 'shift.unassign') {
+            const lineThrough = isSelectedOrApplied ? 'line-through ' : '';
+            return (
+                base +
+                opacity +
+                lineThrough +
+                'border-rose-500 bg-rose-50/50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-300'
+            );
+        } else if (type.endsWith('.update')) {
+            return (
+                base +
+                opacity +
+                'border-amber-500 bg-amber-50/50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300'
+            );
+        } else {
+            return (
+                base +
+                opacity +
+                'border-sky-500 bg-sky-50/50 dark:bg-sky-950/20 text-sky-800 dark:text-sky-300'
+            );
+        }
+    } else if (isApplied) {
+        if (!isSelectedOrApplied) {
+            return (
+                base +
+                'opacity-30 line-through border-outline-glass bg-surface-container-lowest text-on-surface-variant'
+            );
+        }
+
+        if (type.endsWith('.create') || type === 'shift.assign') {
+            return (
+                base +
+                'border-emerald-500 bg-emerald-500/5 text-emerald-800 dark:text-emerald-300'
+            );
+        } else if (type.endsWith('.delete') || type === 'shift.unassign') {
+            return (
+                base +
+                'line-through border-rose-500 bg-rose-500/5 text-rose-800 dark:text-rose-300'
+            );
+        } else if (type.endsWith('.update')) {
+            return (
+                base +
+                'border-amber-500 bg-amber-500/5 text-amber-800 dark:text-amber-300'
+            );
+        } else {
+            return (
+                base +
+                'border-sky-500 bg-sky-500/5 text-sky-800 dark:text-sky-300'
+            );
+        }
+    } else {
+        return (
+            base +
+            'opacity-50 border-outline-glass bg-surface-container-lowest text-on-surface-variant'
+        );
+    }
+}
+
 // Sync local messages with props
 watch(
     () => props.messages,
@@ -90,9 +225,18 @@ function handlePromptKeydown(event: KeyboardEvent): void {
 
 function applyProposal(proposal: AgentProposal): void {
     proposalActionId.value = proposal.id;
+
+    const selectionMap = selectedActions.value[proposal.id] || {};
+    const selectedIndexes = Object.entries(selectionMap)
+        .filter(([_, isSelected]) => isSelected)
+        .map(([idx]) => parseInt(idx, 10));
+
     router.post(
         '/agent/proposals/apply',
-        { proposal_id: proposal.id },
+        {
+            proposal_id: proposal.id,
+            action_indexes: selectedIndexes,
+        },
         {
             preserveScroll: true,
             onFinish: () => {
@@ -523,13 +667,70 @@ onMounted(() => {
                                                 {{ proposal.summary }}
                                             </h2>
 
-                                            <ul class="mt-3 space-y-1.5">
+                                            <ul class="mt-3 space-y-2">
                                                 <li
-                                                    v-for="action in proposal.actions"
-                                                    :key="`${proposal.id}-${action.label}`"
-                                                    class="rounded-lg bg-surface-container-lowest/60 px-3 py-2 text-[11px] text-on-surface-variant"
+                                                    v-for="(
+                                                        action, idx
+                                                    ) in proposal.actions"
+                                                    :key="`${proposal.id}-${idx}`"
+                                                    :class="
+                                                        actionDiffClass(
+                                                            action,
+                                                            proposal.status ===
+                                                                'pending'
+                                                                ? isActionSelected(
+                                                                      proposal.id,
+                                                                      idx,
+                                                                  )
+                                                                : isActionApplied(
+                                                                      proposal,
+                                                                      idx,
+                                                                  ),
+                                                            proposal.status ===
+                                                                'pending',
+                                                            proposal.status ===
+                                                                'applied',
+                                                        )
+                                                    "
                                                 >
-                                                    {{ action.label }}
+                                                    <div
+                                                        class="flex items-center gap-2.5 min-w-0 flex-1"
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            v-if="
+                                                                proposal.status ===
+                                                                'pending'
+                                                            "
+                                                            :checked="
+                                                                isActionSelected(
+                                                                    proposal.id,
+                                                                    idx,
+                                                                )
+                                                            "
+                                                            @change="
+                                                                toggleActionSelection(
+                                                                    proposal.id,
+                                                                    idx,
+                                                                )
+                                                            "
+                                                            class="h-4 w-4 shrink-0 rounded border-outline-glass bg-surface-container-low text-primary focus:ring-primary/20 accent-primary cursor-pointer"
+                                                        />
+                                                        <span
+                                                            class="truncate font-medium leading-5"
+                                                        >
+                                                            {{ action.label }}
+                                                        </span>
+                                                    </div>
+                                                    <span
+                                                        class="shrink-0 text-[9px] font-bold uppercase tracking-wider opacity-60"
+                                                    >
+                                                        {{
+                                                            getActionTypeName(
+                                                                action.type,
+                                                            )
+                                                        }}
+                                                    </span>
                                                 </li>
                                             </ul>
 
@@ -592,11 +793,14 @@ onMounted(() => {
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    class="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-3 text-[11px] font-semibold text-white transition hover:bg-primary-hover disabled:opacity-50"
+                                                    class="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-3 text-[11px] font-semibold text-white transition hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
                                                     :disabled="
                                                         isStreaming ||
                                                         proposalActionId !==
-                                                            null
+                                                            null ||
+                                                        !hasSelectedActions(
+                                                            proposal.id,
+                                                        )
                                                     "
                                                     @click="
                                                         applyProposal(proposal)
@@ -665,13 +869,70 @@ onMounted(() => {
                                             {{ proposal.summary }}
                                         </h2>
 
-                                        <ul class="mt-3 space-y-1.5">
+                                        <ul class="mt-3 space-y-2">
                                             <li
-                                                v-for="action in proposal.actions"
-                                                :key="`${proposal.id}-${action.label}`"
-                                                class="rounded-lg bg-surface-container-lowest/60 px-3 py-2 text-[11px] text-on-surface-variant"
+                                                v-for="(
+                                                    action, idx
+                                                ) in proposal.actions"
+                                                :key="`${proposal.id}-${idx}`"
+                                                :class="
+                                                    actionDiffClass(
+                                                        action,
+                                                        proposal.status ===
+                                                            'pending'
+                                                            ? isActionSelected(
+                                                                  proposal.id,
+                                                                  idx,
+                                                              )
+                                                            : isActionApplied(
+                                                                  proposal,
+                                                                  idx,
+                                                              ),
+                                                        proposal.status ===
+                                                            'pending',
+                                                        proposal.status ===
+                                                            'applied',
+                                                    )
+                                                "
                                             >
-                                                {{ action.label }}
+                                                <div
+                                                    class="flex items-center gap-2.5 min-w-0 flex-1"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        v-if="
+                                                            proposal.status ===
+                                                            'pending'
+                                                        "
+                                                        :checked="
+                                                            isActionSelected(
+                                                                proposal.id,
+                                                                idx,
+                                                            )
+                                                        "
+                                                        @change="
+                                                            toggleActionSelection(
+                                                                proposal.id,
+                                                                idx,
+                                                            )
+                                                        "
+                                                        class="h-4 w-4 shrink-0 rounded border-outline-glass bg-surface-container-low text-primary focus:ring-primary/20 accent-primary cursor-pointer"
+                                                    />
+                                                    <span
+                                                        class="truncate font-medium leading-5"
+                                                    >
+                                                        {{ action.label }}
+                                                    </span>
+                                                </div>
+                                                <span
+                                                    class="shrink-0 text-[9px] font-bold uppercase tracking-wider opacity-60"
+                                                >
+                                                    {{
+                                                        getActionTypeName(
+                                                            action.type,
+                                                        )
+                                                    }}
+                                                </span>
                                             </li>
                                         </ul>
 
@@ -722,10 +983,13 @@ onMounted(() => {
                                             </button>
                                             <button
                                                 type="button"
-                                                class="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-3 text-[11px] font-semibold text-white transition hover:bg-primary-hover disabled:opacity-50"
+                                                class="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-3 text-[11px] font-semibold text-white transition hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
                                                 :disabled="
                                                     isStreaming ||
-                                                    proposalActionId !== null
+                                                    proposalActionId !== null ||
+                                                    !hasSelectedActions(
+                                                        proposal.id,
+                                                    )
                                                 "
                                                 @click="applyProposal(proposal)"
                                             >

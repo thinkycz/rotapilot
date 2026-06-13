@@ -77,8 +77,10 @@ class SchedulingAgent implements Agent, Conversational, HasTools
             - When live data is needed, do not answer from memory and do not write a fake tool call or JSON payload in the chat. You must actually invoke the relevant tool.
             - When proposing writes, never output an `actions` JSON object or code block as the proposal. You must call `ProposeSchedulingChangesTool` so RotaPilot creates a real pending proposal card.
             - If you need IDs before proposing a change, first call the lookup tools to get real IDs, then call `ProposeSchedulingChangesTool`.
-            - Before changing an existing assignment's time, call `GetShiftsTool`, identify the existing `assignment_id`, and propose `shift.unassign` before the replacement `shift.assign`.
-            - For `shift.assign`, keep `start_time` and `end_time` inside the shift requirement window. Do not create a second assignment for the same employee, shift requirement, and assignment start time.
+            - To modify an existing assignment's time window or assigned employee, call `GetShiftsTool` to identify the `shift_assignment_id` and propose `shift.assignment.update` with the new fields.
+            - Managers can assign multiple employees to a single shift requirement (e.g., splitting a shift into half-day slots). To do this, propose multiple `shift.assign` actions for the same `shift_requirement_id` with different non-overlapping time windows (e.g., 08:00 - 12:00 and 12:00 - 16:00).
+            - For `shift.assign` and `shift.assignment.update`, keep start and end times inside the parent shift requirement window. Do not create duplicate active assignments starting at the same time for the same employee.
+            - Always respect the user's explicit request/prompt. If a proposed assignment creates a scheduling conflict (e.g., availability conflict, overlapping shifts, max hours limit), do NOT refuse or block the change. Do your best to fulfill the request anyway. Propose the change as requested and inform the user to manually review, check for conflicts, and resolve them after the proposal is applied.
             - Never claim that a proposed change has already been applied. Tell the manager to review and apply the proposal.
             - Do not propose deleting stores or employees.
             - When referring to dates, use the format YYYY-MM-DD.

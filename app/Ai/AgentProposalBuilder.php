@@ -41,6 +41,7 @@ class AgentProposalBuilder
         'shift.assign',
         'shift.unassign',
         'shift.autofill',
+        'shift.assignment.update',
     ];
 
     /**
@@ -144,6 +145,7 @@ class AgentProposalBuilder
                 'type' => $type,
                 'shift_requirement_id' => $this->managedShiftRequirement($user, $this->int($action, 'shift_requirement_id'))->getKey(),
             ],
+            'shift.assignment.update' => $this->shiftAssignmentUpdate($user, $type, $action, $proposalState),
         };
     }
 
@@ -316,6 +318,47 @@ class AgentProposalBuilder
     }
 
     /**
+     * Normalize shift assignment update.
+     *
+     * @param array<string, mixed> $action
+     * @param array{unassigned_assignment_ids: array<int, true>, ...} $proposalState
+     *
+     * @return array<string, mixed>
+     */
+    private function shiftAssignmentUpdate(User $user, string $type, array $action, array $proposalState): array
+    {
+        $assignment = $this->managedShiftAssignment($user, $this->int($action, 'shift_assignment_id'));
+        $requirement = $assignment->getShiftRequirement();
+
+        $employeeId = $this->nullableInt($action, 'employee_profile_id');
+        $employee = $employeeId !== null ? $this->managedEmployee($user, $employeeId) : $assignment->getEmployeeProfile();
+
+        $startTime = $this->nullableString($action, 'start_time');
+        $startTime = $startTime !== null ? $this->timeString($startTime) : $this->timeString($assignment->getStartTime());
+
+        $endTime = $this->nullableString($action, 'end_time');
+        $endTime = $endTime !== null ? $this->timeString($endTime) : $this->timeString($assignment->getEndTime());
+
+        if ($startTime >= $endTime) {
+            throw new RuntimeException('Assignment start_time must be before end_time.');
+        }
+
+        if ($startTime < $this->timeString($requirement->getStartTime()) || $endTime > $this->timeString($requirement->getEndTime())) {
+            throw new RuntimeException('Assignment time must be within the shift hours.');
+        }
+
+        $this->assertNoDuplicateAssignmentStart($requirement, $employee, $startTime, $proposalState, $assignment->getKey());
+
+        return [
+            'type' => $type,
+            'shift_assignment_id' => $assignment->getKey(),
+            'employee_profile_id' => $employee->getKey(),
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+        ];
+    }
+
+    /**
      * Guard the database uniqueness constraint before a proposal is created.
      *
      * @param array{unassigned_assignment_ids: array<int, true>, ...} $proposalState
@@ -325,13 +368,19 @@ class AgentProposalBuilder
         EmployeeProfile $employee,
         string $startTime,
         array $proposalState,
+        int|null $excludeAssignmentId = null,
     ): void {
-        $existing = ShiftAssignment::query()
+        $query = ShiftAssignment::query()
             ->where('shift_requirement_id', $requirement->getKey())
             ->where('employee_profile_id', $employee->getKey())
             ->where('start_time', $startTime)
-            ->where('status', '!=', ShiftAssignmentStatusEnum::Cancelled->value)
-            ->first();
+            ->where('status', '!=', ShiftAssignmentStatusEnum::Cancelled->value);
+
+        if ($excludeAssignmentId !== null) {
+            $query->where('id', '!=', $excludeAssignmentId);
+        }
+
+        $existing = $query->first();
 
         if (!$existing instanceof ShiftAssignment) {
             return;

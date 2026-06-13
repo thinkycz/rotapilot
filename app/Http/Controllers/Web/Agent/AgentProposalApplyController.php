@@ -34,6 +34,8 @@ class AgentProposalApplyController
 
         $validated = $this->validateRequest($request, [
             'proposal_id' => 'required|integer|exists:agent_action_proposals,id',
+            'action_indexes' => 'nullable|array',
+            'action_indexes.*' => 'integer',
         ]);
 
         $proposal = AgentActionProposal::query()
@@ -46,7 +48,19 @@ class AgentProposalApplyController
         }
 
         try {
-            $service->apply($proposal, $user);
+            $actionIndexes = null;
+            if ($request->has('action_indexes')) {
+                $rawIndexes = $validated->assertArray('action_indexes');
+                $actionIndexes = [];
+                foreach ($rawIndexes as $val) {
+                    if (\is_int($val)) {
+                        $actionIndexes[] = $val;
+                    } elseif (\is_string($val) && \ctype_digit($val)) {
+                        $actionIndexes[] = (int) $val;
+                    }
+                }
+            }
+            $service->apply($proposal, $user, $actionIndexes);
             $notifier->applied($proposal, $user);
         } catch (Throwable $throwable) {
             // Error is caught and saved in the proposal database record via the service.

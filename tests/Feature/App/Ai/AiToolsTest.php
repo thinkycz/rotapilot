@@ -446,3 +446,59 @@ use Thinkycz\LaravelCore\Support\Typer;
     static::assertSame('10:00', $actions[1]['start_time']);
     static::assertSame('12:00', $actions[1]['end_time']);
 });
+
+\test('proposal tool normalizes shift assignment update', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne([
+        'role' => UserRoleEnum::StoreManager->value,
+    ]), User::class);
+    $conversation = \createAgentConversation($manager);
+    $store = \managedStoreFor($manager, 'Owned Store');
+    $employee = \employeeFor($store, 'Owned Employee');
+    $otherEmployee = \employeeFor($store, 'Other Employee');
+    $schedule = Typer::assertInstance(ScheduleFactory::new()->createOne([
+        'store_id' => $store->getKey(),
+        'created_by' => $manager->getKey(),
+    ]), Schedule::class);
+    $shift = Typer::assertInstance(ShiftRequirementFactory::new()->createOne([
+        'schedule_id' => $schedule->getKey(),
+        'store_id' => $store->getKey(),
+        'start_time' => '10:00:00',
+        'end_time' => '21:00:00',
+        'created_by' => $manager->getKey(),
+    ]), ShiftRequirement::class);
+    $assignment = Typer::assertInstance(ShiftAssignmentFactory::new()->createOne([
+        'shift_requirement_id' => $shift->getKey(),
+        'employee_profile_id' => $employee->getKey(),
+        'start_time' => '10:00',
+        'end_time' => '15:00',
+        'status' => 'draft',
+        'assigned_by' => $manager->getKey(),
+    ]), ShiftAssignment::class);
+
+    \app(AgentConversationContext::class)->setConversationId($conversation->getKey());
+    $this->be($manager, 'users');
+
+    $payload = \decodeToolJson(\app(ProposeSchedulingChangesTool::class)->handle(new Request([
+        'summary' => 'Update assignment',
+        'actions' => [
+            [
+                'type' => 'shift.assignment.update',
+                'shift_assignment_id' => $assignment->getKey(),
+                'employee_profile_id' => $otherEmployee->getKey(),
+                'start_time' => '12:00',
+                'end_time' => '16:00',
+            ],
+        ],
+    ])));
+
+    static::assertSame('pending', $payload['status']);
+
+    $proposal = Typer::assertInstance(AgentActionProposal::query()->find($payload['proposal_id']), AgentActionProposal::class);
+    $actions = $proposal->getActions();
+
+    static::assertSame('shift.assignment.update', $actions[0]['type']);
+    static::assertSame($assignment->getKey(), $actions[0]['shift_assignment_id']);
+    static::assertSame($otherEmployee->getKey(), $actions[0]['employee_profile_id']);
+    static::assertSame('12:00', $actions[0]['start_time']);
+    static::assertSame('16:00', $actions[0]['end_time']);
+});

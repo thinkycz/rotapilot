@@ -54,8 +54,10 @@ class AgentProposalChatNotifier
     private function appliedMessage(AgentActionProposal $proposal, User $user): string
     {
         $summary = $proposal->getSummary();
-        $actionCount = \count($proposal->getActions());
-        $conflictCount = $this->countConflicts($proposal->getResult());
+        $result = $proposal->getResult();
+        $appliedActions = $result['applied_actions'] ?? null;
+        $actionCount = \is_array($appliedActions) ? \count($appliedActions) : \count($proposal->getActions());
+        $conflictCount = $this->countConflicts($result);
 
         return match ($user->getLocale()) {
             'cs' => $conflictCount > 0
