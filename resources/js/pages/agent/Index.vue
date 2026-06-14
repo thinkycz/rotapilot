@@ -9,9 +9,10 @@ import {
 } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
-import { Bot, Send, Sparkles, Loader2, Check, X } from '@lucide/vue';
+import { Bot, Send, Sparkles, Loader2, X } from '@lucide/vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import ClarificationCard from '@/components/agent/ClarificationCard.vue';
+import ProposalCard from '@/components/agent/ProposalCard.vue';
 import { clarificationChoicePrompt } from '@/lib/clarification';
 import { renderMarkdown, renderPlainText } from '@/lib/markdown';
 import { parseTextDeltaSseChunk } from '@/lib/sse';
@@ -69,100 +70,6 @@ function toggleActionSelection(proposalId: number, index: number): void {
     }
     selectedActions.value[proposalId][index] =
         !selectedActions.value[proposalId][index];
-}
-
-function isActionSelected(proposalId: number, index: number): boolean {
-    const pSelection = selectedActions.value[proposalId];
-    if (!pSelection) return true;
-    return pSelection[index] ?? true;
-}
-
-function isActionApplied(proposal: AgentProposal, index: number): boolean {
-    if (proposal.status !== 'applied') return false;
-    const applied = proposal.result?.applied_actions;
-    if (!Array.isArray(applied)) return true;
-    return applied.some((a: any) => a.action_index === index);
-}
-
-const hasSelectedActions = computed(() => {
-    return (proposalId: number) => {
-        const selectionMap = selectedActions.value[proposalId];
-        if (!selectionMap) return false;
-        return Object.values(selectionMap).some(Boolean);
-    };
-});
-
-function getActionTypeName(type: string): string {
-    if (type.endsWith('.create')) return '+';
-    if (type === 'shift.assign') return 'assign';
-    if (type === 'shift.unassign') return 'remove';
-    if (type.endsWith('.delete')) return 'delete';
-    if (type.endsWith('.update')) return 'edit';
-    return type.split('.')[1] || type;
-}
-
-function actionDiffClass(
-    action: { type: string },
-    isSelectedOrApplied: boolean,
-    isPending: boolean,
-    isApplied: boolean,
-): string {
-    const type = action.type;
-    const base =
-        'rounded-lg border-l-2 px-3 py-2 text-[11px] flex items-center justify-between gap-3 transition-all duration-150 text-on-surface ';
-
-    if (isPending) {
-        const opacity = !isSelectedOrApplied ? 'opacity-40 ' : '';
-        if (type.endsWith('.create') || type === 'shift.assign') {
-            return (
-                base +
-                opacity +
-                'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20'
-            );
-        } else if (type.endsWith('.delete') || type === 'shift.unassign') {
-            const lineThrough = isSelectedOrApplied ? 'line-through ' : '';
-            return (
-                base +
-                opacity +
-                lineThrough +
-                'border-rose-500 bg-rose-50/50 dark:bg-rose-950/20'
-            );
-        } else if (type.endsWith('.update')) {
-            return (
-                base +
-                opacity +
-                'border-amber-500 bg-amber-50/50 dark:bg-amber-950/20'
-            );
-        } else {
-            return (
-                base +
-                opacity +
-                'border-sky-500 bg-sky-50/50 dark:bg-sky-950/20'
-            );
-        }
-    } else if (isApplied) {
-        if (!isSelectedOrApplied) {
-            return (
-                base +
-                'opacity-30 line-through border-outline-glass bg-surface-container-lowest text-on-surface-variant'
-            );
-        }
-
-        if (type.endsWith('.create') || type === 'shift.assign') {
-            return base + 'border-emerald-500 bg-emerald-500/5';
-        } else if (type.endsWith('.delete') || type === 'shift.unassign') {
-            return base + 'line-through border-rose-500 bg-rose-500/5';
-        } else if (type.endsWith('.update')) {
-            return base + 'border-amber-500 bg-amber-500/5';
-        } else {
-            return base + 'border-sky-500 bg-sky-500/5';
-        }
-    } else {
-        return (
-            base +
-            'opacity-50 border-outline-glass bg-surface-container-lowest text-on-surface-variant'
-        );
-    }
 }
 
 function assistantRunMessageId(runId: string): string {
@@ -323,29 +230,6 @@ function updateAssistantRunContent(runId: string, delta: string): void {
     }
 
     scrollToBottom();
-}
-
-function proposalStatusLabel(status: AgentProposal['status']): string {
-    return t(`agent.proposal_status_${status}`);
-}
-
-function proposalConflictCount(proposal: AgentProposal): number {
-    const conflicts = proposal.result?.conflicts;
-    if (!Array.isArray(conflicts)) {
-        return 0;
-    }
-
-    return conflicts.reduce((count, row) => {
-        if (
-            typeof row === 'object' &&
-            row !== null &&
-            Array.isArray((row as { conflicts?: unknown }).conflicts)
-        ) {
-            return count + (row as { conflicts: unknown[] }).conflicts.length;
-        }
-
-        return count;
-    }, 0);
 }
 
 function renderedMessageContent(message: AgentMessage): string {
@@ -939,210 +823,33 @@ onBeforeUnmount(() => {
                                         </div>
 
                                         <!-- Tool-result bubbles (proposals) attached to this assistant turn -->
-                                        <template
-                                            v-if="
-                                                proposalsForMessage(msg.id)
-                                                    .length > 0
+                                        <ProposalCard
+                                            v-for="proposal in proposalsForMessage(
+                                                msg.id,
+                                            )"
+                                            :key="proposal.id"
+                                            :proposal="proposal"
+                                            :selected="
+                                                selectedActions[proposal.id] ??
+                                                {}
                                             "
-                                        >
-                                            <article
-                                                v-for="proposal in proposalsForMessage(
-                                                    msg.id,
-                                                )"
-                                                :key="proposal.id"
-                                                class="rounded-2xl border border-dashed border-primary/30 bg-primary/5 px-4 py-3 text-xs leading-relaxed shadow-sm transition-all"
-                                            >
-                                                <div
-                                                    class="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-primary"
-                                                >
-                                                    <Sparkles :size="13" />
-                                                    <span>{{
-                                                        t(
-                                                            'agent.proposal_title',
-                                                        )
-                                                    }}</span>
-                                                    <span
-                                                        class="rounded-full bg-surface-container px-2 py-0.5 text-[9px] font-semibold normal-case tracking-normal text-on-surface-variant"
-                                                    >
-                                                        {{
-                                                            proposalStatusLabel(
-                                                                proposal.status,
-                                                            )
-                                                        }}
-                                                    </span>
-                                                </div>
-
-                                                <h2
-                                                    class="text-sm font-semibold text-on-surface"
-                                                >
-                                                    {{ proposal.summary }}
-                                                </h2>
-
-                                                <ul class="mt-3 space-y-2">
-                                                    <li
-                                                        v-for="(
-                                                            action, idx
-                                                        ) in proposal.actions"
-                                                        :key="`${proposal.id}-${idx}`"
-                                                        :class="
-                                                            actionDiffClass(
-                                                                action,
-                                                                proposal.status ===
-                                                                    'pending'
-                                                                    ? isActionSelected(
-                                                                          proposal.id,
-                                                                          idx,
-                                                                      )
-                                                                    : isActionApplied(
-                                                                          proposal,
-                                                                          idx,
-                                                                      ),
-                                                                proposal.status ===
-                                                                    'pending',
-                                                                proposal.status ===
-                                                                    'applied',
-                                                            )
-                                                        "
-                                                    >
-                                                        <div
-                                                            class="flex items-center gap-2.5 min-w-0 flex-1"
-                                                        >
-                                                            <input
-                                                                type="checkbox"
-                                                                v-if="
-                                                                    proposal.status ===
-                                                                    'pending'
-                                                                "
-                                                                :checked="
-                                                                    isActionSelected(
-                                                                        proposal.id,
-                                                                        idx,
-                                                                    )
-                                                                "
-                                                                @change="
-                                                                    toggleActionSelection(
-                                                                        proposal.id,
-                                                                        idx,
-                                                                    )
-                                                                "
-                                                                class="h-4 w-4 shrink-0 rounded border-outline-glass bg-surface-container-low text-primary focus:ring-primary/20 accent-primary cursor-pointer"
-                                                            />
-                                                            <span
-                                                                class="truncate font-medium leading-5"
-                                                            >
-                                                                {{
-                                                                    action.label
-                                                                }}
-                                                            </span>
-                                                        </div>
-                                                        <span
-                                                            class="shrink-0 text-[9px] font-bold uppercase tracking-wider opacity-60"
-                                                        >
-                                                            {{
-                                                                getActionTypeName(
-                                                                    action.type,
-                                                                )
-                                                            }}
-                                                        </span>
-                                                    </li>
-                                                </ul>
-
-                                                <p
-                                                    v-if="
-                                                        proposalConflictCount(
-                                                            proposal,
-                                                        ) > 0
-                                                    "
-                                                    class="mt-3 text-[11px] font-medium text-amber-700"
-                                                >
-                                                    {{
-                                                        t(
-                                                            'agent.proposal_conflicts',
-                                                            {
-                                                                count: proposalConflictCount(
-                                                                    proposal,
-                                                                ),
-                                                            },
-                                                        )
-                                                    }}
-                                                </p>
-
-                                                <div
-                                                    v-if="
-                                                        proposal.status ===
-                                                            'failed' &&
-                                                        proposal.result?.error
-                                                    "
-                                                    class="mt-3 rounded-lg border border-red-200 bg-red-50/50 px-3 py-2 text-[11px] text-red-800"
-                                                >
-                                                    {{ proposal.result.error }}
-                                                </div>
-
-                                                <div
-                                                    v-if="
-                                                        proposal.status ===
-                                                        'pending'
-                                                    "
-                                                    class="mt-3 flex shrink-0 items-center gap-2"
-                                                >
-                                                    <button
-                                                        type="button"
-                                                        class="inline-flex h-8 items-center gap-1 rounded-lg border border-outline-glass bg-surface-container-lowest/40 px-3 text-[11px] font-semibold text-on-surface-variant transition hover:bg-surface-container disabled:opacity-50"
-                                                        :disabled="
-                                                            isStreaming ||
-                                                            proposalActionId !==
-                                                                null
-                                                        "
-                                                        @click="
-                                                            rejectProposal(
-                                                                proposal,
-                                                            )
-                                                        "
-                                                    >
-                                                        <X :size="13" />
-                                                        {{
-                                                            t(
-                                                                'agent.proposal_reject',
-                                                            )
-                                                        }}
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        class="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-3 text-[11px] font-semibold text-white transition hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        :disabled="
-                                                            isStreaming ||
-                                                            proposalActionId !==
-                                                                null ||
-                                                            !hasSelectedActions(
-                                                                proposal.id,
-                                                            )
-                                                        "
-                                                        @click="
-                                                            applyProposal(
-                                                                proposal,
-                                                            )
-                                                        "
-                                                    >
-                                                        <Loader2
-                                                            v-if="
-                                                                proposalActionId ===
-                                                                proposal.id
-                                                            "
-                                                            class="h-3.5 w-3.5 animate-spin"
-                                                        />
-                                                        <Check
-                                                            v-else
-                                                            :size="13"
-                                                        />
-                                                        {{
-                                                            t(
-                                                                'agent.proposal_apply',
-                                                            )
-                                                        }}
-                                                    </button>
-                                                </div>
-                                            </article>
-                                        </template>
+                                            :is-streaming="isStreaming"
+                                            :is-submitting-this="
+                                                proposalActionId === proposal.id
+                                            "
+                                            :is-any-submitting="
+                                                proposalActionId !== null
+                                            "
+                                            @toggle="
+                                                (idx) =>
+                                                    toggleActionSelection(
+                                                        proposal.id,
+                                                        idx,
+                                                    )
+                                            "
+                                            @apply="applyProposal(proposal)"
+                                            @reject="rejectProposal(proposal)"
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -1155,177 +862,36 @@ onBeforeUnmount(() => {
                         >
                             <div class="flex items-start gap-3 max-w-[85%]">
                                 <div
-                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-outline-glass bg-surface-container-low text-primary"
+                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-outline-glass bg-surface-container-low text-agent-avatar text-primary"
                                 >
                                     <Bot :size="16" />
                                 </div>
 
                                 <div class="flex min-w-0 flex-1 flex-col gap-3">
-                                    <article
+                                    <ProposalCard
                                         v-for="proposal in orphanProposals()"
                                         :key="proposal.id"
-                                        class="rounded-2xl border border-dashed border-primary/30 bg-primary/5 px-4 py-3 text-xs leading-relaxed shadow-sm transition-all"
-                                    >
-                                        <div
-                                            class="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-primary"
-                                        >
-                                            <Sparkles :size="13" />
-                                            <span>{{
-                                                t('agent.proposal_title')
-                                            }}</span>
-                                            <span
-                                                class="rounded-full bg-surface-container px-2 py-0.5 text-[9px] font-semibold normal-case tracking-normal text-on-surface-variant"
-                                            >
-                                                {{
-                                                    proposalStatusLabel(
-                                                        proposal.status,
-                                                    )
-                                                }}
-                                            </span>
-                                        </div>
-
-                                        <h2
-                                            class="text-sm font-semibold text-on-surface"
-                                        >
-                                            {{ proposal.summary }}
-                                        </h2>
-
-                                        <ul class="mt-3 space-y-2">
-                                            <li
-                                                v-for="(
-                                                    action, idx
-                                                ) in proposal.actions"
-                                                :key="`${proposal.id}-${idx}`"
-                                                :class="
-                                                    actionDiffClass(
-                                                        action,
-                                                        proposal.status ===
-                                                            'pending'
-                                                            ? isActionSelected(
-                                                                  proposal.id,
-                                                                  idx,
-                                                              )
-                                                            : isActionApplied(
-                                                                  proposal,
-                                                                  idx,
-                                                              ),
-                                                        proposal.status ===
-                                                            'pending',
-                                                        proposal.status ===
-                                                            'applied',
-                                                    )
-                                                "
-                                            >
-                                                <div
-                                                    class="flex items-center gap-2.5 min-w-0 flex-1"
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        v-if="
-                                                            proposal.status ===
-                                                            'pending'
-                                                        "
-                                                        :checked="
-                                                            isActionSelected(
-                                                                proposal.id,
-                                                                idx,
-                                                            )
-                                                        "
-                                                        @change="
-                                                            toggleActionSelection(
-                                                                proposal.id,
-                                                                idx,
-                                                            )
-                                                        "
-                                                        class="h-4 w-4 shrink-0 rounded border-outline-glass bg-surface-container-low text-primary focus:ring-primary/20 accent-primary cursor-pointer"
-                                                    />
-                                                    <span
-                                                        class="truncate font-medium leading-5"
-                                                    >
-                                                        {{ action.label }}
-                                                    </span>
-                                                </div>
-                                                <span
-                                                    class="shrink-0 text-[9px] font-bold uppercase tracking-wider opacity-60"
-                                                >
-                                                    {{
-                                                        getActionTypeName(
-                                                            action.type,
-                                                        )
-                                                    }}
-                                                </span>
-                                            </li>
-                                        </ul>
-
-                                        <p
-                                            v-if="
-                                                proposalConflictCount(
-                                                    proposal,
-                                                ) > 0
-                                            "
-                                            class="mt-3 text-[11px] font-medium text-amber-700"
-                                        >
-                                            {{
-                                                t('agent.proposal_conflicts', {
-                                                    count: proposalConflictCount(
-                                                        proposal,
-                                                    ),
-                                                })
-                                            }}
-                                        </p>
-
-                                        <div
-                                            v-if="
-                                                proposal.status === 'failed' &&
-                                                proposal.result?.error
-                                            "
-                                            class="mt-3 rounded-lg border border-red-200 bg-red-50/50 px-3 py-2 text-[11px] text-red-800"
-                                        >
-                                            {{ proposal.result.error }}
-                                        </div>
-
-                                        <div
-                                            v-if="proposal.status === 'pending'"
-                                            class="mt-3 flex shrink-0 items-center gap-2"
-                                        >
-                                            <button
-                                                type="button"
-                                                class="inline-flex h-8 items-center gap-1 rounded-lg border border-outline-glass bg-surface-container-lowest/40 px-3 text-[11px] font-semibold text-on-surface-variant transition hover:bg-surface-container disabled:opacity-50"
-                                                :disabled="
-                                                    isStreaming ||
-                                                    proposalActionId !== null
-                                                "
-                                                @click="
-                                                    rejectProposal(proposal)
-                                                "
-                                            >
-                                                <X :size="13" />
-                                                {{ t('agent.proposal_reject') }}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                class="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-3 text-[11px] font-semibold text-white transition hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
-                                                :disabled="
-                                                    isStreaming ||
-                                                    proposalActionId !== null ||
-                                                    !hasSelectedActions(
-                                                        proposal.id,
-                                                    )
-                                                "
-                                                @click="applyProposal(proposal)"
-                                            >
-                                                <Loader2
-                                                    v-if="
-                                                        proposalActionId ===
-                                                        proposal.id
-                                                    "
-                                                    class="h-3.5 w-3.5 animate-spin"
-                                                />
-                                                <Check v-else :size="13" />
-                                                {{ t('agent.proposal_apply') }}
-                                            </button>
-                                        </div>
-                                    </article>
+                                        :proposal="proposal"
+                                        :selected="
+                                            selectedActions[proposal.id] ?? {}
+                                        "
+                                        :is-streaming="isStreaming"
+                                        :is-submitting-this="
+                                            proposalActionId === proposal.id
+                                        "
+                                        :is-any-submitting="
+                                            proposalActionId !== null
+                                        "
+                                        @toggle="
+                                            (idx) =>
+                                                toggleActionSelection(
+                                                    proposal.id,
+                                                    idx,
+                                                )
+                                        "
+                                        @apply="applyProposal(proposal)"
+                                        @reject="rejectProposal(proposal)"
+                                    />
                                 </div>
                             </div>
                         </div>
