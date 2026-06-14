@@ -24,6 +24,29 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
+     * Creates the application.
+     *
+     * Forcing APP_ENV=testing before bootstrap ensures two things:
+     *   - The container's `env` binding is 'testing', so Laravel's
+     *     `runningUnitTests()` check returns true and the standard
+     *     CSRF middleware (`PreventRequestForgery::runningUnitTests()`)
+     *     short-circuits instead of throwing TokenMismatchException.
+     *   - Environment-specific .env files (e.g. .env.testing) are
+     *     not silently re-introducing APP_ENV=local from this
+     *     repo's .env.testing override.
+     *
+     * @return \Illuminate\Foundation\Application
+     */
+    public function createApplication()
+    {
+        $_ENV['APP_ENV'] = 'testing';
+        $_SERVER['APP_ENV'] = 'testing';
+        \putenv('APP_ENV=testing');
+
+        return parent::createApplication();
+    }
+
+    /**
      * Headers for an Inertia JSON page request.
      *
      * @return array<string, string>
