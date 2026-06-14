@@ -9,6 +9,7 @@ use App\Ai\AgentProposalChatNotifier;
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Models\AgentActionProposal;
 use App\Models\User;
+use App\Support\Authorization;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
@@ -29,9 +30,7 @@ class AgentProposalRejectController
 
         $user = User::mustAuth();
 
-        if (!$user->isStoreManager()) {
-            \abort(403, 'Unauthorized.');
-        }
+        Authorization::mustBeStoreManager($user);
 
         $validated = $this->validateRequest($request, [
             'proposal_id' => 'required|integer|exists:agent_action_proposals,id',

@@ -41,9 +41,7 @@ class AvailabilityStoreController
         ]);
 
         $actor = User::mustAuth();
-        if (!$actor->isStoreManager()) {
-            \abort(403);
-        }
+        Authorization::mustBeStoreManager($actor);
 
         $employeeId = $validated->assertInt('employee_profile_id');
         $employee = EmployeeProfile::query()->find($employeeId);

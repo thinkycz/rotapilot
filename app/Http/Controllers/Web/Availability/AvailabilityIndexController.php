@@ -29,9 +29,7 @@ class AvailabilityIndexController
     public function __invoke(Request $request): Response
     {
         $user = User::mustAuth();
-        if (!$user->isStoreManager()) {
-            \abort(403);
-        }
+        Authorization::mustBeStoreManager($user);
 
         $monthVal = $request->query('month');
         $month = \is_string($monthVal) ? $monthVal : \now()->format('Y-m');

@@ -8,6 +8,7 @@ use App\Ai\AgentRunAlreadyActiveException;
 use App\Ai\AgentRunService;
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Models\User;
+use App\Support\Authorization;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Thinkycz\LaravelCore\Support\Typer;
@@ -23,9 +24,7 @@ class AgentRunStartController
     {
         $user = User::mustAuth();
 
-        if (!$user->isStoreManager()) {
-            \abort(403, 'Unauthorized.');
-        }
+        Authorization::mustBeStoreManager($user);
 
         $validated = $this->validateRequest($request, [
             'prompt' => 'required|string',

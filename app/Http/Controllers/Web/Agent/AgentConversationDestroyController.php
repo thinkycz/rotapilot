@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Web\Agent;
 
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Models\User;
+use App\Support\Authorization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -23,9 +24,7 @@ class AgentConversationDestroyController
     {
         $user = User::mustAuth();
 
-        if (!$user->isStoreManager()) {
-            \abort(403, 'Unauthorized.');
-        }
+        Authorization::mustBeStoreManager($user);
 
         $validated = $this->validateRequest($request, [
             'conversation_id' => 'required|string',

@@ -9,6 +9,7 @@ use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Models\AgentRun;
 use App\Models\AgentRunEvent;
 use App\Models\User;
+use App\Support\Authorization;
 use Generator;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -28,9 +29,7 @@ class AgentRunStreamController
     {
         $user = User::mustAuth();
 
-        if (!$user->isStoreManager()) {
-            \abort(403, 'Unauthorized.');
-        }
+        Authorization::mustBeStoreManager($user);
 
         $validated = $this->validateRequest($request, [
             'run_id' => 'required|string',

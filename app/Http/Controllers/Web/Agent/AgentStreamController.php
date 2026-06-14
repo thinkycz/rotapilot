@@ -9,6 +9,7 @@ use App\Ai\AgentProposalLinker;
 use App\Ai\Agents\SchedulingAgent;
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Models\User;
+use App\Support\Authorization;
 use Generator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -37,9 +38,7 @@ class AgentStreamController
 
         $user = User::mustAuth();
 
-        if (!$user->isStoreManager()) {
-            \abort(403, 'Unauthorized.');
-        }
+        Authorization::mustBeStoreManager($user);
 
         $validated = $this->validateRequest($request, [
             'prompt' => 'required|string',

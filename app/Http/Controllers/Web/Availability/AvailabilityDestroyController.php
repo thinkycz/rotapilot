@@ -22,9 +22,7 @@ class AvailabilityDestroyController
     public function __invoke(Request $request): SymfonyResponse
     {
         $actor = User::mustAuth();
-        if (!$actor->isStoreManager()) {
-            \abort(403);
-        }
+        Authorization::mustBeStoreManager($actor);
 
         $id = (int) $request->query('id', '0');
         $row = EmployeeAvailability::query()->find($id);

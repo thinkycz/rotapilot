@@ -272,4 +272,27 @@ class Authorization
             throw new AccessDeniedHttpException('You cannot delete this store.');
         }
     }
+
+    /**
+     * Check whether the user is a store manager at all.
+     *
+     * Several web controllers act only on store_manager sessions (the
+     * AI agent and the manager-driven availability CRUD). Use this
+     * helper instead of inlining `if (!$user->isStoreManager()) abort`
+     * so the access-denied message and 403 status stay consistent.
+     */
+    public static function canBeStoreManager(User $user): bool
+    {
+        return $user->isStoreManager();
+    }
+
+    /**
+     * Throw if the user is not a store manager.
+     */
+    public static function mustBeStoreManager(User $user): void
+    {
+        if (!static::canBeStoreManager($user)) {
+            throw new AccessDeniedHttpException('You are not a store manager.');
+        }
+    }
 }

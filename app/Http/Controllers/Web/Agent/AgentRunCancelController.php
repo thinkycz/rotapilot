@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Web\Agent;
 use App\Ai\AgentRunService;
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Models\User;
+use App\Support\Authorization;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -21,9 +22,7 @@ class AgentRunCancelController
     {
         $user = User::mustAuth();
 
-        if (!$user->isStoreManager()) {
-            \abort(403, 'Unauthorized.');
-        }
+        Authorization::mustBeStoreManager($user);
 
         $validated = $this->validateRequest($request, [
             'run_id' => 'required|string',
