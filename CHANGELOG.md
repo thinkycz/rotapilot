@@ -153,6 +153,12 @@ throw()` and `Typer::assertString(\__(...))` instead of
   pinning the new payload shape (employee fields, stats, upcoming shifts,
   availability strip, conflict count, cancelled-assignment exclusion from
   hours totals).
+- 7 regression tests in `tests/Unit/Env/EnvKeyInPanicTest.php` pinning the
+  env-key-in-panic behavior of `AssertTrait` and `ParseTrait`. 4 tests
+  spawn a child `php -d zend.assertions=-1` (since `zend.assertions` can
+  only be flipped in `php.ini`) and assert the panic class and message;
+  2 tests pin the in-process behavior under `zend.assertions=1`; 1 happy
+  path test verifies the value passes through unchanged.
 - 16 Playwright e2e tests covering register, login, logout, password reset,
   profile update, locale switch, email verification flash, and protected
   route redirects.
@@ -300,6 +306,18 @@ flashError, errors}` with strict TypeScript types.
   The web route `GET /email/verify` is now registered and the
   translation points at it; the new controller consumes the token,
   marks the user verified, and redirects.
+- `packages/thinkycz/laravel-core/src/Traits/AssertTrait` and
+  `ParseTrait` previously used `\assert(condition, Panicker::message(...))`
+  for the "must not be null" / "must be TYPE" guards. `\assert` becomes
+  a no-op when `zend.assertions=-1` (the production default), so the
+  trait methods silently returned `null` and PHP tripped a generic
+  `TypeError: ... Return value must be of type string, null returned`
+  with no hint about the missing env key. Replaced every `\assert`
+  with an explicit `if (!...) Panicker::panic(...)` block. The panic
+  message now starts with `env '<KEY>'` and the args section still
+  carries the full `\compact('key', 'value')` payload, so the
+  offending key is visible at a glance regardless of
+  `zend.assertions`.
 - `app/Http/Controllers/Web/Employees/EmployeeShowController`
   computed the "end of week" bound as
   `CarbonImmutable::endOfWeek(CarbonImmutable::MONDAY)`. With that

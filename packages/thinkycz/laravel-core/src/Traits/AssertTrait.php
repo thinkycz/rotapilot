@@ -9,6 +9,7 @@ use Brick\Math\BigDecimal;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Thinkycz\LaravelCore\Support\Panicker;
+use Thinkycz\LaravelCore\Support\Typer;
 
 trait AssertTrait
 {
@@ -19,7 +20,9 @@ trait AssertTrait
     {
         $value = $this->mixed($key);
 
-        \assert(\is_string($value), Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if (!\is_string($value)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected string, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -31,7 +34,9 @@ trait AssertTrait
     {
         $value = $this->mixed($key);
 
-        \assert($value === null || \is_string($value), Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value !== null && !\is_string($value)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected string or null, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -43,7 +48,9 @@ trait AssertTrait
     {
         $value = $this->mixed($key);
 
-        \assert(\is_bool($value), Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if (!\is_bool($value)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected bool, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -55,7 +62,9 @@ trait AssertTrait
     {
         $value = $this->mixed($key);
 
-        \assert($value === null || \is_bool($value), Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value !== null && !\is_bool($value)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected bool or null, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -67,7 +76,9 @@ trait AssertTrait
     {
         $value = $this->mixed($key);
 
-        \assert(\is_int($value), Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if (!\is_int($value)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected int, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -79,7 +90,9 @@ trait AssertTrait
     {
         $value = $this->mixed($key);
 
-        \assert($value === null || \is_int($value), Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value !== null && !\is_int($value)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected int or null, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -91,7 +104,9 @@ trait AssertTrait
     {
         $value = $this->mixed($key);
 
-        \assert(\is_float($value), Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if (!\is_float($value)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected float, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -103,7 +118,9 @@ trait AssertTrait
     {
         $value = $this->mixed($key);
 
-        \assert($value === null || \is_float($value), Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value !== null && !\is_float($value)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected float or null, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -117,7 +134,9 @@ trait AssertTrait
     {
         $value = $this->mixed($key);
 
-        \assert(\is_array($value), Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if (!\is_array($value)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected array, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -131,7 +150,9 @@ trait AssertTrait
     {
         $value = $this->mixed($key);
 
-        \assert($value === null || \is_array($value), Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value !== null && !\is_array($value)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected array or null, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -167,7 +188,9 @@ trait AssertTrait
     {
         $value = $this->mixed($key);
 
-        \assert($value instanceof Carbon, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if (!$value instanceof Carbon) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected Carbon, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -179,7 +202,9 @@ trait AssertTrait
     {
         $value = $this->mixed($key);
 
-        \assert($value === null || $value instanceof Carbon, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value !== null && !($value instanceof Carbon)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected Carbon or null, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -191,7 +216,9 @@ trait AssertTrait
     {
         $value = $this->mixed($key);
 
-        \assert(\is_object($value), Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if (!\is_object($value)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected object, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -203,7 +230,9 @@ trait AssertTrait
     {
         $value = $this->mixed($key);
 
-        \assert($value === null || \is_object($value), Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value !== null && !\is_object($value)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected object or null, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -215,7 +244,9 @@ trait AssertTrait
     {
         $value = $this->mixed($key);
 
-        \assert(\is_scalar($value), Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if (!\is_scalar($value)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected scalar, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -227,7 +258,9 @@ trait AssertTrait
     {
         $value = $this->mixed($key);
 
-        \assert($value === null || \is_scalar($value), Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value !== null && !\is_scalar($value)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected scalar or null, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -245,7 +278,9 @@ trait AssertTrait
     {
         $value = $this->mixed($key);
 
-        \assert($value instanceof $enum, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value', 'enum')));
+        if (!$value instanceof $enum) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected instance of ' . $enum . ', got ' . \get_debug_type($value), \compact('key', 'value', 'enum'));
+        }
 
         return $value;
     }
@@ -263,7 +298,9 @@ trait AssertTrait
     {
         $value = $this->mixed($key);
 
-        \assert($value === null || $value instanceof $enum, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value', 'enum')));
+        if ($value !== null && !($value instanceof $enum)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected instance of ' . $enum . ' or null, got ' . \get_debug_type($value), \compact('key', 'value', 'enum'));
+        }
 
         return $value;
     }

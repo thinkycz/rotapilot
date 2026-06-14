@@ -54,7 +54,9 @@ trait ParseTrait
     {
         $value = $this->mustParseNullableString($key);
 
-        \assert($value !== null, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value === null) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' must not be null', \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -72,7 +74,9 @@ trait ParseTrait
 
         $value = \filter_var($value);
 
-        \assert($value !== false, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value === false) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' could not be parsed', \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -106,7 +110,9 @@ trait ParseTrait
     {
         $value = $this->mustParseNullableBool($key);
 
-        \assert($value !== null, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value === null) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' must not be null', \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -124,7 +130,9 @@ trait ParseTrait
 
         $value = \filter_var($value, \FILTER_VALIDATE_BOOL, \FILTER_NULL_ON_FAILURE);
 
-        \assert($value !== null, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value === null) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' must not be null', \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -164,7 +172,9 @@ trait ParseTrait
     {
         $value = $this->mustParseNullableInt($key);
 
-        \assert($value !== null, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value === null) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' must not be null', \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -182,7 +192,9 @@ trait ParseTrait
 
         $value = \filter_var($value, \FILTER_VALIDATE_INT);
 
-        \assert($value !== false, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value === false) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' could not be parsed', \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -222,7 +234,9 @@ trait ParseTrait
     {
         $value = $this->mustParseNullableFloat($key);
 
-        \assert($value !== null, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value === null) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' must not be null', \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -240,7 +254,9 @@ trait ParseTrait
 
         $value = \filter_var($value, \FILTER_VALIDATE_FLOAT);
 
-        \assert($value !== false, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value === false) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' could not be parsed', \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -284,7 +300,9 @@ trait ParseTrait
     {
         $value = $this->mustParseNullableArray($key);
 
-        \assert($value !== null, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value === null) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' must not be null', \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -302,7 +320,9 @@ trait ParseTrait
             return \get_object_vars($value);
         }
 
-        \assert($value === null || \is_array($value), Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value !== null && !\is_array($value)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected array or null, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -336,7 +356,9 @@ trait ParseTrait
     {
         $value = $this->mustParseNullableFile($key);
 
-        \assert($value !== null, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value === null) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' must not be null', \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -394,7 +416,9 @@ trait ParseTrait
     {
         $value = $this->mustParseNullableCarbon($key, $format, $tz);
 
-        \assert($value !== null, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value === null) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' must not be null', \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -412,7 +436,9 @@ trait ParseTrait
 
         $value = \filter_var($value);
 
-        \assert($value !== false && $value !== '', Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value === false || $value === '') {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' must be a non-empty string for carbon parsing', \compact('key', 'value'));
+        }
 
         if ($format === null) {
             return Carbon::parse($value, $tz)->setTimezone(Config::inject()->appTimezone());
@@ -420,7 +446,9 @@ trait ParseTrait
 
         $value = Carbon::createFromFormat($format, $value, $tz);
 
-        \assert($value !== null, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value === null) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' must not be null', \compact('key', 'value'));
+        }
 
         return $value->setTimezone(Config::inject()->appTimezone());
     }
@@ -458,7 +486,9 @@ trait ParseTrait
     {
         $value = $this->mustParseNullableObject($key);
 
-        \assert($value !== null, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value === null) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' must not be null', \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -474,7 +504,9 @@ trait ParseTrait
             return (object) $value;
         }
 
-        \assert($value === null || \is_object($value), Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value !== null && !\is_object($value)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected object or null, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -508,7 +540,9 @@ trait ParseTrait
     {
         $value = $this->mustParseNullableScalar($key);
 
-        \assert($value !== null, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value === null) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' must not be null', \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -520,7 +554,9 @@ trait ParseTrait
     {
         $value = $this->mixed($key);
 
-        \assert($value === null || \is_scalar($value), Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value !== null && !\is_scalar($value)) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' expected scalar or null, got ' . \get_debug_type($value), \compact('key', 'value'));
+        }
 
         return $value;
     }
@@ -576,7 +612,9 @@ trait ParseTrait
     {
         $value = $this->mustParseNullableEnum($key, $enum);
 
-        \assert($value !== null, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value', 'enum')));
+        if ($value === null) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' must not be null', \compact('key', 'value', 'enum'));
+        }
 
         return $value;
     }
@@ -652,7 +690,9 @@ trait ParseTrait
     {
         $value = $this->mustParseNullableIntEnum($key, $enum);
 
-        \assert($value !== null, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value', 'enum')));
+        if ($value === null) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' must not be null', \compact('key', 'value', 'enum'));
+        }
 
         return $value;
     }
@@ -724,7 +764,9 @@ trait ParseTrait
     {
         $value = $this->mustParseNullableStringEnum($key, $enum);
 
-        \assert($value !== null, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value', 'enum')));
+        if ($value === null) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' must not be null', \compact('key', 'value', 'enum'));
+        }
 
         return $value;
     }
@@ -782,7 +824,9 @@ trait ParseTrait
     {
         $value = $this->mustParseNullableBigDecimal($key, $scale, $roundingMode);
 
-        \assert($value !== null, Panicker::message(__METHOD__, 'assertion failed', \compact('key', 'value')));
+        if ($value === null) {
+            Panicker::panic(__METHOD__, 'env ' . Typer::assertString($key) . ' must not be null', \compact('key', 'value'));
+        }
 
         return $value;
     }
