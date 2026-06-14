@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Thinkycz\LaravelCore\Models\BaseUser;
+use Thinkycz\LaravelCore\Support\Config;
 use Thinkycz\LaravelCore\Support\Resolver;
 use Thinkycz\LaravelCore\Support\Thrower;
 use Thinkycz\LaravelCore\Support\Typer;
@@ -52,20 +53,38 @@ class ForgotPasswordController
             Thrower::default()->message('email', Typer::assertString(\__(PasswordBroker::INVALID_USER)))->throw();
         }
 
-        $password = Str::password(16);
+        if (self::getSendRawPasswordConfig()) {
+            $password = Str::password(16);
 
-        DB::transaction(static function () use ($user, $password): void {
-            $user->update([
-                'password' => $password,
-            ]);
+            DB::transaction(static function () use ($user, $password): void {
+                $user->update([
+                    'password' => $password,
+                ]);
 
-            $user->databaseTokens()->getQuery()->delete();
-        });
+                $user->databaseTokens()->getQuery()->delete();
+            });
 
-        $user->sendPasswordNewPasswordSettedNotification($password);
+            $user->sendPasswordNewPasswordSettedNotification($password);
 
-        $request->session()->flash('success', \__('A new password has been sent to your email address.'));
+            $request->session()->flash('success', \__('A new password has been sent to your email address.'));
+        } else {
+            $broker = Resolver::resolvePasswordBroker('users');
+
+            $token = $broker->createToken($user);
+
+            $user->sendPasswordResetNotification($token);
+
+            $request->session()->flash('success', \__('A password reset link has been sent to your email address.'));
+        }
 
         return Inertia::render('auth/ForgotPassword');
+    }
+
+    /**
+     * Read the send-raw-password flag from auth config for the users broker.
+     */
+    private static function getSendRawPasswordConfig(): bool
+    {
+        return Config::inject()->assertNullableBool('auth.passwords.users.send_raw_password') ?? false;
     }
 }
