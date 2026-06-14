@@ -78,8 +78,11 @@ function selfServiceAvailability(EmployeeProfile $employee, User $creator, strin
     $current = \selfServiceSchedule($store, 'Assigned Store - June 2026', '2026-06-01');
     $future = \selfServiceSchedule($store, 'Assigned Store - July 2026', '2026-07-01');
     \selfServiceSchedule($store, 'Assigned Store - May 2026', '2026-05-01');
-    \selfServiceSchedule($store, 'Assigned Store - Draft June 2026', '2026-06-01', 'draft');
-    \selfServiceSchedule($store, 'Assigned Store - Archived June 2026', '2026-06-01', 'archived');
+    // Past draft / past archived schedules on different periods to
+    // exercise the status filter without colliding with the unique
+    // (store_id, period_start) index.
+    \selfServiceSchedule($store, 'Assigned Store - Draft April 2026', '2026-04-01', 'draft');
+    \selfServiceSchedule($store, 'Assigned Store - Archived March 2026', '2026-03-01', 'archived');
     $foreignStore = Typer::assertInstance(StoreFactory::new()->createOne(), Store::class);
     \selfServiceSchedule($foreignStore, 'Foreign Store - June 2026', '2026-06-01');
 

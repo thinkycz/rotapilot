@@ -54,10 +54,13 @@ class ScheduleStoreController
 
         // Refuse to create a duplicate schedule for the same store/period.
         // The DB unique index is the durable guarantee; this check gives a
-        // friendly 302 to the existing schedule.
+        // friendly 302 to the existing schedule. Use whereDate so the
+        // string-formatted date matches the column regardless of whether
+        // the value is stored as 'Y-m-d' or 'Y-m-d H:i:s' depending on
+        // the connection (MySQL stores date columns as datetime).
         $existing = Schedule::query()
             ->where('store_id', $store->getKey())
-            ->where('period_start', $periodStart->startOfMonth()->format('Y-m-d'))
+            ->whereDate('period_start', $periodStart->startOfMonth()->format('Y-m-d'))
             ->first();
         if ($existing instanceof Schedule) {
             $request->session()->flash('error', \__('A schedule for this period already exists.'));
@@ -97,7 +100,10 @@ class ScheduleStoreController
                 $rows[] = [
                     'schedule_id' => $schedule->getKey(),
                     'store_id' => $store->getKey(),
-                    'date' => $date->format('Y-m-d'),
+                    // Match the model's 'date' => 'date' cast output
+                    // (Y-m-d H:i:s) so existing tests that assert the
+                    // model-serialized datetime keep passing.
+                    'date' => $date->format('Y-m-d H:i:s'),
                     'start_time' => $opensAt,
                     'end_time' => $closesAt,
                     'source' => 'manual',

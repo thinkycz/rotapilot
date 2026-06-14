@@ -334,7 +334,7 @@ use Thinkycz\LaravelCore\Support\Typer;
 
     static::assertSame(1, Schedule::query()
         ->where('store_id', $store->getKey())
-        ->where('period_start', '2026-06-01')
+        ->whereDate('period_start', '2026-06-01')
         ->count());
 });
 
@@ -379,7 +379,7 @@ use Thinkycz\LaravelCore\Support\Typer;
 
     $schedule = Schedule::query()
         ->where('store_id', $store->getKey())
-        ->where('period_start', '2026-06-01')
+        ->whereDate('period_start', '2026-06-01')
         ->firstOrFail();
 
     // Exactly the 22 weekday shift requirements should have been batch-inserted.
@@ -398,7 +398,11 @@ use Thinkycz\LaravelCore\Support\Typer;
     // No row should land on a closed day (Sat/Sun).
     static::assertSame(0, ShiftRequirement::query()
         ->where('schedule_id', $schedule->getKey())
-        ->whereIn('date', ['2026-06-06', '2026-06-07', '2026-06-13', '2026-06-14', '2026-06-20', '2026-06-21', '2026-06-27', '2026-06-28'])
+        ->where(function ($q): void {
+            foreach (['2026-06-06', '2026-06-07', '2026-06-13', '2026-06-14', '2026-06-20', '2026-06-21', '2026-06-27', '2026-06-28'] as $day) {
+                $q->orWhereDate('date', $day);
+            }
+        })
         ->count());
 });
 

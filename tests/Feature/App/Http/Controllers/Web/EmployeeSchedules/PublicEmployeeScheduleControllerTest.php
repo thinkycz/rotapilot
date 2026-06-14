@@ -138,8 +138,11 @@ function publicScheduleRow(Store $store, string $name, string $periodStart, stri
     $current = \publicScheduleRow($store, 'Downtown Cafe - June 2026', '2026-06-01');
     $future = \publicScheduleRow($store, 'Downtown Cafe - July 2026', '2026-07-01');
     \publicScheduleRow($store, 'Downtown Cafe - May 2026', '2026-05-01');
-    \publicScheduleRow($store, 'Downtown Cafe - Draft June 2026', '2026-06-01', 'draft');
-    \publicScheduleRow($store, 'Downtown Cafe - Archived June 2026', '2026-06-01', 'archived');
+    // Past draft / past archived schedules on different periods to
+    // exercise the status filter without colliding with the unique
+    // (store_id, period_start) index.
+    \publicScheduleRow($store, 'Downtown Cafe - Draft April 2026', '2026-04-01', 'draft');
+    \publicScheduleRow($store, 'Downtown Cafe - Archived March 2026', '2026-03-01', 'archived');
 
     $response = $this->get('/public/employee-schedules?token=' . $employee->ensurePublicScheduleToken(), $this->inertiaHeaders());
 
