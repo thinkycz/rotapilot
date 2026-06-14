@@ -56,3 +56,34 @@ declare(strict_types=1);
         \expect($contents)->toMatch('/public const int TAKE/');
     }
 });
+
+\arch('web update controllers call an Authorization guard', function (): void {
+    foreach (\glob(\base_path('app/Http/Controllers/Web/**/*UpdateController.php')) as $file) {
+        $contents = (string) \file_get_contents($file);
+
+        // Must reference the Authorization helper. ModelFinder is allowed
+        // because controllers can choose to authorize the resolved target
+        // explicitly. The original ScheduleUpdateController bug was
+        // missing both, so either is enough.
+        $has_authorization = \str_contains($contents, 'Authorization::');
+        \expect($has_authorization)->toBeTrue("{$file} must call an Authorization:: guard before mutating the model");
+    }
+});
+
+\arch('web destroy controllers call an Authorization guard', function (): void {
+    foreach (\glob(\base_path('app/Http/Controllers/Web/**/*DestroyController.php')) as $file) {
+        $contents = (string) \file_get_contents($file);
+
+        $has_authorization = \str_contains($contents, 'Authorization::');
+        \expect($has_authorization)->toBeTrue("{$file} must call an Authorization:: guard before deleting the model");
+    }
+});
+
+\arch('web store controllers call an Authorization guard', function (): void {
+    foreach (\glob(\base_path('app/Http/Controllers/Web/**/*StoreController.php')) as $file) {
+        $contents = (string) \file_get_contents($file);
+
+        $has_authorization = \str_contains($contents, 'Authorization::');
+        \expect($has_authorization)->toBeTrue("{$file} must call an Authorization:: guard before creating a model");
+    }
+});
