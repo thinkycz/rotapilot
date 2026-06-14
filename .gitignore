@@ -64,3 +64,9 @@ yarn-error.log
 
 # bootstrap
 /bootstrap/cache/*.php
+
+# local SQLite databases (not in database/database.sqlite)
+/*.sqlite
+/rotapilot
+*.sqlite3
+*.db
