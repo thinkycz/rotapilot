@@ -159,6 +159,17 @@ throw()` and `Typer::assertString(\__(...))` instead of
   only be flipped in `php.ini`) and assert the panic class and message;
   2 tests pin the in-process behavior under `zend.assertions=1`; 1 happy
   path test verifies the value passes through unchanged.
+- 1 whole-repo architecture test in
+  `tests/Architecture/EnvOutsideConfigArchitectureTest.php` that walks
+  every PHP file under the repo (skipping `vendor/`, `node_modules/`,
+  `bootstrap/cache/`, `storage/`) and asserts that no file outside
+  `config/`, the env wrapper itself, `tests/Unit/Env/`, or
+  `tests/Architecture/` references `Env::inject()`, `\Env::inject(`,
+  or imports `Thinkycz\LaravelCore\Support\Env`. `bootstrap/app.php`
+  is the only `bootstrap/` file allowed — and only for the
+  `withMiddleware` callback, which runs at kernel resolution time
+  (before `LoadConfiguration` has bound the config repository) and
+  therefore cannot reach `Config::inject()` without panicking.
 - 16 Playwright e2e tests covering register, login, logout, password reset,
   profile update, locale switch, email verification flash, and protected
   route redirects.
@@ -327,6 +338,24 @@ flashError, errors}` with strict TypeScript types.
   later in the same week. Replaced with the no-arg `endOfWeek()`
   which uses the framework default (Sunday-end) and returns the
   correct Sunday.
+- `app/Providers/AppServiceProvider` called
+  `Env::inject()->appEnvIs([...])` and
+  `Env::inject()->parseNullableString('OPENROUTER_API_KEY')` during
+  `boot()`. `Env::inject()` reads from the process environment
+  (via `Illuminate\Support\Env::get()`), not from the config
+  repository, so it bypasses the `config:cache` snapshot and stays
+  coupled to whatever the shell happened to expose when the artisan
+  command was spawned. On deploy (`make development` / `make
+  production` → `php artisan config:cache`) the panic from
+  `ParseTrait::mustParseString('APP_ENV')` fired with a confusing
+  `env APP_ENV must not be null` even though `.env` had it set.
+  Switched the provider to `Config::inject()`: env check now uses
+  `Config::appEnvIs([...])` (reads `config('app.env')`) and the
+  OpenRouter key check uses
+  `Config::parseNullableString('ai.providers.openrouter.key')`
+  (reads the cached config). The narrower
+  `OnlyOneWayArchitectureTest` rule was dropped in favor of the
+  whole-repo `EnvOutsideConfigArchitectureTest` (see Added).
 
 ## [0.1.0] - 2026-06-07
 

@@ -7,7 +7,7 @@ namespace App\Providers;
 use App\Ai\AgentConversationContext;
 use App\Ai\Agents\SchedulingAgent;
 use Illuminate\Support\ServiceProvider;
-use Thinkycz\LaravelCore\Support\Env;
+use Thinkycz\LaravelCore\Support\Config;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -26,9 +26,9 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->loadMigrationsFrom(\base_path('vendor/laravel/ai/database/migrations'));
 
-        $env = Env::inject();
+        $config = Config::inject();
 
-        if ($env->appEnvIs(['local', 'testing']) && $env->parseNullableString('OPENROUTER_API_KEY') === null) {
+        if ($config->appEnvIs(['local', 'testing']) && $config->parseNullableString('ai.providers.openrouter.key') === null) {
             SchedulingAgent::fake(static fn(string $prompt): string => 'Local AI assistant response for: ' . $prompt);
         }
     }
