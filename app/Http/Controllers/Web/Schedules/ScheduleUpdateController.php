@@ -7,6 +7,8 @@ namespace App\Http\Controllers\Web\Schedules;
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Http\Validation\ScheduleValidity;
 use App\Models\Schedule;
+use App\Models\User;
+use App\Support\Authorization;
 use App\Support\ModelFinder;
 use App\Support\ScheduleTitle;
 use Carbon\CarbonImmutable;
@@ -22,8 +24,11 @@ class ScheduleUpdateController
      */
     public function __invoke(Request $request): SymfonyResponse
     {
+        $actor = User::mustAuth();
         $id = (int) $request->query('id', '0');
         $schedule = ModelFinder::findOrAbort(Schedule::class, $id);
+
+        Authorization::mustManageSchedule($actor, $schedule);
 
         $validity = ScheduleValidity::inject();
         $validated = $this->validateRequest($request, [

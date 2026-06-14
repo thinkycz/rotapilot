@@ -337,6 +337,27 @@ use Thinkycz\LaravelCore\Support\Typer;
     ]);
 });
 
+\test('store manager cannot update a schedule for a store they do not manage', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne(['role' => 'store_manager']), User::class);
+    $foreignStore = Typer::assertInstance(StoreFactory::new()->createOne(), Store::class);
+    $schedule = Typer::assertInstance(ScheduleFactory::new()->createOne([
+        'store_id' => $foreignStore->getKey(),
+        'name' => 'Foreign Schedule',
+    ]), Schedule::class);
+
+    $response = $this->be($manager, 'users')->post('/schedules/update?id=' . $schedule->getKey(), [
+        'month' => 5,
+        'year' => 2027,
+    ], $this->inertiaHeaders());
+
+    $response->assertForbidden();
+
+    $this->assertDatabaseHas('schedules', [
+        'id' => $schedule->getKey(),
+        'name' => 'Foreign Schedule',
+    ]);
+});
+
 \test('store manager can delete an assigned schedule', function (): void {
     $manager = Typer::assertInstance(UserFactory::new()->createOne(['role' => 'store_manager']), User::class);
     $store = Typer::assertInstance(StoreFactory::new()->createOne(), Store::class);
