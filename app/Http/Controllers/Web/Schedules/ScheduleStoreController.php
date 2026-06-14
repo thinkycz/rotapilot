@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Web\Schedules;
 
+use App\Enums\ShiftSourceEnum;
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Http\Validation\ScheduleValidity;
 use App\Models\Schedule;
@@ -96,7 +97,6 @@ class ScheduleStoreController
                 if ($opensAt === null || $closesAt === null) {
                     continue;
                 }
-                // TODO: switch to ShiftSourceEnum::Manual once the enum is final.
                 $rows[] = [
                     'schedule_id' => $schedule->getKey(),
                     'store_id' => $store->getKey(),
@@ -106,7 +106,7 @@ class ScheduleStoreController
                     'date' => $date->format('Y-m-d H:i:s'),
                     'start_time' => $opensAt,
                     'end_time' => $closesAt,
-                    'source' => 'manual',
+                    'source' => ShiftSourceEnum::Manual->value,
                     'created_by' => $actor->getKey(),
                     'created_at' => \now(),
                     'updated_at' => \now(),

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Scheduling;
 
 use App\Enums\ShiftAssignmentStatusEnum;
+use App\Enums\ShiftSourceEnum;
 use App\Models\EmployeeProfile;
 use App\Models\ShiftAssignment;
 use App\Models\ShiftRequirement;
@@ -61,7 +62,7 @@ class AssignmentService
                 $requirement,
                 $employee,
                 $actor,
-                'manual',
+                ShiftSourceEnum::Manual->value,
                 $requirement->getStartTime(),
                 $requirement->getEndTime(),
             );
@@ -108,7 +109,7 @@ class AssignmentService
             return $existing;
         }
 
-        return $this->createDraftAssignment($requirement, $employee, $actor, 'manual', $startTime, $endTime);
+        return $this->createDraftAssignment($requirement, $employee, $actor, ShiftSourceEnum::Manual->value, $startTime, $endTime);
     }
 
     /**
@@ -161,21 +162,10 @@ class AssignmentService
         int $employeeId,
         string $startTime,
     ): ShiftAssignment|null {
-        $rows = ShiftAssignment::query()
-            ->getQuery()
+        return ShiftAssignment::query()
             ->where('shift_requirement_id', $requirementId)
             ->where('employee_profile_id', $employeeId)
             ->where('start_time', $startTime)
-            ->get();
-
-        $row = $rows->first();
-        if ($row === null) {
-            return null;
-        }
-
-        /** @var array<string, mixed> $attrs */
-        $attrs = (array) $row;
-
-        return (new ShiftAssignment())->newFromBuilder($attrs);
+            ->first();
     }
 }

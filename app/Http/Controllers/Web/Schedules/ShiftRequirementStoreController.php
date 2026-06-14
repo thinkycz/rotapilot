@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Web\Schedules;
 
+use App\Enums\ShiftSourceEnum;
 use App\Http\Controllers\Web\Concerns\ValidatesWebRequests;
 use App\Http\Validation\ShiftRequirementValidity;
 use App\Models\EmployeeProfile;
@@ -81,7 +82,7 @@ class ShiftRequirementStoreController
                 'end_time' => $validated->assertString('end_time'),
                 'role_label' => $validated->assertNullableString('role_label'),
                 'note' => $validated->assertNullableString('note'),
-                'source' => 'manual',
+                'source' => ShiftSourceEnum::Manual->value,
                 'created_by' => $actor->getKey(),
             ])->save();
 
