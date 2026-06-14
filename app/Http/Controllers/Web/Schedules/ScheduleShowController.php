@@ -38,7 +38,10 @@ class ScheduleShowController
             \abort(403);
         }
 
-        $schedule->loadMissing(['store', 'shiftRequirements']);
+        $schedule->loadMissing([
+            'store',
+            'shiftRequirements.assignments.employeeProfile',
+        ]);
         $store = $schedule->getStore();
         $requirements = $schedule->getShiftRequirements();
         $conflicts = $this->conflictDetector->detect($schedule);
@@ -65,10 +68,7 @@ class ScheduleShowController
 
             $date = $r->getDate();
             if (isset($byDate[$date])) {
-                $assignments = $r->assignments()
-                    ->with('employeeProfile')
-                    ->orderBy('start_time')
-                    ->get();
+                $assignments = $r->getAssignments();
 
                 foreach ($assignments as $a) {
                     $employeeNames[$a->getEmployeeProfileId()] = $a->getEmployeeProfile()->getName();

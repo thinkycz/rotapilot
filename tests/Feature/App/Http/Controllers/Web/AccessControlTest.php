@@ -307,6 +307,101 @@ use Thinkycz\LaravelCore\Support\Typer;
     ]);
 });
 
+\test('store manager cannot create a duplicate schedule for the same store and period', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne(['role' => 'store_manager']), User::class);
+    $store = Typer::assertInstance(StoreFactory::new()->createOne(), Store::class);
+    DB::table('store_manager_store')->insert([
+        'user_id' => $manager->getKey(),
+        'store_id' => $store->getKey(),
+        'created_at' => \now(),
+        'updated_at' => \now(),
+    ]);
+
+    $existing = Typer::assertInstance(ScheduleFactory::new()->createOne([
+        'store_id' => $store->getKey(),
+        'period_start' => '2026-06-01',
+        'period_end' => '2026-06-30',
+    ]), Schedule::class);
+
+    $response = $this->be($manager, 'users')->post('/schedules/store', [
+        'store_id' => $store->getKey(),
+        'month' => 6,
+        'year' => 2026,
+    ], $this->inertiaHeaders());
+
+    $response->assertRedirect('/schedules/show?id=' . $existing->getKey());
+    $response->assertSessionHas('error', \__('A schedule for this period already exists.'));
+
+    static::assertSame(1, Schedule::query()
+        ->where('store_id', $store->getKey())
+        ->where('period_start', '2026-06-01')
+        ->count());
+});
+
+\test('store manager can create a schedule and batch-insert shift requirements for open business-hour days', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne(['role' => 'store_manager']), User::class);
+    $store = Typer::assertInstance(StoreFactory::new()->createOne(), Store::class);
+    DB::table('store_manager_store')->insert([
+        'user_id' => $manager->getKey(),
+        'store_id' => $store->getKey(),
+        'created_at' => \now(),
+        'updated_at' => \now(),
+    ]);
+
+    // Open Mon–Fri (1..5), closed Sat–Sun (6..7).
+    foreach ([1, 2, 3, 4, 5] as $dayOfWeek) {
+        StoreBusinessHour::query()->create([
+            'store_id' => $store->getKey(),
+            'day_of_week' => $dayOfWeek,
+            'opens_at' => '08:00',
+            'closes_at' => '16:00',
+            'is_closed' => false,
+        ]);
+    }
+    foreach ([6, 7] as $dayOfWeek) {
+        StoreBusinessHour::query()->create([
+            'store_id' => $store->getKey(),
+            'day_of_week' => $dayOfWeek,
+            'opens_at' => null,
+            'closes_at' => null,
+            'is_closed' => true,
+        ]);
+    }
+
+    // June 2026 has 30 days; 22 of them are Mon–Fri.
+    $response = $this->be($manager, 'users')->post('/schedules/store', [
+        'store_id' => $store->getKey(),
+        'month' => 6,
+        'year' => 2026,
+    ], $this->inertiaHeaders());
+
+    $response->assertRedirect();
+
+    $schedule = Schedule::query()
+        ->where('store_id', $store->getKey())
+        ->where('period_start', '2026-06-01')
+        ->firstOrFail();
+
+    // Exactly the 22 weekday shift requirements should have been batch-inserted.
+    static::assertSame(22, ShiftRequirement::query()
+        ->where('schedule_id', $schedule->getKey())
+        ->count());
+
+    // Each row should carry the configured business hours.
+    $this->assertDatabaseHas('shift_requirements', [
+        'schedule_id' => $schedule->getKey(),
+        'date' => '2026-06-01 00:00:00',
+        'start_time' => '08:00',
+        'end_time' => '16:00',
+    ]);
+
+    // No row should land on a closed day (Sat/Sun).
+    static::assertSame(0, ShiftRequirement::query()
+        ->where('schedule_id', $schedule->getKey())
+        ->whereIn('date', ['2026-06-06', '2026-06-07', '2026-06-13', '2026-06-14', '2026-06-20', '2026-06-21', '2026-06-27', '2026-06-28'])
+        ->count());
+});
+
 \test('store manager can successfully update a schedule', function (): void {
     $manager = Typer::assertInstance(UserFactory::new()->createOne(['role' => 'store_manager']), User::class);
     $store = Typer::assertInstance(StoreFactory::new()->createOne(), Store::class);
