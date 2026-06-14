@@ -248,7 +248,7 @@ trait ParseTrait
     {
         $value = $this->mixed($key);
 
-        if ($value === null || \is_int($value)) {
+        if ($value === null || \is_float($value)) {
             return $value;
         }
 
