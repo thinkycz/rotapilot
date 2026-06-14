@@ -45,7 +45,6 @@ The MVP proves one thing: a store manager can describe staffing needs in plain E
 | `schedules`                   | A planning period for a single store. Has status (draft/published/archived). |
 | `shift_requirements`          | "Need one shift slot on date D from start to end." The unit of planning.     |
 | `shift_assignments`           | Employee assigned to a requirement.                                          |
-| `schedule_conflicts`          | Detected problem for a schedule (understaffed, unavailable, etc.).           |
 | `agent_conversations`         | (Laravel AI SDK) Chat sessions for the AI planner.                           |
 | `agent_conversation_messages` | (Laravel AI SDK) Individual messages.                                        |
 
@@ -69,29 +68,28 @@ Verb-specific actions publish as additional `POST /{resource}/{action}?id=` endp
 
 ## 5. Screen Inventory
 
-| Path                                                    | Audience | Purpose                                                                                   |
-| ------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------- |
-| `/dashboard`                                            | all      | Role-aware: managers see scheduling stats and navigation; employees see their next shift. |
-| `/stores/index`                                         | manager  | List of stores visible to the user.                                                       |
-| `/stores/show?id=`                                      | manager  | Store detail with hours, managers, employees, recent schedules.                           |
-| `/stores/create` and `/stores/edit?id=`                 | manager  | Create or edit a store.                                                                   |
-| `/stores/business-hours?id=`                            | manager  | Weekly editor for business hours.                                                         |
-| `/employees/index`                                      | manager  | Employee list with filters.                                                               |
-| `/employees/show?id=`                                   | manager  | Profile, assigned stores, availability, upcoming shifts.                                  |
-| `/employees/create` and `/employees/edit?id=`           | manager  | Create or edit an employee.                                                               |
-| `/availability`                                         | manager  | Monthly availability grid; click a day to edit.                                           |
-| `/schedules/index`                                      | manager  | List of schedules.                                                                        |
-| `/schedules/show?id=`                                   | manager  | Calendar (week/month) with shift cards and side panel.                                    |
-| `/schedules/create` and `/schedules/edit?id=`           | manager  | Create or edit a schedule.                                                                |
-| `/agent`                                                | manager  | Conversational AI assistant with persisted chats and scoped scheduling tools.             |
-| `/agent/stream`                                         | manager  | Streaming assistant endpoint used by the `/agent` page.                                   |
-| `/agent/conversations/destroy`                          | manager  | Deletes the manager's own assistant conversations.                                        |
-| `/agent/proposals/apply`                                | manager  | Applies the manager's own pending assistant proposal batch.                               |
-| `/agent/proposals/reject`                               | manager  | Rejects the manager's own pending assistant proposal batch.                               |
-| `/conflicts`                                            | manager  | Grouped conflicts with suggested fixes.                                                   |
-| `/my-calendar`                                          | employee | Published shifts for the logged-in employee only.                                         |
-| `/login` (existing)                                     | guest    | Sign in.                                                                                  |
-| `/settings/profile` and `/settings/password` (existing) | all      | Personal settings.                                                                        |
+| Path                                                    | Audience | Purpose                                                                                                                                                                                                                                           |
+| ------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/dashboard`                                            | all      | Role-aware: managers see scheduling stats and navigation; employees see their next shift.                                                                                                                                                         |
+| `/stores/index`                                         | manager  | List of stores visible to the user.                                                                                                                                                                                                               |
+| `/stores/show?id=`                                      | manager  | Store detail with hours, managers, employees, recent schedules.                                                                                                                                                                                   |
+| `/stores/create` and `/stores/edit?id=`                 | manager  | Create or edit a store.                                                                                                                                                                                                                           |
+| `/stores/business-hours?id=`                            | manager  | Weekly editor for business hours.                                                                                                                                                                                                                 |
+| `/employees/index`                                      | manager  | Employee list with filters.                                                                                                                                                                                                                       |
+| `/employees/show?id=`                                   | manager  | Stats row (upcoming shifts, hours this week / month / total, conflicts), upcoming shifts list (top 5 with deep link to parent schedule), 7-day availability strip, profile card, assigned stores, login account management, public schedule link. |
+| `/employees/create` and `/employees/edit?id=`           | manager  | Create or edit an employee.                                                                                                                                                                                                                       |
+| `/availability`                                         | manager  | Monthly availability grid; click a day to edit.                                                                                                                                                                                                   |
+| `/schedules/index`                                      | manager  | List of schedules.                                                                                                                                                                                                                                |
+| `/schedules/show?id=`                                   | manager  | Calendar (week/month) with shift cards and side panel.                                                                                                                                                                                            |
+| `/schedules/create` and `/schedules/edit?id=`           | manager  | Create or edit a schedule.                                                                                                                                                                                                                        |
+| `/agent`                                                | manager  | Conversational AI assistant with persisted chats and scoped scheduling tools.                                                                                                                                                                     |
+| `/agent/stream`                                         | manager  | Streaming assistant endpoint used by the `/agent` page.                                                                                                                                                                                           |
+| `/agent/conversations/destroy`                          | manager  | Deletes the manager's own assistant conversations.                                                                                                                                                                                                |
+| `/agent/proposals/apply`                                | manager  | Applies the manager's own pending assistant proposal batch.                                                                                                                                                                                       |
+| `/agent/proposals/reject`                               | manager  | Rejects the manager's own pending assistant proposal batch.                                                                                                                                                                                       |
+| `/my-calendar`                                          | employee | Published shifts for the logged-in employee only.                                                                                                                                                                                                 |
+| `/login` (existing)                                     | guest    | Sign in.                                                                                                                                                                                                                                          |
+| `/settings/profile` and `/settings/password` (existing) | all      | Personal settings.                                                                                                                                                                                                                                |
 
 ## 6. AI Flow
 
@@ -130,6 +128,8 @@ When no API key is configured in `local` or `testing`, `AppServiceProvider` fake
 | `missing_availability`   | info     | Employee has no availability record for the shift date.                   |
 
 Publishing a schedule is blocked if any conflict is `critical`. Warnings and info can remain; the manager sees a confirmation.
+
+Conflicts are surfaced inline on `/schedules/show` in a dedicated panel that lists every detected conflict with its type, severity, message, suggested fix, employee, and shift context. Each row offers an "Open shift" link to scroll to the affected shift in the same view, and an "Ask AI" button that opens `/agent?q=…` with a prefilled question so the AI planner can propose a fix. The previous dedicated `/conflicts` page (and its controllers and the `schedule_conflicts` table that backed the now-removed persistence) were removed because conflicts are computed dynamically on every request and cannot be "resolved" on a stored record.
 
 ## 9. Seed Data
 

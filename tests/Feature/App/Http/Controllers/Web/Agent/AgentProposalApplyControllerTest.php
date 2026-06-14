@@ -10,6 +10,7 @@ use App\Models\Schedule;
 use App\Models\ShiftAssignment;
 use App\Models\ShiftRequirement;
 use App\Models\Store;
+use App\Models\StoreBusinessHour;
 use App\Models\User;
 use Database\Factories\ScheduleFactory;
 use Database\Factories\ShiftAssignmentFactory;
@@ -189,6 +190,101 @@ use Thinkycz\LaravelCore\Support\Typer;
 
     static::assertSame('10:00', $assignment->getStartTime());
     static::assertSame('18:00', $assignment->getEndTime());
+});
+
+\test('manager can apply business hours update proposal', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne([
+        'role' => 'store_manager',
+    ]), User::class);
+    $conversation = \createAgentConversation($manager);
+    $store = \managedStoreFor($manager, 'Existing Store');
+    $proposal = \createAgentProposal($manager, $conversation->getKey(), [
+        [
+            'type' => 'business_hours.update',
+            'store_id' => $store->getKey(),
+            'hours' => [
+                [
+                    'day_of_week' => 1,
+                    'opens_at' => '08:00',
+                    'closes_at' => '16:00',
+                    'is_closed' => false,
+                ],
+                [
+                    'day_of_week' => 7,
+                    'opens_at' => null,
+                    'closes_at' => null,
+                    'is_closed' => true,
+                ],
+            ],
+        ],
+    ]);
+
+    $response = $this
+        ->from('/agent?conversation=' . $conversation->getKey())
+        ->be($manager, 'users')
+        ->post('/agent/proposals/apply', [
+            'proposal_id' => $proposal->getKey(),
+        ], $this->inertiaHeaders());
+
+    $response->assertRedirect('/agent?conversation=' . $conversation->getKey());
+
+    $monday = Typer::assertInstance(StoreBusinessHour::query()
+        ->where('store_id', $store->getKey())
+        ->where('day_of_week', 1)
+        ->first(), StoreBusinessHour::class);
+    $sunday = Typer::assertInstance(StoreBusinessHour::query()
+        ->where('store_id', $store->getKey())
+        ->where('day_of_week', 7)
+        ->first(), StoreBusinessHour::class);
+
+    static::assertSame('08:00', \mb_substr(Typer::assertString($monday->getOpensAt()), 0, 5));
+    static::assertSame('16:00', \mb_substr(Typer::assertString($monday->getClosesAt()), 0, 5));
+    static::assertFalse($monday->getIsClosed());
+    static::assertNull($sunday->getOpensAt());
+    static::assertNull($sunday->getClosesAt());
+    static::assertTrue($sunday->getIsClosed());
+    static::assertSame(AgentActionProposal::STATUS_APPLIED, Typer::assertInstance($proposal->refresh(), AgentActionProposal::class)->getStatus());
+});
+
+\test('failed proposal apply rolls back business hours changes', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne([
+        'role' => 'store_manager',
+    ]), User::class);
+    $conversation = \createAgentConversation($manager);
+    $store = \managedStoreFor($manager, 'Existing Store');
+    $proposal = \createAgentProposal($manager, $conversation->getKey(), [
+        [
+            'type' => 'business_hours.update',
+            'store_id' => $store->getKey(),
+            'hours' => [
+                [
+                    'day_of_week' => 1,
+                    'opens_at' => '08:00',
+                    'closes_at' => '16:00',
+                    'is_closed' => false,
+                ],
+            ],
+        ],
+        [
+            'type' => 'shift.assign',
+            'shift_requirement_id' => 999999,
+            'employee_profile_id' => 999999,
+            'start_time' => '09:00',
+            'end_time' => '10:00',
+        ],
+    ]);
+
+    $response = $this
+        ->from('/agent?conversation=' . $conversation->getKey())
+        ->be($manager, 'users')
+        ->post('/agent/proposals/apply', [
+            'proposal_id' => $proposal->getKey(),
+        ], $this->inertiaHeaders());
+
+    $response->assertRedirect('/agent?conversation=' . $conversation->getKey());
+
+    static::assertFalse(StoreBusinessHour::query()->where('store_id', $store->getKey())->exists());
+    static::assertSame(AgentActionProposal::STATUS_FAILED, Typer::assertInstance($proposal->refresh(), AgentActionProposal::class)->getStatus());
 });
 
 \test('duplicate assignment start fails with domain error instead of database exception', function (): void {

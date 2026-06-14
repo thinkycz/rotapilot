@@ -6,6 +6,8 @@ use App\Ai\Agents\SchedulingAgent;
 use App\Enums\UserRoleEnum;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\AgentActionProposal;
+use App\Models\AgentRun;
+use App\Models\AgentRunEvent;
 use App\Models\User;
 use Database\Factories\UserFactory;
 use Illuminate\Http\Request;
@@ -131,6 +133,29 @@ use Thinkycz\LaravelCore\Support\Typer;
 
     static::assertSame($messageId, $byId[$linked->getKey()]['message_id']);
     static::assertNull($byId[$orphan->getKey()]['message_id']);
+});
+
+\test('store manager page exposes active background run', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne([
+        'role' => UserRoleEnum::StoreManager->value,
+    ]), User::class);
+    $conversation = \createAgentConversation($manager);
+    $run = \createAgentRun($manager, $conversation->getKey(), AgentRun::STATUS_RUNNING);
+    $run->forceFill(['assistant_content' => 'Partial answer'])->save();
+
+    $event = Typer::assertInstance(AgentRunEvent::query()->create([
+        'run_id' => $run->getId(),
+        'type' => AgentRunEvent::TYPE_TEXT_DELTA,
+        'payload' => ['delta' => 'Partial answer'],
+    ]), AgentRunEvent::class);
+
+    $response = $this->be($manager, 'users')->get('/agent?conversation=' . $conversation->getKey(), $this->inertiaHeaders());
+
+    $response->assertOk();
+    $response->assertJsonPath('props.activeRun.id', $run->getId());
+    $response->assertJsonPath('props.activeRun.status', AgentRun::STATUS_RUNNING);
+    $response->assertJsonPath('props.activeRun.assistant_content', 'Partial answer');
+    $response->assertJsonPath('props.activeRun.last_event_id', $event->getKey());
 });
 
 \test('store manager cannot load foreign or unknown conversations', function (): void {

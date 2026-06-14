@@ -10,6 +10,7 @@ import {
     Clock,
     Briefcase,
     User,
+    ChevronDown,
 } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import { computed, ref } from 'vue';
@@ -54,7 +55,14 @@ interface Conflict {
     suggested_fix: string | null;
     employee_id: number | null;
     shift_requirement_id: number | null;
+    employee_name: string | null;
+    shift_date: string | null;
+    shift_start_time: string | null;
+    shift_end_time: string | null;
+    shift_role_label: string | null;
 }
+
+type ConflictGroupKey = 'critical' | 'warning' | 'info';
 
 interface Schedule {
     id: number;
@@ -80,11 +88,37 @@ const props = defineProps<{
 
 const isPublished = computed(() => props.schedule.status === 'published');
 const isManager = computed(() => auth.value.user?.role === 'store_manager');
-const criticalConflicts = computed(() =>
-    props.conflicts.filter(
-        (c) => c.severity === 'critical' && c.shift_requirement_id === null,
-    ),
-);
+const conflictSeverityGroups: ConflictGroupKey[] = [
+    'critical',
+    'warning',
+    'info',
+];
+const isConflictsPanelOpen = ref<boolean>(true);
+
+function toggleConflictsPanel(): void {
+    isConflictsPanelOpen.value = !isConflictsPanelOpen.value;
+    if (isConflictsPanelOpen.value) {
+        const el = document.getElementById('conflicts-panel');
+        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+const conflictsByGroup = computed<Record<ConflictGroupKey, Conflict[]>>(() => {
+    const groups: Record<ConflictGroupKey, Conflict[]> = {
+        critical: [],
+        warning: [],
+        info: [],
+    };
+    for (const c of props.conflicts) {
+        const key = ((): ConflictGroupKey => {
+            if (c.severity === 'critical') return 'critical';
+            if (c.severity === 'warning') return 'warning';
+            return 'info';
+        })();
+        groups[key].push(c);
+    }
+    return groups;
+});
 
 const dayKeys = computed(() => Object.keys(props.days).sort());
 const weekdays = computed(() => tm('common.weekdays') as string[]);
@@ -389,6 +423,62 @@ function getUnattributedShiftConflicts(shiftId: number): Conflict[] {
 function dateLabel(d: string): string {
     return formatDate(d);
 }
+
+function severityLabel(severity: string): string {
+    if (severity === 'critical')
+        return t('schedules.conflicts_panel.severity_critical');
+    if (severity === 'warning')
+        return t('schedules.conflicts_panel.severity_warning');
+    return t('schedules.conflicts_panel.severity_info');
+}
+
+function severityDotClass(severity: string): string {
+    if (severity === 'critical') return 'bg-rose-500';
+    if (severity === 'warning') return 'bg-amber-500';
+    return 'bg-sky-500';
+}
+
+function severityCardClass(severity: string): string {
+    if (severity === 'critical') return 'border-rose-200 bg-rose-50/40';
+    if (severity === 'warning') return 'border-amber-200 bg-amber-50/40';
+    return 'border-sky-200 bg-sky-50/40';
+}
+
+function severityGroupLabel(group: ConflictGroupKey): string {
+    if (group === 'critical')
+        return t('schedules.conflicts_panel.group_critical');
+    if (group === 'warning')
+        return t('schedules.conflicts_panel.group_warning');
+    return t('schedules.conflicts_panel.group_info');
+}
+
+function typeLabel(type: string): string {
+    const key = `schedules.conflicts_panel.type_${type}`;
+    const value = t(key);
+    return value === key ? type : value;
+}
+
+function formatShiftTime(start: string | null, end: string | null): string {
+    if (!start || !end) return '';
+    return `${start.substring(0, 5)}–${end.substring(0, 5)}`;
+}
+
+function buildAskAiPrompt(c: Conflict): string {
+    return t('schedules.conflicts_panel.ask_ai_prompt_template', {
+        schedule_name: props.schedule.name,
+        type: typeLabel(c.type),
+        date: c.shift_date ? formatDate(c.shift_date) : '',
+        time: formatShiftTime(c.shift_start_time, c.shift_end_time),
+        employee: c.employee_name ?? '',
+        message: c.message,
+        fix: c.suggested_fix ?? '',
+    });
+}
+
+function askAiAbout(c: Conflict): void {
+    const prompt = buildAskAiPrompt(c);
+    router.visit(`/agent?q=${encodeURIComponent(prompt)}`);
+}
 </script>
 
 <template>
@@ -447,8 +537,17 @@ function dateLabel(d: string): string {
                     <Edit :size="14" class="mr-1.5" />
                     {{ t('schedules.edit_link') }}
                 </Link>
-                <div
-                    class="inline-flex h-9 items-center rounded-xl border border-outline-glass bg-surface-container px-4 text-xs font-semibold text-on-surface-variant cursor-default"
+                <button
+                    type="button"
+                    @click="toggleConflictsPanel"
+                    :aria-expanded="isConflictsPanelOpen"
+                    aria-controls="conflicts-panel"
+                    :class="[
+                        'inline-flex h-9 cursor-pointer items-center rounded-xl border border-outline-glass bg-surface-container px-4 text-xs font-semibold transition-colors',
+                        conflicts.length > 0
+                            ? 'text-rose-700 hover:bg-rose-50'
+                            : 'text-on-surface-variant/50 hover:bg-surface-container',
+                    ]"
                 >
                     <AlertTriangle
                         :size="14"
@@ -460,7 +559,14 @@ function dateLabel(d: string): string {
                         ]"
                     />
                     {{ conflicts.length }}
-                </div>
+                    <ChevronDown
+                        :size="14"
+                        :class="[
+                            'ml-1.5 transition-transform duration-200',
+                            isConflictsPanelOpen ? 'rotate-180' : 'rotate-0',
+                        ]"
+                    />
+                </button>
                 <button
                     v-if="isManager && !isPublished"
                     @click="publish"
@@ -487,22 +593,213 @@ function dateLabel(d: string): string {
             </div>
         </div>
 
-        <div
-            v-if="criticalConflicts.length > 0"
-            class="mb-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700"
+        <section
+            id="conflicts-panel"
+            :class="[
+                'rounded-2xl border bg-surface-container-lowest shadow-sm scroll-mt-6 overflow-hidden transition-all duration-200 ease-out',
+                isConflictsPanelOpen
+                    ? 'mb-6 border-outline-glass p-6 max-h-[2000px] opacity-100'
+                    : 'mb-0 max-h-0 border-transparent opacity-0 pointer-events-none',
+            ]"
         >
-            <p class="font-semibold mb-2">
-                {{ t('schedules.critical_conflicts_warning') }}
-            </p>
-            <ul class="list-disc pl-4 space-y-1">
-                <li v-for="c in criticalConflicts" :key="c.id">
-                    {{ c.message }}
-                    <span v-if="c.suggested_fix" class="italic opacity-85 ml-1">
-                        ({{ c.suggested_fix }})
-                    </span>
-                </li>
-            </ul>
-        </div>
+            <div class="mb-4 flex items-center justify-between gap-3">
+                <div>
+                    <h2 class="font-heading text-sm font-bold text-on-surface">
+                        {{ t('schedules.conflicts_panel.title') }}
+                    </h2>
+                    <p class="mt-1 text-[11px] text-on-surface-variant/80">
+                        {{ t('schedules.conflicts_panel.subtitle') }}
+                    </p>
+                </div>
+                <span
+                    :class="[
+                        'inline-flex h-7 items-center rounded-full border px-3 text-[11px] font-semibold',
+                        conflicts.length > 0
+                            ? 'border-rose-200 bg-rose-50 text-rose-700'
+                            : 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                    ]"
+                >
+                    {{ conflicts.length }}
+                </span>
+            </div>
+
+            <div
+                v-if="conflicts.length === 0"
+                class="flex flex-col items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-8 text-center"
+            >
+                <AlertTriangle :size="20" class="text-emerald-500" />
+                <p class="text-xs font-semibold text-emerald-800">
+                    {{ t('schedules.conflicts_panel.empty_title') }}
+                </p>
+                <p class="text-[11px] text-emerald-700/80">
+                    {{ t('schedules.conflicts_panel.empty_subtitle') }}
+                </p>
+            </div>
+
+            <div v-else class="space-y-5">
+                <div
+                    v-for="groupKey in conflictSeverityGroups"
+                    :key="groupKey"
+                    v-show="conflictsByGroup[groupKey].length > 0"
+                >
+                    <div
+                        class="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant"
+                    >
+                        <span
+                            :class="[
+                                'h-2 w-2 rounded-full',
+                                severityDotClass(groupKey),
+                            ]"
+                        />
+                        <span>{{ severityGroupLabel(groupKey) }}</span>
+                        <span
+                            class="rounded-full bg-surface-container px-1.5 py-0.5 text-[9px] font-semibold text-on-surface-variant"
+                        >
+                            {{ conflictsByGroup[groupKey].length }}
+                        </span>
+                    </div>
+                    <ul class="space-y-2">
+                        <li
+                            v-for="c in conflictsByGroup[groupKey]"
+                            :key="c.id"
+                            :class="[
+                                'rounded-xl border p-3 text-xs',
+                                severityCardClass(c.severity),
+                            ]"
+                        >
+                            <div class="flex items-start gap-2.5">
+                                <span
+                                    :class="[
+                                        'mt-0.5 inline-flex h-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[9px] font-bold uppercase tracking-wider text-white',
+                                        severityDotClass(c.severity),
+                                    ]"
+                                >
+                                    {{ severityLabel(c.severity) }}
+                                </span>
+                                <div class="flex-1 min-w-0 space-y-1">
+                                    <p class="font-semibold text-on-surface">
+                                        {{ typeLabel(c.type) }}
+                                    </p>
+                                    <p class="text-on-surface-variant">
+                                        {{ c.message }}
+                                    </p>
+                                    <div
+                                        v-if="c.shift_date || c.employee_name"
+                                        class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-on-surface-variant/80"
+                                    >
+                                        <span
+                                            v-if="c.shift_date"
+                                            class="inline-flex items-center gap-1"
+                                        >
+                                            <Clock
+                                                :size="11"
+                                                class="text-on-surface-variant/60"
+                                            />
+                                            <span
+                                                class="font-medium text-on-surface-variant"
+                                            >
+                                                {{
+                                                    t(
+                                                        'schedules.conflicts_panel.shift_label',
+                                                    )
+                                                }}:
+                                            </span>
+                                            <span>
+                                                {{ formatDate(c.shift_date) }}
+                                                <span
+                                                    v-if="
+                                                        formatShiftTime(
+                                                            c.shift_start_time,
+                                                            c.shift_end_time,
+                                                        )
+                                                    "
+                                                    class="font-mono"
+                                                >
+                                                    {{
+                                                        formatShiftTime(
+                                                            c.shift_start_time,
+                                                            c.shift_end_time,
+                                                        )
+                                                    }}
+                                                </span>
+                                            </span>
+                                            <span
+                                                v-if="c.shift_role_label"
+                                                class="rounded-md border border-outline-glass bg-white px-1.5 py-0.5 text-[10px] font-semibold text-on-surface-variant"
+                                            >
+                                                {{ c.shift_role_label }}
+                                            </span>
+                                        </span>
+                                        <span
+                                            v-if="c.employee_name"
+                                            class="inline-flex items-center gap-1"
+                                        >
+                                            <User
+                                                :size="11"
+                                                class="text-on-surface-variant/60"
+                                            />
+                                            <span
+                                                class="font-medium text-on-surface-variant"
+                                            >
+                                                {{
+                                                    t(
+                                                        'schedules.conflicts_panel.employee_label',
+                                                    )
+                                                }}:
+                                            </span>
+                                            <span
+                                                class="font-semibold text-on-surface"
+                                            >
+                                                {{ c.employee_name }}
+                                            </span>
+                                        </span>
+                                    </div>
+                                    <p
+                                        v-if="c.suggested_fix"
+                                        class="text-[11px] italic text-on-surface-variant"
+                                    >
+                                        <span
+                                            class="font-semibold not-italic text-on-surface-variant/80"
+                                        >
+                                            {{
+                                                t(
+                                                    'schedules.conflicts_panel.suggested_fix_label',
+                                                )
+                                            }}:
+                                        </span>
+                                        {{ c.suggested_fix }}
+                                    </p>
+                                    <div class="flex flex-wrap gap-2 pt-1">
+                                        <a
+                                            v-if="c.shift_requirement_id"
+                                            :href="`#shift-${c.shift_requirement_id}`"
+                                            class="inline-flex h-7 cursor-pointer items-center gap-1 rounded-md border border-outline-glass bg-white px-2 text-[11px] font-semibold text-on-surface hover:bg-surface-container-low"
+                                        >
+                                            {{
+                                                t(
+                                                    'schedules.conflicts_panel.action_open_shift',
+                                                )
+                                            }}
+                                        </a>
+                                        <button
+                                            type="button"
+                                            @click="askAiAbout(c)"
+                                            class="inline-flex h-7 cursor-pointer items-center gap-1 rounded-md border border-primary/20 bg-primary px-2 text-[11px] font-semibold text-white hover:bg-primary-hover"
+                                        >
+                                            {{
+                                                t(
+                                                    'schedules.conflicts_panel.action_ask_ai',
+                                                )
+                                            }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
 
         <!-- Employee Statistics section -->
         <section
@@ -623,8 +920,9 @@ function dateLabel(d: string): string {
                     <div
                         v-for="s in props.days[date]?.shifts"
                         :key="s.id"
+                        :id="`shift-${s.id}`"
                         @click="openShift(s)"
-                        class="cursor-pointer transition-colors hover:bg-surface-container-lowest/60"
+                        class="cursor-pointer transition-colors hover:bg-surface-container-lowest/60 scroll-mt-24"
                     >
                         <!-- Shift top row: time + role + actions -->
                         <div class="flex items-center gap-4 px-5 py-3">
@@ -863,10 +1161,11 @@ function dateLabel(d: string): string {
                                 <button
                                     v-for="s in day.shifts"
                                     :key="s.id"
+                                    :id="`shift-${s.id}`"
                                     type="button"
                                     @click="openShift(s)"
                                     :class="[
-                                        'w-full text-left rounded-lg overflow-hidden flex transition-all hover:shadow-sm cursor-pointer border',
+                                        'w-full text-left rounded-lg overflow-hidden flex transition-all hover:shadow-sm cursor-pointer border scroll-mt-24',
                                         s.assignments.length === 0
                                             ? 'border-rose-200 bg-rose-50/60 hover:bg-rose-50'
                                             : getShiftConflicts(s.id).length > 0

@@ -3,6 +3,9 @@ export interface SseParseResult {
     deltas: string[];
     done: boolean;
     eventTypes: string[];
+    lastEventId: number | null;
+    terminalType: string | null;
+    error: string | null;
 }
 
 export function parseTextDeltaSseChunk(
@@ -17,6 +20,9 @@ export function parseTextDeltaSseChunk(
             : (lines.pop() ?? '');
     const deltas: string[] = [];
     const eventTypes: string[] = [];
+    let lastEventId: number | null = null;
+    let terminalType: string | null = null;
+    let error: string | null = null;
     let done = false;
 
     for (const line of lines) {
@@ -41,6 +47,18 @@ export function parseTextDeltaSseChunk(
 
             if (typeof parsed.type === 'string') {
                 eventTypes.push(parsed.type);
+
+                if (
+                    parsed.type === 'run_completed' ||
+                    parsed.type === 'run_failed' ||
+                    parsed.type === 'run_cancelled'
+                ) {
+                    terminalType = parsed.type;
+                }
+            }
+
+            if (typeof (parsed as { id?: unknown }).id === 'number') {
+                lastEventId = (parsed as { id: number }).id;
             }
 
             if (
@@ -49,10 +67,25 @@ export function parseTextDeltaSseChunk(
             ) {
                 deltas.push(parsed.delta);
             }
+
+            if (
+                parsed.type === 'run_failed' &&
+                typeof (parsed as { error?: unknown }).error === 'string'
+            ) {
+                error = (parsed as { error: string }).error;
+            }
         } catch {
             // Ignore malformed SSE rows and continue parsing later complete rows.
         }
     }
 
-    return { buffer, deltas, done, eventTypes };
+    return {
+        buffer,
+        deltas,
+        done,
+        eventTypes,
+        lastEventId,
+        terminalType,
+        error,
+    };
 }

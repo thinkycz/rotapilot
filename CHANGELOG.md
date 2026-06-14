@@ -149,6 +149,10 @@ throw()` and `Typer::assertString(\__(...))` instead of
 ### Added
 
 - 90 PHPUnit feature tests / 198 assertions (up from 14 / 45 in baseline).
+- 4 regression tests in `tests/Feature/App/Http/Controllers/Web/Employees/EmployeeShowControllerTest.php`
+  pinning the new payload shape (employee fields, stats, upcoming shifts,
+  availability strip, conflict count, cancelled-assignment exclusion from
+  hours totals).
 - 16 Playwright e2e tests covering register, login, logout, password reset,
   profile update, locale switch, email verification flash, and protected
   route redirects.
@@ -198,9 +202,29 @@ flashError, errors}` with strict TypeScript types.
 
 ### Changed
 
-- `app/Http/Controllers/Web/Auth/*::store` controllers no longer hash the
-  password twice; the single `Resolver::resolveHasher()->check(...)` call now
-  serves both auth and constant-time comparison.
+- `app/Http/Controllers/Web/Schedules/ScheduleShowController` now enriches
+  every detected conflict with `employee_name`, `shift_date`,
+  `shift_start_time`, `shift_end_time`, and `shift_role_label`, sourced
+  from the already-loaded `shift_requirements` and assignments
+  (no extra queries). The `schedules/Show.vue` page renders a new
+  dedicated `Conflicts` panel grouped by severity that shows type,
+  message, suggested fix, shift context, and employee, with an
+  `Open shift` anchor and an `Ask AI` button that navigates to
+  `/agent?q=…` with a prefilled prompt.
+- `app/Ai/AgentPageLoader` now reads the `q` query param as an
+  `initialPrompt` (truncated to 1000 chars) and `pages/agent/Index.vue`
+  seeds the prompt input from it on mount, then strips `?q=` from the
+  URL so a refresh does not re-seed.
+- The header count badge on `/schedules/show` is now an anchor link
+  that scrolls to the new `Conflicts` panel.
+- The list-view and calendar-view shift elements now carry
+  `id="shift-<id>"` so the new `Open shift` links resolve.
+- The old, broken critical-only banner on `/schedules/show` is
+  replaced by the comprehensive panel.
+- `app/Http/Controllers/Web/Schedules/ScheduleShowController`
+  removes the dead `criticalConflicts` derivation that filtered to
+  `severity === 'critical' && shift_requirement_id === null` and
+  skipped the most actionable conflicts.
 - All 6 form pages migrated to Inertia 3 `<Form>` component (replaces the
   custom form helpers).
 - `app/Http/Middleware/HandleInertiaRequests::share()` now reads flash
@@ -218,10 +242,30 @@ flashError, errors}` with strict TypeScript types.
   `Accept: text/html`, and a request-aware Referer.
 - `make e2e` runs Playwright with `webServer` block driving the dev server
   under `APP_ENV=testing`, `SESSION_SECURE_COOKIE=false`, `MAIL_MAILER=log`.
+- `app/Http/Controllers/Web/Employees/EmployeeShowController` now ships an
+  enriched payload: a `stats` block (upcoming shifts, hours this week /
+  this month / total, conflict count), a top-5 `upcoming_shifts` list with
+  date, time, role, store, status, and a deep link to the parent schedule,
+  a 7-day `availability` strip with a per-day `has_unavailable_entry`
+  flag, and a public-schedule link on the employee header. The page is
+  reworked as a single scrollable layout: 4-KPI stats row, upcoming
+  shifts panel + availability strip on the left, profile / assigned
+  stores / login account cards on the right. The hourly rate renders
+  via `Intl.NumberFormat` (CZK, no decimals, suffixed with `/h`).
 
 ### Removed
 
-- Dead `PULSE_ENABLED` and `TELESCOPE_ENABLED` env entries from `phpunit.xml`.
+- Dead `app/Http/Controllers/Web/Conflicts/ConflictIndexController.php`,
+  `ConflictResolveController.php`, the `app/Models/ScheduleConflict.php`
+  model (and its `scopeUnresolved`), and `resources/js/pages/conflicts/Index.vue`
+  — the `schedule_conflicts` table was dropped in 2026-06-13 and
+  none of these controllers were wired in `routes/web.php`. The
+  `conflicts.*` and `nav.conflicts` i18n keys (only consumed by the
+  dead page) are replaced by a scoped `schedules.conflicts_panel.*`
+  block, kept in parity across `en`, `cs`, and `sk`.
+- A line in the Web screen-inventory tables (`docs/specs/rotapilot-mvp.md`,
+  `README.md`) that pointed at the now-removed `/conflicts`,
+  `/conflicts/resolve`, and `/conflicts/ask-ai` routes.
 - Old `tests/e2e/debug*.spec.ts` diagnostic harnesses.
 - `Symfony\Component\HttpFoundation\Response` return type from
   `VerifyEmailController::store`, `ProfileController::update`,
@@ -256,6 +300,15 @@ flashError, errors}` with strict TypeScript types.
   The web route `GET /email/verify` is now registered and the
   translation points at it; the new controller consumes the token,
   marks the user verified, and redirects.
+- `app/Http/Controllers/Web/Employees/EmployeeShowController`
+  computed the "end of week" bound as
+  `CarbonImmutable::endOfWeek(CarbonImmutable::MONDAY)`. With that
+  argument, Carbon treats `MONDAY` as the _end_ day of the week, so
+  on a Monday the bound collapsed to the current day and the
+  "hours this week" stat silently dropped every shift scheduled
+  later in the same week. Replaced with the no-arg `endOfWeek()`
+  which uses the framework default (Sunday-end) and returns the
+  correct Sunday.
 
 ## [0.1.0] - 2026-06-07
 

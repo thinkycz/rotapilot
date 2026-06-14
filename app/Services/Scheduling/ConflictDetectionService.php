@@ -46,7 +46,7 @@ class ConflictDetectionService
     /**
      * Detect all conflicts for a schedule dynamically.
      *
-     * @return array<int, array<string, mixed>>
+     * @return array<int, array{id: int, shift_requirement_id: int|null, employee_profile_id: int|null, type: string, severity: string, message: string, suggested_fix: string|null}>
      */
     public function detect(Schedule $schedule): array
     {
@@ -99,7 +99,7 @@ class ConflictDetectionService
      *
      * @param iterable<int|string, ShiftRequirement> $requirements
      *
-     * @return array<int, array<string, mixed>>
+     * @return array<int, array{id: int, shift_requirement_id: int|null, employee_profile_id: int|null, type: string, severity: string, message: string, suggested_fix: string|null}>
      */
     private function detectOutsideBusinessHours(Store|null $store, iterable $requirements, int &$counter): array
     {
@@ -131,7 +131,7 @@ class ConflictDetectionService
      * @param iterable<int|string, ShiftRequirement> $requirements
      * @param array<int|string, \Illuminate\Support\Collection<int, stdClass>> $availabilities
      *
-     * @return array<int, array<string, mixed>>
+     * @return array<int, array{id: int, shift_requirement_id: int|null, employee_profile_id: int|null, type: string, severity: string, message: string, suggested_fix: string|null}>
      */
     private function detectEmployeeIssues(iterable $requirements, array $availabilities, int &$counter): array
     {
@@ -187,7 +187,7 @@ class ConflictDetectionService
      *
      * @param iterable<int|string, ShiftRequirement> $requirements
      *
-     * @return array<int, array<string, mixed>>
+     * @return array<int, array{id: int, shift_requirement_id: int|null, employee_profile_id: int|null, type: string, severity: string, message: string, suggested_fix: string|null}>
      */
     private function detectOverlaps(iterable $requirements, int &$counter): array
     {
@@ -253,7 +253,7 @@ class ConflictDetectionService
      *
      * @param iterable<int|string, ShiftRequirement> $requirements
      *
-     * @return array<int, array<string, mixed>>
+     * @return array<int, array{id: int, shift_requirement_id: int|null, employee_profile_id: int|null, type: string, severity: string, message: string, suggested_fix: string|null}>
      */
     private function detectMaxHours(Schedule $schedule, iterable $requirements, int &$counter): array
     {
@@ -362,7 +362,7 @@ class ConflictDetectionService
     /**
      * Helper to make standardized conflict array.
      *
-     * @return array<string, mixed>
+     * @return array{id: int, shift_requirement_id: int|null, employee_profile_id: int|null, type: string, severity: string, message: string, suggested_fix: string|null}
      */
     private function makeConflict(
         int $id,

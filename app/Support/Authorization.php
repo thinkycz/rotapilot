@@ -174,7 +174,7 @@ class Authorization
             $builder = EmployeeProfile::query();
 
             return $builder->whereHas('stores', static function (Builder $q) use ($storeIds): void {
-                $q->where('stores.id', $storeIds);
+                $q->whereIn('stores.id', $storeIds);
             });
         }
 

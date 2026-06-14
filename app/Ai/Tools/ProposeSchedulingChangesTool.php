@@ -29,7 +29,7 @@ class ProposeSchedulingChangesTool implements Tool
      */
     public function description(): string
     {
-        return 'Create a real pending batch proposal for manager-confirmed scheduling changes. This tool does not directly modify stores, availability/Požadavky, shifts, or assignments. Assignment times must be inside the shift window. To replace an existing assignment time, include shift.unassign for the current assignment_id before shift.assign. Never print proposal action JSON in chat; call this tool instead.';
+        return 'Create a real pending batch proposal for manager-confirmed scheduling changes. This tool does not directly modify stores, business hours/Otevírací doba, availability/Požadavky, shifts, or assignments. Assignment times must be inside the shift window. To replace an existing assignment time, include shift.unassign for the current assignment_id before shift.assign. Never print proposal action JSON in chat; call this tool instead.';
     }
 
     /**
@@ -47,7 +47,7 @@ class ProposeSchedulingChangesTool implements Tool
                         ->description(
                             'Action type. One of: store.create, store.update, ' .
                             'availability.create, availability.update, availability.delete, ' .
-                            'shift.create, shift.update, shift.delete, shift.assign, shift.unassign, shift.autofill, shift.assignment.update.',
+                            'shift.create, shift.update, shift.delete, shift.assign, shift.unassign, shift.autofill, shift.assignment.update, business_hours.update.',
                         )
                         ->required(),
                     'availability_type' => $schema->string()
@@ -72,7 +72,8 @@ class ProposeSchedulingChangesTool implements Tool
                     'shift.delete and shift.autofill: shift_requirement_id. ' .
                     'shift.assign: shift_requirement_id, employee_profile_id, optional start_time and end_time; omitted times default to the shift window. Assignment times must be inside the shift window and cannot duplicate an active assignment with the same shift_requirement_id, employee_profile_id, and start_time unless that existing assignment is unassigned earlier in this same proposal. ' .
                     'shift.unassign: shift_assignment_id. ' .
-                    'shift.assignment.update: shift_assignment_id, optional employee_profile_id, start_time, end_time.',
+                    'shift.assignment.update: shift_assignment_id, optional employee_profile_id, start_time, end_time. ' .
+                    'business_hours.update: store_id, hours array with day_of_week (1=Monday..7=Sunday), opens_at, closes_at, is_closed. Closed days must use null times; open days need HH:MM times and closes_at after opens_at.',
                 )
                 ->required(),
         ];

@@ -6,6 +6,9 @@ use App\Http\Controllers\Web\Agent\AgentConversationDestroyController;
 use App\Http\Controllers\Web\Agent\AgentIndexController;
 use App\Http\Controllers\Web\Agent\AgentProposalApplyController;
 use App\Http\Controllers\Web\Agent\AgentProposalRejectController;
+use App\Http\Controllers\Web\Agent\AgentRunCancelController;
+use App\Http\Controllers\Web\Agent\AgentRunStartController;
+use App\Http\Controllers\Web\Agent\AgentRunStreamController;
 use App\Http\Controllers\Web\Agent\AgentStreamController;
 use App\Http\Controllers\Web\Auth\EmailVerificationConfirmController;
 use App\Http\Controllers\Web\Auth\ForgotPasswordController;
@@ -150,6 +153,9 @@ Resolver::resolveRouteRegistrar()
 
         // AI Agent
         $router->get('agent', AgentIndexController::class);
+        $router->post('agent/runs/start', AgentRunStartController::class);
+        $router->get('agent/runs/stream', AgentRunStreamController::class);
+        $router->post('agent/runs/cancel', AgentRunCancelController::class);
         $router->post('agent/stream', AgentStreamController::class);
         $router->get('agent/conversations/destroy', static fn() => Resolver::resolveRedirector()->to('/agent'));
         $router->post('agent/conversations/destroy', AgentConversationDestroyController::class);

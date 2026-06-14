@@ -14,6 +14,11 @@ use Thinkycz\LaravelCore\Support\Typer;
 class AgentPageLoader
 {
     /**
+     * Create the loader.
+     */
+    public function __construct(private readonly AgentRunService $runs) {}
+
+    /**
      * Load the conversation page data for the Inertia `agent/Index` component.
      *
      * Centralizes the conversation / messages / proposals shaping so the
@@ -22,7 +27,7 @@ class AgentPageLoader
      * (Inertia v3 does not follow bare 302 redirects — see
      * `docs/lessons.md`).
      *
-     * @return array{conversationId: string|null, messages: array<int, array{id: string, role: string, content: string, created_at: string|null, meta: array<string, mixed>|null, tool_calls: array<mixed>|null, tool_results: array<mixed>|null}>, proposals: array<int, array<string, mixed>>}
+     * @return array{conversationId: string|null, messages: array<int, array{id: string, role: string, content: string, created_at: string|null, meta: array<string, mixed>|null, tool_calls: array<mixed>|null, tool_results: array<mixed>|null}>, proposals: array<int, array<string, mixed>>, activeRun: array{id: string, status: string, assistant_content: string, last_event_id: int|null, error: string|null}|null, initialPrompt: string|null}
      */
     public function load(Request $request, string|null $conversationId = null): array
     {
@@ -36,6 +41,13 @@ class AgentPageLoader
 
         if (!\is_string($conversationId) || $conversationId === '') {
             $conversationId = null;
+        }
+
+        $initialPrompt = $request->input('q');
+        if (!\is_string($initialPrompt) || $initialPrompt === '') {
+            $initialPrompt = null;
+        } else {
+            $initialPrompt = Typer::assertString(\mb_substr($initialPrompt, 0, 1000));
         }
 
         $messages = [];
@@ -70,6 +82,8 @@ class AgentPageLoader
             'conversationId' => $conversationId,
             'messages' => $messages,
             'proposals' => $proposals,
+            'activeRun' => $this->runs->serializeActiveRun($conversationId, $user),
+            'initialPrompt' => $initialPrompt,
         ];
     }
 

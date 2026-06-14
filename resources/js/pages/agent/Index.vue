@@ -1,40 +1,33 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick, computed } from 'vue';
+import {
+    ref,
+    onBeforeUnmount,
+    onMounted,
+    watch,
+    nextTick,
+    computed,
+} from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { Bot, Send, Sparkles, Loader2, Check, X } from '@lucide/vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { useSharedProps } from '@/composables/useSharedProps';
+import ClarificationCard from '@/components/agent/ClarificationCard.vue';
+import { clarificationChoicePrompt } from '@/lib/clarification';
 import { renderMarkdown, renderPlainText } from '@/lib/markdown';
 import { parseTextDeltaSseChunk } from '@/lib/sse';
-import type { AgentProposal } from '@/types';
-
-interface MessagePayload {
-    id: string;
-    role: 'user' | 'assistant';
-    content: string;
-    created_at?: string;
-    meta?: {
-        clarification?: {
-            question: string;
-            options: string[];
-            recommended_option: string | null;
-        } | null;
-    } | null;
-    tool_calls?: any[] | null;
-    tool_results?: any[] | null;
-}
+import type { AgentActiveRun, AgentMessage, AgentProposal } from '@/types';
 
 const props = defineProps<{
     conversationId: string | null;
-    messages: MessagePayload[];
+    messages: AgentMessage[];
     proposals: AgentProposal[];
+    activeRun: AgentActiveRun | null;
+    initialPrompt: string | null;
 }>();
 
 const { t } = useI18n();
-const { conversations } = useSharedProps();
 
-const localMessages = ref<MessagePayload[]>([]);
+const localMessages = ref<AgentMessage[]>([]);
 const promptInput = ref('');
 const isStreaming = ref(false);
 const streamStatus = ref<'idle' | 'connecting' | 'working' | 'answering'>(
@@ -43,9 +36,13 @@ const streamStatus = ref<'idle' | 'connecting' | 'working' | 'answering'>(
 const proposalActionId = ref<number | null>(null);
 const chatScrollContainer = ref<HTMLDivElement | null>(null);
 const promptTextarea = ref<HTMLTextAreaElement | null>(null);
-const streamIdleTimeoutMs = 75000;
+const activeRunId = ref<string | null>(props.activeRun?.id ?? null);
+const lastRunEventId = ref<number>(props.activeRun?.last_event_id ?? 0);
+const streamAbortController = ref<AbortController | null>(null);
+const reconnectTimer = ref<number | null>(null);
 
 const selectedActions = ref<Record<number, Record<number, boolean>>>({});
+const selectedClarifications = ref<Record<string, string>>({});
 
 watch(
     () => props.proposals,
@@ -168,12 +165,37 @@ function actionDiffClass(
     }
 }
 
+function assistantRunMessageId(runId: string): string {
+    return `assistant-run-${runId}`;
+}
+
+function syncLocalMessagesFromProps(): void {
+    localMessages.value = [...props.messages];
+
+    if (props.activeRun) {
+        activeRunId.value = props.activeRun.id;
+        lastRunEventId.value = props.activeRun.last_event_id ?? 0;
+        isStreaming.value = true;
+        streamStatus.value =
+            props.activeRun.assistant_content.trim() === ''
+                ? 'working'
+                : 'answering';
+
+        localMessages.value.push({
+            id: assistantRunMessageId(props.activeRun.id),
+            role: 'assistant',
+            content: props.activeRun.assistant_content,
+        });
+    }
+
+    scrollToBottom();
+}
+
 // Sync local messages with props
 watch(
-    () => props.messages,
-    (newMessages) => {
-        localMessages.value = [...newMessages];
-        scrollToBottom();
+    () => [props.messages, props.activeRun] as const,
+    () => {
+        syncLocalMessagesFromProps();
     },
     { immediate: true, deep: true },
 );
@@ -189,9 +211,12 @@ function scrollToBottom(): void {
 }
 
 const suggestions = computed(() => [
-    t('agent.suggestion_stores'),
-    t('agent.suggestion_shifts'),
-    t('agent.suggestion_availability'),
+    t('agent.suggestion_shift_gaps'),
+    t('agent.suggestion_availability_requests'),
+    t('agent.suggestion_assign_employee'),
+    t('agent.suggestion_business_hours'),
+    t('agent.suggestion_store_staffing'),
+    t('agent.suggestion_conflicts'),
 ]);
 
 const lastAssistantMessageId = computed<string | null>(() => {
@@ -207,40 +232,6 @@ function useSuggestion(text: string): void {
     promptInput.value = text;
     resizePromptTextarea();
     sendMessage();
-}
-
-function isRecommendedOption(
-    option: string,
-    idx: number,
-    clarification: { recommended_option: string | null } | null | undefined,
-): boolean {
-    if (!clarification) return false;
-    const rec = clarification.recommended_option;
-    if (!rec) return false;
-
-    const cleanRec = rec.trim().toUpperCase();
-    const letter = String.fromCharCode(65 + idx); // "A", "B", "C", "D"
-
-    // 1. Exact match
-    if (option === rec) return true;
-
-    // 2. Exact match of clean option vs clean recommended
-    const cleanOpt = option.replace(/^[A-Z][:.)\-]\s*/i, '').trim();
-    const cleanRecText = rec.replace(/^[A-Z][:.)\-]\s*/i, '').trim();
-    if (cleanOpt === cleanRecText) return true;
-
-    // 3. Match of letter prefix (e.g. "A" or "A:" or "A)")
-    if (
-        cleanRec === letter ||
-        cleanRec.startsWith(letter + ':') ||
-        cleanRec.startsWith(letter + ')') ||
-        cleanRec.startsWith(letter + '.') ||
-        cleanRec.startsWith(letter + '-')
-    ) {
-        return true;
-    }
-
-    return false;
 }
 
 function resizePromptTextarea(): void {
@@ -300,6 +291,40 @@ function rejectProposal(proposal: AgentProposal): void {
     );
 }
 
+function selectClarificationOption(
+    message: AgentMessage,
+    option: string,
+): void {
+    const clarification = message.meta?.clarification;
+    if (!clarification || isStreaming.value) {
+        return;
+    }
+
+    selectedClarifications.value[message.id] = option;
+    promptInput.value = clarificationChoicePrompt(clarification, option);
+    resizePromptTextarea();
+    void sendMessage();
+}
+
+function updateAssistantRunContent(runId: string, delta: string): void {
+    const messageId = assistantRunMessageId(runId);
+    const idx = localMessages.value.findIndex(
+        (message) => message.id === messageId,
+    );
+
+    if (idx === -1) {
+        localMessages.value.push({
+            id: messageId,
+            role: 'assistant',
+            content: delta,
+        });
+    } else {
+        localMessages.value[idx].content += delta;
+    }
+
+    scrollToBottom();
+}
+
 function proposalStatusLabel(status: AgentProposal['status']): string {
     return t(`agent.proposal_status_${status}`);
 }
@@ -323,13 +348,13 @@ function proposalConflictCount(proposal: AgentProposal): number {
     }, 0);
 }
 
-function renderedMessageContent(message: MessagePayload): string {
+function renderedMessageContent(message: AgentMessage): string {
     return message.role === 'assistant'
         ? renderMarkdown(message.content)
         : renderPlainText(message.content);
 }
 
-function getToolCallsNames(message: MessagePayload): string[] {
+function getToolCallsNames(message: AgentMessage): string[] {
     if (!message.tool_calls || !Array.isArray(message.tool_calls)) {
         return [];
     }
@@ -397,10 +422,10 @@ function getCsrfToken(): string {
     return match ? decodeURIComponent(match[1]) : '';
 }
 
-// Send Message stream handler
+// Send Message run handler
 async function sendMessage(): Promise<void> {
     const prompt = promptInput.value.trim();
-    if (!prompt || isStreaming.value) return;
+    if (!prompt || isStreaming.value || activeRunId.value !== null) return;
 
     promptInput.value = '';
     resizePromptTextarea();
@@ -416,60 +441,107 @@ async function sendMessage(): Promise<void> {
     });
     scrollToBottom();
 
-    // Setup placeholder for assistant message
-    const assistantMsgId = 'assistant-temp-' + Date.now();
-    localMessages.value.push({
-        id: assistantMsgId,
-        role: 'assistant',
-        content: '',
-    });
-    scrollToBottom();
-
-    const abortController = new AbortController();
-    let streamTimedOut = false;
-    let idleTimer: number | null = null;
-    const resetIdleTimer = (): void => {
-        if (idleTimer !== null) {
-            window.clearTimeout(idleTimer);
-        }
-
-        idleTimer = window.setTimeout(() => {
-            streamTimedOut = true;
-            abortController.abort();
-        }, streamIdleTimeoutMs);
-    };
-
     try {
-        resetIdleTimer();
-
-        const response = await fetch('/agent/stream', {
+        const response = await fetch('/agent/runs/start', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                Accept: 'text/event-stream',
+                Accept: 'application/json',
                 'X-XSRF-TOKEN': getCsrfToken(),
             },
             body: JSON.stringify({
                 prompt: prompt,
                 conversation_id: props.conversationId,
             }),
-            signal: abortController.signal,
         });
 
-        if (!response.ok) {
-            throw new Error('Streaming failed');
+        const payload = (await response.json()) as {
+            run_id?: unknown;
+            conversation_id?: unknown;
+        };
+
+        if (!response.ok && response.status !== 409) {
+            throw new Error('Run start failed');
         }
 
-        streamStatus.value = 'working';
-        resetIdleTimer();
+        if (
+            typeof payload.run_id !== 'string' ||
+            typeof payload.conversation_id !== 'string'
+        ) {
+            throw new Error('Invalid run response');
+        }
+
+        activeRunId.value = payload.run_id;
+        lastRunEventId.value = 0;
+
+        localMessages.value.push({
+            id: assistantRunMessageId(payload.run_id),
+            role: 'assistant',
+            content: '',
+        });
+        scrollToBottom();
+
+        if (!props.conversationId) {
+            window.history.replaceState(
+                {},
+                '',
+                `/agent?conversation=${encodeURIComponent(payload.conversation_id)}`,
+            );
+        }
+
+        connectToRun(payload.run_id);
+    } catch (error) {
+        isStreaming.value = false;
+        streamStatus.value = 'idle';
+        localMessages.value.push({
+            id: 'assistant-error-' + Date.now(),
+            role: 'assistant',
+            content: t('agent.connection_error'),
+        });
+        scrollToBottom();
+    }
+}
+
+function scheduleReconnect(runId: string): void {
+    if (reconnectTimer.value !== null) {
+        window.clearTimeout(reconnectTimer.value);
+    }
+
+    reconnectTimer.value = window.setTimeout(() => {
+        connectToRun(runId);
+    }, 1000);
+}
+
+async function connectToRun(runId: string): Promise<void> {
+    streamAbortController.value?.abort();
+    const abortController = new AbortController();
+    streamAbortController.value = abortController;
+    isStreaming.value = true;
+    streamStatus.value = 'working';
+
+    let terminalType: string | null = null;
+
+    try {
+        const response = await fetch(
+            `/agent/runs/stream?run_id=${encodeURIComponent(runId)}&after_event_id=${lastRunEventId.value}`,
+            {
+                headers: {
+                    Accept: 'text/event-stream',
+                },
+                signal: abortController.signal,
+            },
+        );
+
+        if (!response.ok) {
+            throw new Error('Run stream failed');
+        }
 
         const reader = response.body?.getReader();
-        const decoder = new TextDecoder('utf-8');
-
         if (!reader) {
-            throw new Error('Unable to read stream');
+            throw new Error('Unable to read run stream');
         }
 
+        const decoder = new TextDecoder('utf-8');
         let assistantContent = '';
         let sseBuffer = '';
         let streamDone = false;
@@ -478,11 +550,18 @@ async function sendMessage(): Promise<void> {
             const { done, value } = await reader.read();
             if (done) break;
 
-            resetIdleTimer();
             const chunk = decoder.decode(value, { stream: true });
             const parsed = parseTextDeltaSseChunk(chunk, sseBuffer);
             sseBuffer = parsed.buffer;
             streamDone = parsed.done;
+
+            if (parsed.lastEventId !== null) {
+                lastRunEventId.value = parsed.lastEventId;
+            }
+
+            if (parsed.terminalType !== null) {
+                terminalType = parsed.terminalType;
+            }
 
             if (parsed.eventTypes.length > 0 && assistantContent === '') {
                 streamStatus.value = 'working';
@@ -491,56 +570,76 @@ async function sendMessage(): Promise<void> {
             for (const delta of parsed.deltas) {
                 streamStatus.value = 'answering';
                 assistantContent += delta;
-                const idx = localMessages.value.findIndex(
-                    (m) => m.id === assistantMsgId,
-                );
-                if (idx !== -1) {
-                    localMessages.value[idx].content = assistantContent;
-                    scrollToBottom();
-                }
+                updateAssistantRunContent(runId, delta);
             }
         }
 
-        if (idleTimer !== null) {
-            window.clearTimeout(idleTimer);
+        if (terminalType !== null) {
+            activeRunId.value = null;
+            isStreaming.value = false;
+            streamStatus.value = 'idle';
+            router.reload();
+        } else if (activeRunId.value === runId) {
+            scheduleReconnect(runId);
         }
     } catch (error) {
-        const idx = localMessages.value.findIndex(
-            (m) => m.id === assistantMsgId,
-        );
-        if (idx !== -1) {
-            localMessages.value[idx].content = streamTimedOut
-                ? t('agent.stream_timeout')
-                : t('agent.connection_error');
+        if (!abortController.signal.aborted && activeRunId.value === runId) {
+            scheduleReconnect(runId);
         }
-    } finally {
-        if (idleTimer !== null) {
-            window.clearTimeout(idleTimer);
-        }
+    }
+}
 
+function cancelActiveRun(): void {
+    const runId = activeRunId.value;
+    if (runId === null) {
+        return;
+    }
+
+    streamAbortController.value?.abort();
+    fetch('/agent/runs/cancel', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            'X-XSRF-TOKEN': getCsrfToken(),
+        },
+        body: JSON.stringify({ run_id: runId }),
+    }).finally(() => {
+        activeRunId.value = null;
         isStreaming.value = false;
         streamStatus.value = 'idle';
-        scrollToBottom();
-
-        // Reload to sync database conversation list and message history
-        router.reload({
-            onSuccess: () => {
-                if (!props.conversationId && conversations.value.length > 0) {
-                    const latestChat = conversations.value[0];
-                    router.visit(`/agent?conversation=${latestChat.id}`, {
-                        replace: true,
-                        preserveScroll: true,
-                    });
-                }
-            },
-        });
-    }
+        router.reload();
+    });
 }
 
 // Conversation Deletion — handled from the main sidebar
 
 onMounted(() => {
     scrollToBottom();
+    if (props.activeRun) {
+        connectToRun(props.activeRun.id);
+    }
+    if (props.initialPrompt && promptInput.value === '') {
+        promptInput.value = props.initialPrompt;
+        resizePromptTextarea();
+        nextTick(() => promptTextarea.value?.focus());
+        window.history.replaceState(
+            {},
+            '',
+            window.location.pathname +
+                window.location.search.replace(/([?&])q=[^&]*/, (_, prefix) =>
+                    prefix === '?' ? '' : '?',
+                ) +
+                window.location.hash,
+        );
+    }
+});
+
+onBeforeUnmount(() => {
+    streamAbortController.value?.abort();
+    if (reconnectTimer.value !== null) {
+        window.clearTimeout(reconnectTimer.value);
+    }
 });
 </script>
 
@@ -558,10 +657,11 @@ onMounted(() => {
                     ref="chatScrollContainer"
                     class="flex-1 overflow-y-auto px-4 py-6 md:px-8 custom-scrollbar"
                 >
-                    <!-- Empty state: only shown when no conversation is selected -->
+                    <!-- Empty state: shown when there is no visible chat history -->
                     <div
                         v-if="
-                            localMessages.length === 0 && !props.conversationId
+                            localMessages.length === 0 &&
+                            orphanProposals().length === 0
                         "
                         class="flex h-full flex-col items-center justify-center text-center max-w-lg mx-auto"
                     >
@@ -583,13 +683,13 @@ onMounted(() => {
 
                         <!-- Suggestion Cards -->
                         <div
-                            class="grid w-full gap-3 grid-cols-1 sm:grid-cols-2"
+                            class="grid w-full gap-2.5 grid-cols-1 sm:grid-cols-2"
                         >
                             <button
                                 v-for="suggestion in suggestions"
                                 :key="suggestion"
                                 @click="useSuggestion(suggestion)"
-                                class="flex items-start gap-2.5 rounded-xl border border-outline-glass bg-surface-container-low/40 p-3 text-left text-xs text-on-surface hover:bg-surface-container hover:border-primary/30 transition-all duration-200"
+                                class="flex min-h-16 items-start gap-2.5 rounded-xl border border-outline-glass bg-surface-container-low/40 p-3 text-left text-xs leading-relaxed text-on-surface hover:bg-surface-container hover:border-primary/30 transition-all duration-200"
                             >
                                 <Sparkles
                                     :size="14"
@@ -777,7 +877,7 @@ onMounted(() => {
                                                     msg.id ===
                                                         lastAssistantMessageId
                                                 "
-                                                class="flex items-center gap-1.5 py-1"
+                                                class="flex items-center gap-2 py-1"
                                                 :class="{
                                                     'mt-2 pt-2 border-t border-outline-glass/40':
                                                         msg.content &&
@@ -794,104 +894,48 @@ onMounted(() => {
                                                         streamingStatusLabel
                                                     }}</span
                                                 >
-                                            </div>
-
-                                            <!-- Clarification Questionnaire -->
-                                            <div
-                                                v-if="msg.meta?.clarification"
-                                                class="mt-3 space-y-3 pt-3 border-t border-outline-glass"
-                                            >
-                                                <p
-                                                    v-if="
-                                                        msg.content !==
-                                                        msg.meta.clarification
-                                                            .question
-                                                    "
-                                                    class="font-semibold text-primary text-[10px] uppercase tracking-wider"
+                                                <button
+                                                    type="button"
+                                                    class="ml-1 inline-flex items-center gap-1 rounded-md border border-outline-glass px-1.5 py-0.5 text-[9px] font-medium text-on-surface-variant transition-colors hover:border-primary/30 hover:text-primary"
+                                                    @click="cancelActiveRun"
                                                 >
-                                                    {{
-                                                        msg.meta.clarification
-                                                            .question
-                                                    }}
-                                                </p>
-                                                <div
-                                                    class="flex flex-col gap-2"
-                                                >
-                                                    <button
-                                                        v-for="(
-                                                            option, idx
-                                                        ) in msg.meta
-                                                            .clarification
-                                                            .options"
-                                                        :key="idx"
-                                                        @click="
-                                                            useSuggestion(
-                                                                option,
-                                                            )
-                                                        "
-                                                        :disabled="
-                                                            msg.id !==
-                                                            lastAssistantMessageId
-                                                        "
-                                                        class="flex items-center justify-between text-left p-3 rounded-xl border border-outline-glass bg-surface-container-low/40 hover:bg-primary/5 hover:border-primary/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-outline-glass transition-all group"
-                                                    >
-                                                        <div
-                                                            class="flex items-start gap-2.5 min-w-0"
-                                                        >
-                                                            <span
-                                                                class="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-surface-container-high text-[10px] font-bold text-on-surface-variant group-hover:bg-primary/10 group-hover:text-primary transition-colors"
-                                                            >
-                                                                {{
-                                                                    String.fromCharCode(
-                                                                        65 +
-                                                                            idx,
-                                                                    )
-                                                                }}
-                                                            </span>
-                                                            <span
-                                                                class="text-xs text-on-surface leading-tight font-medium group-hover:text-primary transition-colors whitespace-normal break-words"
-                                                            >
-                                                                {{
-                                                                    option.replace(
-                                                                        /^[A-Z][:.)\-]\s*/i,
-                                                                        '',
-                                                                    )
-                                                                }}
-                                                            </span>
-                                                        </div>
-                                                        <span
-                                                            v-if="
-                                                                isRecommendedOption(
-                                                                    option,
-                                                                    idx,
-                                                                    msg.meta
-                                                                        .clarification,
-                                                                )
-                                                            "
-                                                            class="shrink-0 text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 animate-pulse"
-                                                        >
-                                                            {{
-                                                                t(
-                                                                    'agent.recommended',
-                                                                )
-                                                            }}
-                                                        </span>
-                                                    </button>
-                                                </div>
-                                                <p
-                                                    v-if="
-                                                        msg.id ===
-                                                        lastAssistantMessageId
-                                                    "
-                                                    class="text-[10px] text-on-surface-variant italic mt-1.5"
-                                                >
+                                                    <X :size="10" />
                                                     {{
                                                         t(
-                                                            'agent.clarification_hint',
+                                                            'agent.cancel_response',
                                                         )
                                                     }}
-                                                </p>
+                                                </button>
                                             </div>
+
+                                            <ClarificationCard
+                                                v-if="msg.meta?.clarification"
+                                                :clarification="
+                                                    msg.meta.clarification
+                                                "
+                                                :disabled="
+                                                    isStreaming ||
+                                                    msg.id !==
+                                                        lastAssistantMessageId
+                                                "
+                                                :selected-option="
+                                                    selectedClarifications[
+                                                        msg.id
+                                                    ] ?? null
+                                                "
+                                                :show-question="
+                                                    msg.content !==
+                                                    msg.meta.clarification
+                                                        .question
+                                                "
+                                                @select="
+                                                    (option) =>
+                                                        selectClarificationOption(
+                                                            msg,
+                                                            option,
+                                                        )
+                                                "
+                                            />
                                         </div>
 
                                         <!-- Tool-result bubbles (proposals) attached to this assistant turn -->
@@ -1302,14 +1346,18 @@ onMounted(() => {
                             :placeholder="t('agent.input_placeholder')"
                             rows="1"
                             class="max-h-32 min-h-9 flex-1 resize-none overflow-y-auto rounded-xl border border-outline-glass bg-surface-container-low/60 px-4 py-2.5 text-xs leading-4 text-on-surface placeholder-on-surface-variant/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all"
-                            :disabled="isStreaming"
+                            :disabled="isStreaming || activeRunId !== null"
                             @input="resizePromptTextarea"
                             @keydown="handlePromptKeydown"
                         ></textarea>
                         <button
                             type="submit"
                             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-md transition-all hover:bg-primary-hover disabled:opacity-50 disabled:hover:bg-primary disabled:cursor-not-allowed cursor-pointer"
-                            :disabled="isStreaming || !promptInput.trim()"
+                            :disabled="
+                                isStreaming ||
+                                activeRunId !== null ||
+                                !promptInput.trim()
+                            "
                         >
                             <Send :size="14" />
                         </button>

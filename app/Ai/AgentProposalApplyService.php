@@ -14,6 +14,7 @@ use App\Models\Schedule;
 use App\Models\ShiftAssignment;
 use App\Models\ShiftRequirement;
 use App\Models\Store;
+use App\Models\StoreBusinessHour;
 use App\Models\User;
 use App\Services\Scheduling\AssignmentService;
 use App\Services\Scheduling\ConflictDetectionService;
@@ -124,6 +125,7 @@ class AgentProposalApplyService
             'shift.unassign' => $this->unassignShift($actor, $action),
             'shift.autofill' => $this->autofillShift($actor, $action),
             'shift.assignment.update' => $this->updateShiftAssignment($actor, $action),
+            'business_hours.update' => $this->updateBusinessHours($actor, $action),
             default => throw new RuntimeException('Unsupported action type: ' . $type),
         };
     }
@@ -410,6 +412,32 @@ class AgentProposalApplyService
     }
 
     /**
+     * Update store business hours.
+     *
+     * @param array<string, mixed> $action
+     *
+     * @return array<string, mixed>
+     */
+    private function updateBusinessHours(User $actor, array $action): array
+    {
+        $store = $this->managedStore($actor, $this->int($action, 'store_id'));
+        $hours = $this->businessHours($action);
+
+        foreach ($hours as $hour) {
+            StoreBusinessHour::query()->updateOrCreate(
+                ['store_id' => $store->getKey(), 'day_of_week' => $hour['day_of_week']],
+                [
+                    'opens_at' => $hour['opens_at'],
+                    'closes_at' => $hour['closes_at'],
+                    'is_closed' => $hour['is_closed'],
+                ],
+            );
+        }
+
+        return ['type' => 'business_hours.update', 'store_id' => $store->getKey()];
+    }
+
+    /**
      * Detect conflicts for affected schedules.
      *
      * @param array<int, int> $scheduleIds
@@ -607,6 +635,44 @@ class AgentProposalApplyService
         }
 
         return $ids;
+    }
+
+    /**
+     * Business-hours rows from normalized proposal action.
+     *
+     * @param array<string, mixed> $action
+     *
+     * @return array<int, array{day_of_week: int, opens_at: string|null, closes_at: string|null, is_closed: bool}>
+     */
+    private function businessHours(array $action): array
+    {
+        $raw = $action['hours'] ?? null;
+        if (!\is_array($raw)) {
+            throw new RuntimeException('Missing business-hours rows.');
+        }
+
+        $rows = [];
+        foreach ($raw as $rawRow) {
+            if (!\is_array($rawRow)) {
+                throw new RuntimeException('Invalid business-hours row.');
+            }
+
+            $row = [];
+            foreach ($rawRow as $key => $value) {
+                if (\is_string($key)) {
+                    $row[$key] = $value;
+                }
+            }
+
+            $rows[] = [
+                'day_of_week' => $this->int($row, 'day_of_week'),
+                'opens_at' => $this->nullableString($row, 'opens_at'),
+                'closes_at' => $this->nullableString($row, 'closes_at'),
+                'is_closed' => $this->bool($row, 'is_closed', false),
+            ];
+        }
+
+        return $rows;
     }
 
     /**

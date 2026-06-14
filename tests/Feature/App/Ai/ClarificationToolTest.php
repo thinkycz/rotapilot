@@ -30,6 +30,19 @@ use Thinkycz\LaravelCore\Support\Typer;
     static::assertSame('Prague', $decoded['recommended_option']);
 });
 
+\test('clarifying questions tool rejects invalid payloads', function (array $payload, string $message): void {
+    $tool = new AskClarifyingQuestionsTool();
+    $decoded = \json_decode($tool->handle(new Request($payload)), true);
+
+    static::assertIsArray($decoded);
+    static::assertStringContainsString($message, Typer::assertString($decoded['error'] ?? null));
+})->with([
+    'empty question' => [['question' => '', 'options' => ['Prague', 'Brno'], 'recommended_option' => 'Prague'], 'non-empty string'],
+    'too few options' => [['question' => 'Which store?', 'options' => ['Prague'], 'recommended_option' => 'Prague'], 'between 2 and 5'],
+    'prefixed option' => [['question' => 'Which store?', 'options' => ['A: Prague', 'Brno'], 'recommended_option' => 'Brno'], 'must not include letter prefixes'],
+    'bad recommendation' => [['question' => 'Which store?', 'options' => ['Prague', 'Brno'], 'recommended_option' => 'Ostrava'], 'recommended_option must be one of'],
+]);
+
 \test('linker saves clarifying questions to message meta', function (): void {
     $manager = Typer::assertInstance(UserFactory::new()->createOne([
         'role' => UserRoleEnum::StoreManager->value,
@@ -129,4 +142,43 @@ use Thinkycz\LaravelCore\Support\Typer;
 
     // The content itself should be rewritten to just the question text for clean UI rendering
     static::assertSame('Which store?', $message->getAttribute('content'));
+});
+
+\test('linker ignores invalid clarification shaped json', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne([
+        'role' => UserRoleEnum::StoreManager->value,
+    ]), User::class);
+    $conversation = \createAgentConversation($manager);
+
+    $messageId = (string) Str::uuid();
+    $createdAt = \now()->addMinute();
+
+    $message = ConversationMessage::query()->create([
+        'id' => $messageId,
+        'conversation_id' => $conversation->getKey(),
+        'user_id' => $manager->getKey(),
+        'agent' => SchedulingAgent::class,
+        'role' => 'assistant',
+        'content' => "```json\n" . \json_encode([
+            'question' => 'This looks like a question?',
+            'options' => ['A: Prague', 'Brno'],
+            'recommended_option' => 'Prague',
+        ]) . "\n```",
+        'attachments' => [],
+        'tool_calls' => [],
+        'tool_results' => [],
+        'usage' => [],
+        'meta' => [],
+        'created_at' => $createdAt,
+        'updated_at' => $createdAt,
+    ]);
+
+    \app(AgentProposalLinker::class)
+        ->linkQuestionsToLatestAssistantMessage($conversation->getKey());
+
+    $message->refresh();
+    $meta = $message->getAttribute('meta');
+
+    static::assertIsArray($meta);
+    static::assertArrayNotHasKey('clarification', $meta);
 });

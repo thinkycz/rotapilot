@@ -10,22 +10,75 @@ use App\Ai\Tools\GetAvailabilityTool;
 use App\Ai\Tools\GetEmployeesTool;
 use App\Ai\Tools\GetShiftsTool;
 use App\Ai\Tools\GetStoresTool;
+use App\Ai\Tools\ManageStoreBusinessHoursTool;
 use App\Ai\Tools\ProposeSchedulingChangesTool;
 use App\Models\Store;
 use App\Models\User;
 use App\Support\Authorization;
+use Illuminate\Support\Collection;
 use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Contracts\Tool;
+use Laravel\Ai\Messages\AssistantMessage;
+use Laravel\Ai\Messages\Message;
+use Laravel\Ai\Messages\ToolResultMessage;
+use Laravel\Ai\Messages\UserMessage;
+use Laravel\Ai\Models\ConversationMessage;
 use Laravel\Ai\Promptable;
+use Laravel\Ai\Responses\Data\ToolCall as ToolCallData;
+use Laravel\Ai\Responses\Data\ToolResult as ToolResultData;
 use Thinkycz\LaravelCore\Support\Config;
+use Thinkycz\LaravelCore\Support\Typer;
 
 class SchedulingAgent implements Agent, Conversational, HasTools
 {
     use Promptable;
     use RemembersConversations;
+
+    /**
+     * Conversation message id excluded from background run history.
+     */
+    private string|null $excludedConversationMessageId = null;
+
+    /**
+     * Resume a conversation for a background run without Laravel AI's
+     * RememberConversation middleware persisting duplicate messages.
+     */
+    public function resumeForBackgroundRun(string $conversationId, string $excludedMessageId): static
+    {
+        $this->conversationId = $conversationId;
+        $this->conversationUser = null;
+        $this->excludedConversationMessageId = $excludedMessageId;
+
+        return $this;
+    }
+
+    /**
+     * Get conversation history for the model.
+     */
+    public function messages(): iterable
+    {
+        if ($this->conversationId === null || $this->excludedConversationMessageId === null) {
+            return [];
+        }
+
+        $history = [];
+        $messages = ConversationMessage::query()
+            ->where('conversation_id', $this->conversationId)
+            ->where('id', '!=', $this->excludedConversationMessageId)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        foreach ($messages as $message) {
+            foreach ($this->messageForHistory($message) as $historyMessage) {
+                $history[] = $historyMessage;
+            }
+        }
+
+        return $history;
+    }
 
     /**
      * Get the instructions that the agent should follow.
@@ -71,8 +124,9 @@ class SchedulingAgent implements Agent, Conversational, HasTools
             2. Use `GetEmployeesTool` to list employee profile details. You can optionally filter by store.
             3. Use `GetShiftsTool` to list shifts (shift requirements/assignments) for a date range. You can optionally filter by store.
             4. Use `GetAvailabilityTool` to list employee unavailability or availability records for a date range.
-            5. Use `ProposeSchedulingChangesTool` when the manager asks you to create or change stores, availability, shifts, assignments, unassignments, safe deletions, or auto-fill. This creates a pending proposal only; the manager must review and apply it.
+            5. Use `ProposeSchedulingChangesTool` when the manager asks you to create or change stores, business hours, availability, shifts, assignments, unassignments, safe deletions, or auto-fill. This creates a pending proposal only; the manager must review and apply it.
             6. Use `AskClarifyingQuestionsTool` when the manager's request is too vague, ambiguous, or lacks required details (like store, employee, schedule, date, or times) to ask them a clarifying question with options.
+            7. Use `ManageStoreBusinessHoursTool` to retrieve ("get") the business opening/closing hours of a managed store. To change business hours, call `ProposeSchedulingChangesTool` with `business_hours.update`. Use keys: `day_of_week` (integer 1-7, where 1=Monday..7=Sunday), `opens_at` (string "HH:MM" or null when closed), `closes_at` (string "HH:MM" or null when closed), and `is_closed` (boolean). Do NOT use other keys like `open_time`, `close_time`, `day`, or `weekday`.
 
             CRITICAL RULES:
             - Never make up information. If a query requires data that you do not have, use the tools to fetch it.
@@ -110,5 +164,71 @@ class SchedulingAgent implements Agent, Conversational, HasTools
         yield new GetAvailabilityTool();
         yield \app(ProposeSchedulingChangesTool::class);
         yield \app(AskClarifyingQuestionsTool::class);
+        yield new ManageStoreBusinessHoursTool();
+    }
+
+    /**
+     * Convert a persisted conversation row to Laravel AI message objects.
+     *
+     * @return array<int, Message>
+     */
+    private function messageForHistory(ConversationMessage $message): array
+    {
+        $role = Typer::assertString($message->getAttribute('role'));
+        $content = Typer::assertNullableString($message->getAttribute('content')) ?? '';
+
+        if ($role === 'user') {
+            return [new UserMessage($content)];
+        }
+
+        if ($role !== 'assistant') {
+            return [];
+        }
+
+        $toolCalls = $this->toolCalls($message);
+        $toolResults = $this->toolResults($message);
+
+        $messages = [new AssistantMessage($content, $toolCalls)];
+        if ($toolResults->isNotEmpty()) {
+            $messages[] = new ToolResultMessage($toolResults);
+        }
+
+        return $messages;
+    }
+
+    /**
+     * Tool calls from a persisted assistant row.
+     *
+     * @return Collection<int, ToolCallData>
+     */
+    private function toolCalls(ConversationMessage $message): Collection
+    {
+        $toolCalls = $message->getAttribute('tool_calls');
+        if (!\is_array($toolCalls)) {
+            return new Collection();
+        }
+
+        return (new Collection($toolCalls))
+            ->filter(static fn(mixed $row): bool => \is_array($row))
+            ->map(static fn(array $row): ToolCallData => ToolCallData::fromArray($row))
+            ->values();
+    }
+
+    /**
+     * Tool results from a persisted assistant row.
+     *
+     * @return Collection<int, ToolResultData>
+     */
+    private function toolResults(ConversationMessage $message): Collection
+    {
+        $toolResults = $message->getAttribute('tool_results');
+        if (!\is_array($toolResults)) {
+            return new Collection();
+        }
+
+        return (new Collection($toolResults))
+            ->filter(static fn(mixed $row): bool => \is_array($row))
+            ->map(static fn(array $row): ToolResultData => ToolResultData::fromArray($row))
+            ->values();
     }
 }

@@ -139,6 +139,7 @@ class AgentActionProposalSerializer
             'shift.unassign' => 'Remove assignment of ' . self::resolveAssignmentEmployeeName($action, $context) . ' from shift ' . self::resolveAssignmentShiftDescription($action, $context),
             'shift.autofill' => 'Auto-fill shift ' . self::resolveShiftDescription($action, $context),
             'shift.assignment.update' => self::labelShiftAssignmentUpdate($action, $context),
+            'business_hours.update' => 'Update business hours for "' . self::resolveStoreName($action, $context) . '"',
             default => $type,
         };
     }

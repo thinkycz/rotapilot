@@ -42,6 +42,7 @@ class AgentProposalBuilder
         'shift.unassign',
         'shift.autofill',
         'shift.assignment.update',
+        'business_hours.update',
     ];
 
     /**
@@ -146,6 +147,7 @@ class AgentProposalBuilder
                 'shift_requirement_id' => $this->managedShiftRequirement($user, $this->int($action, 'shift_requirement_id'))->getKey(),
             ],
             'shift.assignment.update' => $this->shiftAssignmentUpdate($user, $type, $action, $proposalState),
+            'business_hours.update' => $this->businessHoursUpdate($user, $type, $action),
         };
     }
 
@@ -359,6 +361,78 @@ class AgentProposalBuilder
     }
 
     /**
+     * Normalize store business-hours update.
+     *
+     * @param array<string, mixed> $action
+     *
+     * @return array<string, mixed>
+     */
+    private function businessHoursUpdate(User $user, string $type, array $action): array
+    {
+        $store = $this->managedStore($user, $this->int($action, 'store_id'));
+        $rawHours = $action['hours'] ?? null;
+        if (!\is_array($rawHours)) {
+            throw new RuntimeException('business_hours.update requires an hours array.');
+        }
+
+        $hours = [];
+        $seenDays = [];
+
+        foreach ($rawHours as $rawHour) {
+            if (!\is_array($rawHour)) {
+                throw new RuntimeException('Each business-hours row must be an object.');
+            }
+
+            $hour = $this->stringKeyed($rawHour);
+            $dayOfWeek = $this->int($hour, 'day_of_week');
+            if ($dayOfWeek < 1 || $dayOfWeek > 7) {
+                throw new RuntimeException('day_of_week must be between 1 and 7.');
+            }
+
+            if (isset($seenDays[$dayOfWeek])) {
+                throw new RuntimeException('Duplicate business-hours day: ' . $dayOfWeek . '.');
+            }
+            $seenDays[$dayOfWeek] = true;
+
+            $isClosed = $this->bool($hour, 'is_closed', false);
+            $opensAt = $this->nullableTimeString($hour, 'opens_at');
+            $closesAt = $this->nullableTimeString($hour, 'closes_at');
+
+            if ($isClosed) {
+                $opensAt = null;
+                $closesAt = null;
+            } else {
+                if ($opensAt === null || $closesAt === null) {
+                    throw new RuntimeException('Open business-hours days require opens_at and closes_at.');
+                }
+
+                if ($closesAt <= $opensAt) {
+                    throw new RuntimeException('Business-hours closes_at must be after opens_at.');
+                }
+            }
+
+            $hours[] = [
+                'day_of_week' => $dayOfWeek,
+                'opens_at' => $opensAt,
+                'closes_at' => $closesAt,
+                'is_closed' => $isClosed,
+            ];
+        }
+
+        if (\count($hours) === 0) {
+            throw new RuntimeException('business_hours.update requires at least one hours row.');
+        }
+
+        \usort($hours, static fn(array $a, array $b): int => $a['day_of_week'] <=> $b['day_of_week']);
+
+        return [
+            'type' => $type,
+            'store_id' => $store->getKey(),
+            'hours' => $hours,
+        ];
+    }
+
+    /**
      * Guard the database uniqueness constraint before a proposal is created.
      *
      * @param array{unassigned_assignment_ids: array<int, true>, ...} $proposalState
@@ -532,6 +606,25 @@ class AgentProposalBuilder
     private function timeString(string $value): string
     {
         return \mb_substr($value, 0, 5);
+    }
+
+    /**
+     * Nullable strict HH:MM time input.
+     *
+     * @param array<string, mixed> $action
+     */
+    private function nullableTimeString(array $action, string $key): string|null
+    {
+        $value = $this->nullableString($action, $key);
+        if ($value === null) {
+            return null;
+        }
+
+        if (\preg_match('/^(?:[01]\\d|2[0-3]):[0-5]\\d$/', $value) !== 1) {
+            throw new RuntimeException($key . ' must use HH:MM format.');
+        }
+
+        return $value;
     }
 
     /**

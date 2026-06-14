@@ -51,6 +51,17 @@ use Thinkycz\LaravelCore\Support\Typer;
         ->where('role', 'user')
         ->where('content', 'What stores do I manage?')
         ->exists());
+
+    static::assertSame(1, ConversationMessage::query()
+        ->where('conversation_id', $conversation->getKey())
+        ->where('role', 'user')
+        ->where('content', 'What stores do I manage?')
+        ->count());
+
+    static::assertFalse(ConversationMessage::query()
+        ->where('conversation_id', $conversation->getKey())
+        ->where('meta->provisional', true)
+        ->exists());
 });
 
 \test('store manager can continue own conversation but not foreign conversation', function (): void {

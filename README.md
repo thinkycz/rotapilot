@@ -39,7 +39,6 @@ make local     # provision the dev environment end-to-end
 - Shift assignments: `/shift-assignments/store`, `/shift-assignments/destroy`
 - Employee self-service: `/my-calendar`
 - AI planner: `/ai-planner`, `/ai-planner/message`, `/ai-planner/apply-preview`
-- Conflicts: `/conflicts`, `/conflicts/resolve`, `/conflicts/ask-ai`
 
 Minimal API-compatible auth endpoints remain under `/api/v1/auth`,
 `/api/v1/me`, `/api/v1/password`, and `/api/v1/email_verification`.

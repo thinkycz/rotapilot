@@ -11,6 +11,7 @@ describe('parseTextDeltaSseChunk', () => {
         expect(second.deltas).toEqual(['Hello']);
         expect(second.buffer).toBe('');
         expect(second.eventTypes).toEqual(['text_delta']);
+        expect(second.lastEventId).toBeNull();
     });
 
     test('ignores malformed rows and keeps later valid deltas', () => {
@@ -35,5 +36,24 @@ describe('parseTextDeltaSseChunk', () => {
 
         expect(parsed.deltas).toEqual([]);
         expect(parsed.eventTypes).toEqual(['stream_start', 'tool_call']);
+    });
+
+    test('tracks replay event ids and terminal run events', () => {
+        const parsed = parseTextDeltaSseChunk(
+            'data: {"id":12,"type":"text_delta","delta":"Hi"}\n\ndata: {"id":13,"type":"run_completed","status":"completed"}\n\n',
+        );
+
+        expect(parsed.deltas).toEqual(['Hi']);
+        expect(parsed.lastEventId).toBe(13);
+        expect(parsed.terminalType).toBe('run_completed');
+    });
+
+    test('exposes run failure errors', () => {
+        const parsed = parseTextDeltaSseChunk(
+            'data: {"id":2,"type":"run_failed","error":"Provider failed"}\n\n',
+        );
+
+        expect(parsed.terminalType).toBe('run_failed');
+        expect(parsed.error).toBe('Provider failed');
     });
 });

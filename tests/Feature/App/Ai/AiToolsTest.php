@@ -14,6 +14,7 @@ use App\Models\Schedule;
 use App\Models\ShiftAssignment;
 use App\Models\ShiftRequirement;
 use App\Models\Store;
+use App\Models\StoreBusinessHour;
 use App\Models\User;
 use Database\Factories\ScheduleFactory;
 use Database\Factories\ShiftAssignmentFactory;
@@ -30,6 +31,7 @@ use Thinkycz\LaravelCore\Support\Typer;
     static::assertStringContainsString('Směny', (new GetShiftsTool())->description());
     static::assertStringContainsString('Požadavky', (new GetAvailabilityTool())->description());
     static::assertStringContainsString('availability/Požadavky', \app(ProposeSchedulingChangesTool::class)->description());
+    static::assertStringContainsString('business hours/Otevírací doba', \app(ProposeSchedulingChangesTool::class)->description());
     static::assertStringContainsString('include shift.unassign', \app(ProposeSchedulingChangesTool::class)->description());
     static::assertStringContainsString('Never print proposal action JSON in chat', \app(ProposeSchedulingChangesTool::class)->description());
 });
@@ -502,3 +504,90 @@ use Thinkycz\LaravelCore\Support\Typer;
     static::assertSame('12:00', $actions[0]['start_time']);
     static::assertSame('16:00', $actions[0]['end_time']);
 });
+
+\test('proposal tool normalizes business hours update without mutating store hours', function (): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne([
+        'role' => UserRoleEnum::StoreManager->value,
+    ]), User::class);
+    $conversation = \createAgentConversation($manager);
+    $store = \managedStoreFor($manager, 'Owned Store');
+
+    \app(AgentConversationContext::class)->setConversationId($conversation->getKey());
+    $this->be($manager, 'users');
+
+    $payload = \decodeToolJson(\app(ProposeSchedulingChangesTool::class)->handle(new Request([
+        'summary' => 'Update opening hours',
+        'actions' => [
+            [
+                'type' => 'business_hours.update',
+                'store_id' => $store->getKey(),
+                'hours' => [
+                    [
+                        'day_of_week' => 7,
+                        'opens_at' => '09:00',
+                        'closes_at' => '12:00',
+                        'is_closed' => false,
+                    ],
+                    [
+                        'day_of_week' => 1,
+                        'opens_at' => '08:00',
+                        'closes_at' => '16:00',
+                        'is_closed' => false,
+                    ],
+                    [
+                        'day_of_week' => 6,
+                        'opens_at' => '10:00',
+                        'closes_at' => '11:00',
+                        'is_closed' => true,
+                    ],
+                ],
+            ],
+        ],
+    ])));
+
+    static::assertSame('pending', $payload['status']);
+
+    $proposal = Typer::assertInstance(AgentActionProposal::query()->find($payload['proposal_id']), AgentActionProposal::class);
+    $actions = $proposal->getActions();
+
+    static::assertSame('business_hours.update', $actions[0]['type']);
+    static::assertSame($store->getKey(), $actions[0]['store_id']);
+    static::assertSame(1, $actions[0]['hours'][0]['day_of_week']);
+    static::assertSame('08:00', $actions[0]['hours'][0]['opens_at']);
+    static::assertSame(6, $actions[0]['hours'][1]['day_of_week']);
+    static::assertNull($actions[0]['hours'][1]['opens_at']);
+    static::assertNull($actions[0]['hours'][1]['closes_at']);
+    static::assertTrue($actions[0]['hours'][1]['is_closed']);
+    static::assertFalse(StoreBusinessHour::query()->where('store_id', $store->getKey())->exists());
+});
+
+\test('proposal tool rejects invalid business hours without creating proposal', function (array $hours, string $message): void {
+    $manager = Typer::assertInstance(UserFactory::new()->createOne([
+        'role' => UserRoleEnum::StoreManager->value,
+    ]), User::class);
+    $conversation = \createAgentConversation($manager);
+    $store = \managedStoreFor($manager, 'Owned Store');
+
+    \app(AgentConversationContext::class)->setConversationId($conversation->getKey());
+    $this->be($manager, 'users');
+
+    $payload = \decodeToolJson(\app(ProposeSchedulingChangesTool::class)->handle(new Request([
+        'summary' => 'Invalid opening hours',
+        'actions' => [
+            [
+                'type' => 'business_hours.update',
+                'store_id' => $store->getKey(),
+                'hours' => $hours,
+            ],
+        ],
+    ])));
+
+    static::assertStringContainsString($message, Typer::assertString($payload['error'] ?? null));
+    static::assertFalse(AgentActionProposal::query()->where('summary', 'Invalid opening hours')->exists());
+})->with([
+    'invalid day' => [[['day_of_week' => 8, 'opens_at' => '08:00', 'closes_at' => '16:00', 'is_closed' => false]], 'day_of_week must be between 1 and 7'],
+    'missing time' => [[['day_of_week' => 1, 'opens_at' => null, 'closes_at' => '16:00', 'is_closed' => false]], 'Open business-hours days require opens_at and closes_at'],
+    'bad time format' => [[['day_of_week' => 1, 'opens_at' => '8:00', 'closes_at' => '16:00', 'is_closed' => false]], 'opens_at must use HH:MM format'],
+    'closing before opening' => [[['day_of_week' => 1, 'opens_at' => '16:00', 'closes_at' => '08:00', 'is_closed' => false]], 'Business-hours closes_at must be after opens_at'],
+    'duplicate day' => [[['day_of_week' => 1, 'opens_at' => '08:00', 'closes_at' => '16:00', 'is_closed' => false], ['day_of_week' => 1, 'opens_at' => '09:00', 'closes_at' => '17:00', 'is_closed' => false]], 'Duplicate business-hours day'],
+]);

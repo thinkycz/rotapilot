@@ -31,7 +31,7 @@
 
 RotaPilot is an AI-assisted shift planner for small multi-store businesses. Store managers create stores, employees, availability, schedules, shift requirements, and assignments. Employees log in to view their published shifts. The `/agent` assistant answers manager questions about stores, employees, shifts, and availability by using scoped Laravel AI tools over live application data.
 
-Tables: `users`, `stores`, `store_business_hours`, `store_manager_store`, `employee_profiles`, `employee_store`, `employee_availabilities`, `schedules`, `shift_requirements`, `shift_assignments`, `schedule_conflicts`, plus Laravel AI SDK's `agent_conversations` and `agent_conversation_messages`.
+Tables: `users`, `stores`, `store_business_hours`, `store_manager_store`, `employee_profiles`, `employee_store`, `employee_availabilities`, `schedules`, `shift_requirements`, `shift_assignments`, plus Laravel AI SDK's `agent_conversations` and `agent_conversation_messages`. Schedule conflicts are computed dynamically by `App\Services\Scheduling\ConflictDetectionService` on every page load; no `schedule_conflicts` table is stored.
 
 ## Runtime services
 

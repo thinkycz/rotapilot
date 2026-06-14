@@ -50,6 +50,32 @@ export interface AgentProposal {
     created_at: string | null;
 }
 
+export interface AgentActiveRun {
+    id: string;
+    status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+    assistant_content: string;
+    last_event_id: number | null;
+    error: string | null;
+}
+
+export interface AgentClarification {
+    question: string;
+    options: string[];
+    recommended_option: string | null;
+}
+
+export interface AgentMessage {
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+    created_at?: string;
+    meta?: {
+        clarification?: AgentClarification | null;
+    } | null;
+    tool_calls?: unknown[] | null;
+    tool_results?: unknown[] | null;
+}
+
 export interface SharedProps {
     [key: string]: unknown;
 

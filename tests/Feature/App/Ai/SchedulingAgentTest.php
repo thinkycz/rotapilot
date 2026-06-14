@@ -48,7 +48,7 @@ use Thinkycz\LaravelCore\Support\Typer;
     static::assertStringContainsString('Use `GetShiftsTool` for schedules, shifts, staffing, assignments', $instructions);
     static::assertStringContainsString('modify an existing assignment\'s time window', $instructions);
     static::assertStringContainsString('shift.assignment.update', $instructions);
-    static::assertStringContainsString('Use `ProposeSchedulingChangesTool` only when the manager asks to create, update, delete, assign, unassign, update assignments, or auto-fill', $instructions);
+    static::assertStringContainsString('Use `ProposeSchedulingChangesTool` only when the manager asks to create, update, delete, assign, unassign, update assignments, update business hours, or auto-fill', $instructions);
     static::assertStringContainsString('do not write a fake tool call or JSON payload in the chat', $instructions);
     static::assertStringContainsString('The only valid way to create a pending proposal is to call `ProposeSchedulingChangesTool`', $instructions);
 });

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Ai\Agents\SchedulingAgent;
 use App\Enums\UserRoleEnum;
 use App\Models\AgentActionProposal;
+use App\Models\AgentRun;
 use App\Models\EmployeeProfile;
 use App\Models\Store;
 use App\Models\User;
@@ -179,4 +180,24 @@ function createAgentProposal(
         'actions' => $actions,
         'result' => null,
     ]), AgentActionProposal::class);
+}
+
+/**
+ * Create a persisted agent run for controller tests.
+ */
+function createAgentRun(User $user, string $conversationId, string $status = AgentRun::STATUS_RUNNING): AgentRun
+{
+    return Typer::assertInstance(AgentRun::query()->create([
+        'id' => (string) Str::uuid(),
+        'conversation_id' => $conversationId,
+        'user_id' => $user->getKey(),
+        'status' => $status,
+        'prompt' => 'What stores do I manage?',
+        'user_message_id' => (string) Str::uuid(),
+        'assistant_message_id' => null,
+        'assistant_content' => '',
+        'error' => null,
+        'started_at' => $status === AgentRun::STATUS_QUEUED ? null : \now(),
+        'finished_at' => \in_array($status, AgentRun::activeStatuses(), true) ? null : \now(),
+    ]), AgentRun::class);
 }
