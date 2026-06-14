@@ -131,6 +131,18 @@ return [
             'store' => $env->parseNullableBool('OPENAI_STORE') ?? true,
         ],
 
+        // NOTE: Of the providers declared below, the agent and any
+        // production traffic only need 'openrouter' (text completions),
+        // 'openai' (fallback / specific tools), and 'gemini' (image
+        // generation per 'default_for_images'). The remaining keys
+        // (anthropic, azure, bedrock, cohere, deepseek, eleven, groq,
+        // jina, mistral, ollama, voyageai, xai) are declared because
+        // the laravel/ai SDK ships a built-in driver for each, and
+        // removing the block would mean re-registering the driver
+        // manually if a future feature wants to use it. Leave them
+        // as no-op configurations that resolve to null keys unless
+        // the corresponding *_API_KEY env var is set.
+
         'openrouter' => [
             'driver' => 'openrouter',
             'key' => $env->parseNullableString('OPENROUTER_API_KEY'),
