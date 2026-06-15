@@ -48,8 +48,7 @@ class EmployeeUpdateController
                         return;
                     }
                     foreach ($value as $storeId) {
-                        $storeIdInt = \is_int($storeId) ? $storeId : (\is_string($storeId) && \ctype_digit($storeId) ? (int) $storeId : 0);
-                        $store = Store::query()->find($storeIdInt);
+                        $store = Store::query()->find(EmployeeProfileValidity::parseStoreId($storeId));
                         if ($store instanceof Store && Authorization::canManageStore($actor, $store)) {
                             return;
                         }
@@ -63,31 +62,15 @@ class EmployeeUpdateController
         $storeIds = $validated->array('store_ids');
         $validStoreIds = [];
         foreach ($storeIds as $storeId) {
-            $storeIdInt = \is_int($storeId) ? $storeId : (\is_string($storeId) && \ctype_digit($storeId) ? (int) $storeId : 0);
-            $store = Store::query()->find($storeIdInt);
+            $store = Store::query()->find(EmployeeProfileValidity::parseStoreId($storeId));
             if ($store instanceof Store && Authorization::canManageStore($actor, $store)) {
                 $validStoreIds[] = $store->getKey();
             }
         }
 
-        $maxHoursRaw = $validated->mixed('max_hours_per_week');
-        $maxHours = null;
-        if (\is_int($maxHoursRaw)) {
-            $maxHours = $maxHoursRaw;
-        } elseif (\is_string($maxHoursRaw) && \ctype_digit($maxHoursRaw)) {
-            $maxHours = (int) $maxHoursRaw;
-        }
-
-        $isActiveRaw = $validated->mixed('is_active');
-        $isActive = \is_bool($isActiveRaw) ? $isActiveRaw : true;
-
-        $hourlyRateRaw = $validated->mixed('hourly_rate');
-        $hourlyRate = null;
-        if (\is_int($hourlyRateRaw)) {
-            $hourlyRate = $hourlyRateRaw;
-        } elseif (\is_string($hourlyRateRaw) && \ctype_digit($hourlyRateRaw)) {
-            $hourlyRate = (int) $hourlyRateRaw;
-        }
+        $maxHours = EmployeeProfileValidity::parseNullableInt($validated->mixed('max_hours_per_week'));
+        $hourlyRate = EmployeeProfileValidity::parseNullableInt($validated->mixed('hourly_rate'));
+        $isActive = EmployeeProfileValidity::parseBool($validated->mixed('is_active'), true);
 
         $employee->forceFill([
             'name' => $validated->assertString('name'),
