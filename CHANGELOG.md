@@ -346,7 +346,7 @@ flashError, errors}` with strict TypeScript types.
   repository, so it bypasses the `config:cache` snapshot and stays
   coupled to whatever the shell happened to expose when the artisan
   command was spawned. On deploy (`make development` / `make
-  production` → `php artisan config:cache`) the panic from
+production` → `php artisan config:cache`) the panic from
   `ParseTrait::mustParseString('APP_ENV')` fired with a confusing
   `env APP_ENV must not be null` even though `.env` had it set.
   Switched the provider to `Config::inject()`: env check now uses
