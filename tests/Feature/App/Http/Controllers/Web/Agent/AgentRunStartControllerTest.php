@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Ai\Agents\SchedulingAgent;
 use App\Enums\UserRoleEnum;
 use App\Models\AgentRun;
 use App\Models\User;
@@ -24,6 +25,13 @@ use Thinkycz\LaravelCore\Support\Typer;
 });
 
 \test('store manager can start background run and persist user message immediately', function (): void {
+    // Force the agent to use the canned "Local AI" response rather than
+    // hitting a real provider. AppServiceProvider's fake() is conditional
+    // on the openrouter key being null, but the .env carries a real
+    // test key — the controller test should not depend on that env
+    // detail.
+    SchedulingAgent::fake(static fn(string $prompt): string => 'Local AI assistant response for: ' . $prompt);
+
     $manager = Typer::assertInstance(UserFactory::new()->createOne([
         'role' => UserRoleEnum::StoreManager->value,
     ]), User::class);
