@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Thinkycz\LaravelCore\Models\BaseModel;
 
@@ -16,26 +15,6 @@ class EmployeeStore extends BaseModel
      * @var string|null
      */
     protected $table = 'employee_store';
-
-    /**
-     * Base select query.
-     *
-     * @param Builder<static> $builder
-     */
-    public static function querySelect(Builder $builder): void
-    {
-        $builder->getQuery()->select($builder->qualifyColumn('*'));
-    }
-
-    /**
-     * Search scope.
-     *
-     * @param Builder<static> $builder
-     */
-    public static function scopeSearch(Builder $builder, string $search): void
-    {
-        $builder->getQuery()->where($builder->qualifyColumn('id'), (int) $search);
-    }
 
     /**
      * Employee profile id getter.
