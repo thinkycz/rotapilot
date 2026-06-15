@@ -12,8 +12,10 @@ use App\Models\EmployeeProfile;
 use App\Models\Schedule;
 use App\Models\ShiftRequirement;
 use App\Models\Store;
+use App\Models\StoreBusinessHour;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Collection;
 use stdClass;
 use Thinkycz\LaravelCore\Support\Typer;
 
@@ -28,19 +30,11 @@ class ConflictDetectionService
     private readonly AvailabilityMatcherService $availability;
 
     /**
-     * Business hour guard.
-     */
-    private readonly BusinessHourGuardService $businessHours;
-
-    /**
      * Constructor.
      */
-    public function __construct(
-        AvailabilityMatcherService $availability,
-        BusinessHourGuardService $businessHours,
-    ) {
+    public function __construct(AvailabilityMatcherService $availability)
+    {
         $this->availability = $availability;
-        $this->businessHours = $businessHours;
     }
 
     /**
@@ -50,11 +44,16 @@ class ConflictDetectionService
      */
     public function detect(Schedule $schedule): array
     {
-        $schedule->loadMissing(['store', 'shiftRequirements']);
+        $schedule->loadMissing(['store', 'shiftRequirements.assignments']);
         $store = $schedule->getStore();
         $requirements = $schedule->getShiftRequirements();
-        $employeeIds = $this->collectEmployeeIds($requirements);
 
+        // Pre-load business hours for the store once, indexed by
+        // day-of-week. The previous implementation issued one
+        // business-hours query per requirement (N+1).
+        $businessHours = new Collection($store->businessHours()->getQuery()->get()->all());
+
+        $employeeIds = $this->collectEmployeeIds($requirements);
         $availabilities = EmployeeAvailability::query()
             ->getQuery()
             ->whereIn('employee_profile_id', $employeeIds)
@@ -65,7 +64,7 @@ class ConflictDetectionService
         $conflicts = [];
         $counter = 1;
 
-        $conflicts = \array_merge($conflicts, $this->detectOutsideBusinessHours($store, $requirements, $counter));
+        $conflicts = \array_merge($conflicts, $this->detectOutsideBusinessHours($store, $requirements, $businessHours, $counter));
         $conflicts = \array_merge($conflicts, $this->detectEmployeeIssues($requirements, $availabilities, $counter));
         $conflicts = \array_merge($conflicts, $this->detectOverlaps($requirements, $counter));
 
@@ -83,11 +82,10 @@ class ConflictDetectionService
     {
         $ids = [];
         foreach ($requirements as $r) {
-            $rows = $r->assignments()
-                ->where('status', '!=', ShiftAssignmentStatusEnum::Cancelled->value)
-                ->get();
-            foreach ($rows as $a) {
-                $ids[$a->getEmployeeProfileId()] = true;
+            foreach ($r->getAssignments() as $a) {
+                if (ShiftAssignmentStatusEnum::Cancelled->value !== $a->getStatus()) {
+                    $ids[$a->getEmployeeProfileId()] = true;
+                }
             }
         }
 
@@ -98,18 +96,33 @@ class ConflictDetectionService
      * Detect shifts outside the store's business hours.
      *
      * @param iterable<int|string, ShiftRequirement> $requirements
+     * @param Collection<int, StoreBusinessHour> $businessHours
      *
      * @return array<int, array{id: int, shift_requirement_id: int|null, employee_profile_id: int|null, type: string, severity: string, message: string, suggested_fix: string|null}>
      */
-    private function detectOutsideBusinessHours(Store|null $store, iterable $requirements, int &$counter): array
+    private function detectOutsideBusinessHours(Store $store, iterable $requirements, Collection $businessHours, int &$counter): array
     {
-        if ($store === null) {
-            return [];
-        }
-
         $conflicts = [];
         foreach ($requirements as $r) {
-            if (!$this->businessHours->isWithinBusinessHours($store, $r->getDate(), $r->getStartTime(), $r->getEndTime())) {
+            $dateCarbon = Carbon::parse($r->getDate());
+            $dayOfWeek = (int) $dateCarbon->format('N');
+            /** @var StoreBusinessHour|null $hour */
+            $hour = $businessHours->first(static fn(StoreBusinessHour $h): bool => $dayOfWeek === $h->getDayOfWeek());
+
+            // When the store has no business hours configured for the
+            // day, treat the shift as outside business hours (matching
+            // the legacy BusinessHourGuardService::isWithinBusinessHours
+            // semantics). The legacy tests rely on this behaviour.
+            $isOutside = true;
+            if ($hour !== null) {
+                $opensAt = $hour->getOpensAt();
+                $closesAt = $hour->getClosesAt();
+                $isOutside = $hour->getIsClosed() || $opensAt === null || $closesAt === null ||
+                    $opensAt > $r->getStartTime() ||
+                    $closesAt < $r->getEndTime();
+            }
+
+            if ($isOutside) {
                 $conflicts[] = $this->makeConflict(
                     $counter++,
                     $r->getKey(),
@@ -129,7 +142,7 @@ class ConflictDetectionService
      * Detect per-employee issues (unavailable / missing availability).
      *
      * @param iterable<int|string, ShiftRequirement> $requirements
-     * @param array<int|string, \Illuminate\Support\Collection<int, stdClass>> $availabilities
+     * @param array<int|string, Collection<int, stdClass>> $availabilities
      *
      * @return array<int, array{id: int, shift_requirement_id: int|null, employee_profile_id: int|null, type: string, severity: string, message: string, suggested_fix: string|null}>
      */
@@ -137,19 +150,20 @@ class ConflictDetectionService
     {
         $conflicts = [];
         foreach ($requirements as $r) {
-            $rows = $r->assignments()
-                ->where('status', '!=', ShiftAssignmentStatusEnum::Cancelled->value)
-                ->get();
-
-            foreach ($rows as $row) {
+            foreach ($r->getAssignments() as $row) {
+                if (ShiftAssignmentStatusEnum::Cancelled->value === $row->getStatus()) {
+                    continue;
+                }
                 $employeeId = $row->getEmployeeProfileId();
                 $bucket = $availabilities[$employeeId] ?? null;
                 $models = [];
-                if ($bucket instanceof \Illuminate\Support\Collection) {
+                if ($bucket instanceof Collection) {
                     foreach ($bucket as $item) {
-                        $model = new EmployeeAvailability();
-                        $model->setRawAttributes((array) $item, true);
-                        $models[] = $model;
+                        if (\is_object($item) && isset($item->day_of_week, $item->start_time, $item->end_time)) {
+                            /** @var array<string, mixed> $attrs */
+                            $attrs = (array) $item;
+                            $models[] = new EmployeeAvailability($attrs);
+                        }
                     }
                 }
 

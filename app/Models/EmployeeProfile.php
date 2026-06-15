@@ -45,22 +45,6 @@ class EmployeeProfile extends BaseModel
     }
 
     /**
-     * Employees assigned to a given store.
-     *
-     * @param Builder<static> $builder
-     */
-    public static function scopeForStore(Builder $builder, int $storeId): void
-    {
-        $builder->getQuery()->whereIn(
-            $builder->qualifyColumn('id'),
-            static fn(\Illuminate\Database\Query\Builder $sub): \Illuminate\Database\Query\Builder => $sub
-                ->select('employee_profile_id')
-                ->from('employee_store')
-                ->where('store_id', $storeId),
-        );
-    }
-
-    /**
      * User id getter.
      */
     public function getUserId(): int|null

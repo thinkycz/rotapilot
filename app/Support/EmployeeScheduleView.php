@@ -113,7 +113,7 @@ class EmployeeScheduleView
      */
     private static function days(Schedule $schedule): array
     {
-        $schedule->loadMissing('shiftRequirements');
+        $schedule->loadMissing('shiftRequirements.assignments.employeeProfile');
 
         $start = CarbonImmutable::parse($schedule->getPeriodStart());
         $end = CarbonImmutable::parse($schedule->getPeriodEnd());
@@ -129,23 +129,26 @@ class EmployeeScheduleView
                 continue;
             }
 
+            // Filter the already-loaded assignments in memory rather
+            // than re-querying per requirement.
+            $assignments = $requirement->getAssignments()
+                ->where('status', '!=', \App\Enums\ShiftAssignmentStatusEnum::Cancelled->value)
+                ->sortBy('start_time')
+                ->values();
+
             $days[$date]['shifts'][] = [
                 'id' => $requirement->getKey(),
                 'start_time' => $requirement->getStartTime(),
                 'end_time' => $requirement->getEndTime(),
                 'role_label' => $requirement->getRoleLabel(),
                 'note' => $requirement->getNote(),
-                'assignments' => $requirement->assignments()
-                    ->with('employeeProfile')
-                    ->tap(static fn($query) => ShiftAssignment::scopeActive($query))
-                    ->orderBy('start_time')
-                    ->get()
+                'assignments' => $assignments
                     ->map(static fn(ShiftAssignment $assignment): array => [
                         'id' => $assignment->getKey(),
                         'employee_name' => $assignment->getEmployeeProfile()->getName(),
                         'start_time' => $assignment->getStartTime(),
                         'end_time' => $assignment->getEndTime(),
-                    ])->values()->all(),
+                    ])->all(),
             ];
         }
 
